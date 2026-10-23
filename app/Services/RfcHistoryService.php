@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Enums\DecisionStatus;
 use App\Enums\RfcStatus;
+use App\Enums\ServiceCategory;
+use App\Enums\TicketPriority;
 use App\Models\ChangeRequest;
 use App\Models\Decision;
 use Illuminate\Support\Carbon;
@@ -36,6 +38,26 @@ class RfcHistoryService
             ->orderBy('id')
             ->get();
 
+        $pairedTicketTransitions = [];
+
+        foreach ($activities as $ticketActivity) {
+            if (data_get($ticketActivity->properties, 'event') !== 'ticket_created') {
+                continue;
+            }
+
+            $transition = $activities
+                ->filter(fn (Activity $candidate): bool => $candidate->getKey() < $ticketActivity->getKey()
+                    && ! in_array($candidate->getKey(), $pairedTicketTransitions, true)
+                    && data_get($candidate->properties, 'event') === null
+                    && data_get($candidate->properties, 'new_status') === RfcStatus::TICKET_CREATED->value)
+                ->sortByDesc('id')
+                ->first();
+
+            if ($transition) {
+                $pairedTicketTransitions[] = $transition->getKey();
+            }
+        }
+
         foreach ($activities as $activity) {
             $sequence++;
 
@@ -43,6 +65,37 @@ class RfcHistoryService
             $oldStatusRaw = data_get($activity->properties, 'old_status');
             $note = data_get($activity->properties, 'note');
             $eventType = data_get($activity->properties, 'event');
+
+            if ($eventType === 'ticket_created') {
+                $ticketNumber = (string) data_get($activity->properties, 'ticket_number', '');
+                $priority = TicketPriority::tryFrom((string) data_get($activity->properties, 'priority'));
+                $category = ServiceCategory::tryFrom((string) data_get($activity->properties, 'category'));
+                $adminNote = data_get($activity->properties, 'admin_note');
+
+                $staffNote = implode("\n", array_filter([
+                    filled($priority) ? 'Prioritas: '.$priority->label() : null,
+                    filled($category) ? 'Kategori layanan: '.$category->label() : null,
+                    filled($adminNote) ? 'Catatan: '.trim((string) $adminNote) : null,
+                ]));
+
+                $events[] = [
+                    'key' => RfcStatus::TICKET_CREATED->value,
+                    'label' => $forStaff
+                        ? "Tiket Change {$ticketNumber} dibuat dan diteruskan ke Change Manager"
+                        : 'Diverifikasi Admin dan diteruskan ke Change Manager',
+                    'note' => $forStaff
+                        ? ($staffNote !== '' ? $staffNote : null)
+                        : (filled($ticketNumber) ? "Nomor tiket: {$ticketNumber}" : null),
+                    'time' => $activity->created_at,
+                    'tone' => 'success',
+                    'actor_name' => $forStaff ? $activity->causer?->name : null,
+                    'actor_role' => 'Admin',
+                    'legacy' => false,
+                    'order' => $sequence,
+                ];
+
+                continue;
+            }
 
             if ($eventType === 'rfc_revised') {
                 $events[] = [
@@ -151,6 +204,15 @@ class RfcHistoryService
                 continue;
             }
 
+            // Kejadian tiket baru dibangun dari activity audit khusus agar
+            // nomor tiket, prioritas, dan catatan Admin tersedia tanpa duplikasi.
+            // Hanya transisi yang berpasangan dengan activity khusus yang
+            // dilewati, sehingga data transisi lama tetap tampil di riwayat.
+            if ($newStatus === RfcStatus::TICKET_CREATED
+                && in_array($activity->getKey(), $pairedTicketTransitions, true)) {
+                continue;
+            }
+
             $events[] = $this->statusEvent(
                 status: $newStatus,
                 oldStatus: $oldStatus,
@@ -209,6 +271,7 @@ class RfcHistoryService
                     RfcStatus::NEEDS_REVISION->value,
                     RfcStatus::FAILED->value,
                     RfcStatus::CANCELLED->value,
+                    RfcStatus::TICKET_CREATED->value,
                     'rfc_revised',
                     'revision_reason',
                 ], true)) {

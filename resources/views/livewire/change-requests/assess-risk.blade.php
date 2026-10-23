@@ -49,6 +49,37 @@
         </div>
     </div>
 
+    {{-- Informasi Tiket dari Admin (baca-saja) --}}
+    @if (filled($rfc->ticket_number) || filled($rfc->priority) || filled($rfc->category) || filled($rfc->admin_note))
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <h3 class="text-sm font-bold text-slate-800">Informasi Tiket dari Admin</h3>
+            <div class="grid grid-cols-1 gap-4 text-xs md:grid-cols-3">
+                <div>
+                    <p class="text-slate-400">Nomor Tiket</p>
+                    <p class="mt-0.5 font-semibold text-slate-800">{{ $rfc->ticket_number ?: '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-slate-400">Prioritas</p>
+                    <p class="mt-0.5 font-semibold text-slate-800">
+                        {{ $rfc->priority instanceof \App\Enums\TicketPriority ? $rfc->priority->label() : (\App\Enums\TicketPriority::tryFrom((string) $rfc->priority)?->label() ?? '-') }}
+                    </p>
+                </div>
+                <div>
+                    <p class="text-slate-400">Kategori Layanan</p>
+                    <p class="mt-0.5 font-semibold text-slate-800">
+                        {{ $rfc->category instanceof \App\Enums\ServiceCategory ? $rfc->category->label() : (\App\Enums\ServiceCategory::tryFrom((string) $rfc->category)?->label() ?? '-') }}
+                    </p>
+                </div>
+            </div>
+            @if (filled($rfc->admin_note))
+                <div class="border-t border-slate-100 pt-3 text-xs">
+                    <p class="font-semibold text-slate-500">Catatan Admin untuk Change Manager</p>
+                    <p class="mt-1 whitespace-pre-wrap leading-relaxed text-slate-700">{{ $rfc->admin_note }}</p>
+                </div>
+            @endif
+        </div>
+    @endif
+
     {{-- Form Evaluasi Risiko & Klasifikasi --}}
     <form wire:submit="submitAssessment" class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
         <div>

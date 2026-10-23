@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\ServiceCategory;
+use App\Enums\TicketPriority;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,6 +17,7 @@ class ChangeRequest extends Model
 
     protected $fillable = [
         'rfc_number',
+        'ticket_number',
         'title',
         'application_id',
         'submitted_by_id',
@@ -27,6 +30,11 @@ class ChangeRequest extends Model
         'status',
         'change_type',
         'emergency_unconfirmed',
+        'priority',
+        'category',
+        'admin_note',
+        'ticket_created_at',
+        'ticket_created_by_id',
         'rejection_note',
         'target_implementation_date',
         'closed_at',
@@ -39,6 +47,9 @@ class ChangeRequest extends Model
         return [
             'is_physical_letter' => 'boolean',
             'emergency_unconfirmed' => 'boolean',
+            'priority' => TicketPriority::class,
+            'category' => ServiceCategory::class,
+            'ticket_created_at' => 'datetime',
             'target_implementation_date' => 'datetime',
             'closed_at' => 'datetime',
         ];

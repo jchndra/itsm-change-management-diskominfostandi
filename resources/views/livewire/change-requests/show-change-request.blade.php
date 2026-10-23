@@ -72,6 +72,12 @@
                             <p class="text-slate-800 font-medium">{{ $submittedChangeType }}</p>
                         </div>
                     @endif
+                    @if (! $isStaff && filled($rfc->ticket_number))
+                        <div>
+                            <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Nomor Tiket</span>
+                            <p class="text-slate-800 font-medium">{{ $rfc->ticket_number }}</p>
+                        </div>
+                    @endif
                     <div>
                         <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Target Tanggal Pelaksanaan</span>
                         <p class="text-slate-800 font-medium">
@@ -164,23 +170,48 @@
             {{-- Ditetapkan Petugas --}}
             @php
                 // Nilai di blok ini adalah hasil penetapan staf. Untuk Pemohon,
-                // kategori usulannya sudah tampil di Informasi Permintaan Perubahan.
-                $officerCategory = $isStaff ? ($rfc->category ?? null) : null;
-                $officerPriority = $isStaff ? ($rfc->priority ?? null) : null;
+                // nomor tiket tampil di Informasi Permintaan Perubahan tanpa
+                // membocorkan prioritas, kategori layanan, atau catatan internal.
+                $officerTicketNumber = $isStaff ? ($rfc->ticket_number ?? null) : null;
+                $officerCategory = null;
+                $officerPriority = null;
+
+                if ($isStaff && filled($rfc->category)) {
+                    $category = $rfc->category instanceof \App\Enums\ServiceCategory
+                        ? $rfc->category
+                        : \App\Enums\ServiceCategory::tryFrom((string) $rfc->category);
+                    $officerCategory = $category?->label() ?? (string) $rfc->category;
+                }
+
+                if ($isStaff && filled($rfc->priority)) {
+                    $priority = $rfc->priority instanceof \App\Enums\TicketPriority
+                        ? $rfc->priority
+                        : \App\Enums\TicketPriority::tryFrom((string) $rfc->priority);
+                    $officerPriority = $priority?->label() ?? (string) $rfc->priority;
+                }
+
+                $officerAdminNote = $isStaff ? ($rfc->admin_note ?? null) : null;
                 $officerChangeType = $isStaff
                     ? (filled($rfc->change_type)
                         ? ($submittedChangeType ?: $rfc->change_type)
                         : $rfc->riskAssessment?->classification)
                     : null;
             @endphp
-            @if (filled($officerCategory) || filled($officerPriority) || filled($officerChangeType))
+            @if (filled($officerTicketNumber) || filled($officerCategory) || filled($officerPriority) || filled($officerChangeType) || filled($officerAdminNote))
                 <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
                     <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Ditetapkan Petugas</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6 text-sm">
+                        @if (filled($officerTicketNumber))
+                            <div>
+                                <span
+                                    class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Nomor Tiket</span>
+                                <p class="text-slate-800 font-medium">{{ $officerTicketNumber }}</p>
+                            </div>
+                        @endif
                         @if (filled($officerCategory))
                             <div>
                                 <span
-                                    class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Kategori</span>
+                                    class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Kategori Layanan</span>
                                 <p class="text-slate-800 font-medium">{{ $officerCategory }}</p>
                             </div>
                         @endif
@@ -195,6 +226,13 @@
                             <div>
                                 <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Jenis Perubahan</span>
                                 <p class="text-slate-800 font-medium">{{ $officerChangeType }}</p>
+                            </div>
+                        @endif
+                        @if (filled($officerAdminNote))
+                            <div class="md:col-span-2">
+                                <span
+                                    class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Catatan Admin untuk Change Manager</span>
+                                <p class="text-slate-800 font-medium whitespace-pre-wrap">{{ $officerAdminNote }}</p>
                             </div>
                         @endif
                     </div>

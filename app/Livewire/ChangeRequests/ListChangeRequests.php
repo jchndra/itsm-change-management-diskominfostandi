@@ -37,6 +37,8 @@ class ListChangeRequests extends Component
 
     public string $statusMessage = '';
 
+    public string $queueFilter = '';
+
     #[On('rfc-deleted')]
     public function handleRfcDeleted(string $message = ''): void
     {
@@ -52,6 +54,7 @@ class ListChangeRequests extends Component
 
     public function updatedStatusFilter(): void
     {
+        $this->queueFilter = '';
         $this->resetPage();
     }
 
@@ -100,6 +103,11 @@ class ListChangeRequests extends Component
     public function mount(?ChangeRequest $rfc = null): void
     {
         $this->search = (string) request()->query('q', '');
+
+        if (request()->query('queue') === 'incoming'
+            && (Auth::user()?->can('rfc.review_completeness') ?? false)) {
+            $this->queueFilter = 'incoming';
+        }
 
         if ($rfc && $rfc->exists) {
             $this->authorize('view', $rfc);
@@ -158,13 +166,11 @@ class ListChangeRequests extends Component
                 'rejected' => (clone $baseQuery)->whereIn('status', RfcStatus::valuesForGroup('rejected'))->count(),
             ];
 
-            $rfcs = $this->applyFilters((clone $baseQuery)->with([
+            $rfcs = $this->orderFilteredRfcs($this->applyFilters((clone $baseQuery)->with([
                 'riskAssessment',
                 'application',
                 'submittedBy.opd',
-            ]))
-                ->latest()
-                ->paginate(10);
+            ])))->paginate(10);
 
             return view('livewire.change-requests.list-change-requests', [
                 'roleView' => 'pemohon',
@@ -189,13 +195,11 @@ class ListChangeRequests extends Component
                 'rejected' => ChangeRequest::whereIn('status', RfcStatus::valuesForGroup('rejected'))->count(),
             ];
 
-            $rfcs = $this->applyFilters(ChangeRequest::query()->with([
+            $rfcs = $this->orderFilteredRfcs($this->applyFilters(ChangeRequest::query()->with([
                 'riskAssessment',
                 'application',
                 'submittedBy.opd',
-            ]))
-                ->latest()
-                ->paginate(10);
+            ])))->paginate(10);
 
             return view('livewire.change-requests.list-change-requests', [
                 'roleView' => 'admin',
@@ -216,13 +220,11 @@ class ListChangeRequests extends Component
             'emergency' => ChangeRequest::where('change_type', 'emergency')->count(),
         ];
 
-        $rfcs = $this->applyFilters(ChangeRequest::query()->with([
+        $rfcs = $this->orderFilteredRfcs($this->applyFilters(ChangeRequest::query()->with([
             'riskAssessment',
             'application',
             'submittedBy.opd',
-        ]))
-            ->latest()
-            ->paginate(10);
+        ])))->paginate(10);
 
         return view('livewire.change-requests.list-change-requests', [
             'roleView' => 'change_manager',
@@ -232,12 +234,24 @@ class ListChangeRequests extends Component
         ] + $filterOptions);
     }
 
+    private function orderFilteredRfcs(Builder $query): Builder
+    {
+        return $this->queueFilter === 'incoming'
+            ? $query->oldest()
+            : $query->latest();
+    }
+
     private function applyFilters(Builder $query): Builder
     {
         return $query
+            ->when($this->queueFilter === 'incoming', fn (Builder $q) => $q->whereIn('status', [
+                RfcStatus::SUBMITTED->value,
+                RfcStatus::RETURNED_TO_ADMIN->value,
+            ]))
             ->when($this->search !== '', fn (Builder $q) => $q->where(fn (Builder $sub) => $sub
                 ->where('title', 'like', "%{$this->search}%")
-                ->orWhere('rfc_number', 'like', "%{$this->search}%")))
+                ->orWhere('rfc_number', 'like', "%{$this->search}%")
+                ->orWhere('ticket_number', 'like', "%{$this->search}%")))
             ->when($this->statusFilter !== '', fn (Builder $q) => $q->where('status', $this->statusFilter))
             ->when($this->categoryFilter !== '', fn (Builder $q) => $q->where('change_type', $this->categoryFilter))
             ->when($this->applicationFilter !== '', fn (Builder $q) => $q->where('application_id', $this->applicationFilter))

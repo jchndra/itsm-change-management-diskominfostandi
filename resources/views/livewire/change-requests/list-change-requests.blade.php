@@ -80,10 +80,12 @@
         </div>
     @elseif($roleView === 'admin')
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div class="bg-white p-5 rounded-2xl border border-blue-100 shadow-sm">
+            <a href="{{ route('change-requests.index', ['queue' => 'incoming']) }}"
+                class="group bg-white p-5 rounded-2xl border border-blue-100 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md">
                 <p class="text-xs font-medium text-blue-600">RFC Masuk</p>
                 <p class="text-2xl font-bold text-blue-900 mt-1">{{ $stats['incoming'] }}</p>
-            </div>
+                <p class="mt-2 text-[11px] font-semibold text-blue-500 group-hover:text-blue-700">Buka antrean buat tiket &rarr;</p>
+            </a>
             <div class="bg-white p-5 rounded-2xl border border-amber-100 shadow-sm">
                 <p class="text-xs font-medium text-amber-600">Perlu Revisi</p>
                 <p class="text-2xl font-bold text-amber-600 mt-1">{{ $stats['needs_revision'] }}</p>
@@ -142,7 +144,7 @@
             </div>
 
             <div class="flex items-center gap-3">
-                <input wire:model.live.debounce.300ms="search" type="text" placeholder="Cari No. RFC / Judul..."
+                <input wire:model.live.debounce.300ms="search" type="text" placeholder="Cari No. RFC / No. Tiket / Judul..."
                     class="px-3.5 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none w-48 md:w-64">
                 @if ($activeFilterCount > 0)
                     <span class="hidden rounded-full bg-blue-100 px-2.5 py-1 text-[10px] font-bold text-blue-700 sm:inline">
@@ -151,6 +153,29 @@
                 @endif
             </div>
         </div>
+
+        @if (auth()->user()?->can('rfc.review_completeness'))
+            <div class="flex flex-col gap-2 border-b border-slate-100 bg-blue-50/60 px-5 py-3 text-xs sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="font-bold text-blue-900">Antrean Buat Tiket Change</span>
+                    @if ($queueFilter === 'incoming')
+                        <span class="rounded-full bg-blue-100 px-2.5 py-1 text-[10px] font-semibold text-blue-700">
+                            Diajukan &amp; dikembalikan ke Admin, terlama dulu
+                        </span>
+                    @endif
+                </div>
+                @if ($queueFilter === 'incoming')
+                    <a href="{{ route('change-requests.index') }}" class="font-semibold text-blue-700 hover:text-blue-900">
+                        Tampilkan semua RFC
+                    </a>
+                @else
+                    <a href="{{ route('change-requests.index', ['queue' => 'incoming']) }}"
+                        class="font-semibold text-blue-700 hover:text-blue-900">
+                        Buka antrean buat tiket &rarr;
+                    </a>
+                @endif
+            </div>
+        @endif
 
         {{-- Panel filter lanjutan --}}
         <div class="grid grid-cols-1 gap-3 border-b border-slate-100 bg-slate-50/60 px-5 py-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
@@ -236,6 +261,9 @@
                     class="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-100">
                     <tr>
                         <th class="px-5 py-3">No. RFC</th>
+                        @if ($roleView !== 'pemohon')
+                            <th class="px-5 py-3">No. Tiket</th>
+                        @endif
                         <th class="px-5 py-3">Judul Perubahan</th>
                         <th class="px-5 py-3">Pemohon</th>
                         <th class="px-5 py-3">Tanggal</th>
@@ -252,6 +280,11 @@
                             <td data-label="No. RFC" class="px-5 py-3.5 font-bold text-blue-900">
                                 {{ $rfc->rfc_number }}
                             </td>
+                            @if ($roleView !== 'pemohon')
+                                <td data-label="No. Tiket" class="px-5 py-3.5 font-semibold text-slate-700">
+                                    {{ $rfc->ticket_number ?: '-' }}
+                                </td>
+                            @endif
                             <td data-label="Judul Perubahan" class="px-5 py-3.5 font-medium text-slate-800">
                                 {{ $rfc->title }}
                             </td>
@@ -289,7 +322,7 @@
                                 @if ($roleView === 'admin' && in_array($statusVal, [\App\Enums\RfcStatus::SUBMITTED, \App\Enums\RfcStatus::RETURNED_TO_ADMIN], true))
                                     <a href="{{ route('change-requests.review', $rfc) }}"
                                         class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-xs transition">
-                                        {{ $statusVal === \App\Enums\RfcStatus::RETURNED_TO_ADMIN ? 'Tindak Lanjut' : 'Verifikasi' }}
+                                        Buat Tiket
                                     </a>
                                 @endif
 
@@ -311,7 +344,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-5 py-8 text-center text-slate-400">
+                            <td colspan="{{ $roleView === 'pemohon' ? 6 : 7 }}" class="px-5 py-8 text-center text-slate-400">
                                 Belum ada dokumen RFC yang cocok dengan filter yang dipilih.
                             </td>
                         </tr>

@@ -24,7 +24,7 @@ function makeReturnedToAdminRfc(): ChangeRequest
     ]);
 }
 
-test('admin dapat mengembalikan rfc returned_to_admin ke ticket_created', function () {
+test('admin dapat membuat tiket dari rfc returned_to_admin', function () {
     $admin = User::factory()->create();
     $admin->assignRole('Admin');
 
@@ -34,10 +34,16 @@ test('admin dapat mengembalikan rfc returned_to_admin ke ticket_created', functi
 
     Livewire::test(ReviewCompleteness::class, ['rfc' => $rfc])
         ->set('action', RfcStatus::TICKET_CREATED->value)
+        ->set('priority', 'high')
+        ->set('category', 'application')
+        ->set('data_complete', true)
+        ->set('attachments_verified', true)
+        ->set('application_verified', true)
         ->call('submitReview')
         ->assertHasNoErrors();
 
-    expect($rfc->fresh()->status)->toBe(RfcStatus::TICKET_CREATED->value);
+    expect($rfc->fresh()->status)->toBe(RfcStatus::TICKET_CREATED->value)
+        ->and($rfc->fresh()->ticket_number)->toStartWith('CHG-');
 });
 
 test('admin dapat mengembalikan rfc returned_to_admin ke needs_revision', function () {

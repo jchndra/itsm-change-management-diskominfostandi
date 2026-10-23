@@ -22,8 +22,11 @@
         $unreadCount = $currentUser ? $currentUser->unreadNotifications()->count() : 0;
         $headerNotifications = $currentUser ? $currentUser->unreadNotifications()->take(5)->get() : collect();
         $canCreateRfc = $currentUser?->can('rfc.create') ?? false;
+        $canReviewCompleteness = $currentUser?->can('rfc.review_completeness') ?? false;
+        $isTicketQueueActive = request()->routeIs('change-requests.index')
+            && request()->query('queue') === 'incoming';
         $isDashboardActive = $isStaff
-            ? request()->routeIs('change-requests.index')
+            ? request()->routeIs('change-requests.index') && ! $isTicketQueueActive
             : request()->routeIs('requester.dashboard');
     @endphp
 
@@ -74,6 +77,20 @@
                     </x-slot:icon>
                     Dashboard
                 </x-sidebar-link>
+
+                @if ($canReviewCompleteness)
+                    <x-sidebar-link :href="route('change-requests.index', ['queue' => 'incoming'])" :active="$isTicketQueueActive">
+                        <x-slot:icon>
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                    d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v6a2.25 2.25 0 0 1-2.25 2.25H12M8.25 9H6.75A2.25 2.25 0 0 0 4.5 11.25v6A2.25 2.25 0 0 0 6.75 19.5h6a2.25 2.25 0 0 0 2.25-2.25V15" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                    d="m9 12.75 2.25 2.25 4.5-4.5" />
+                            </svg>
+                        </x-slot:icon>
+                        Buat Tiket Change
+                    </x-sidebar-link>
+                @endif
 
                 @if ($canCreateRfc)
                     <x-sidebar-link :href="route('change-requests.create')" :active="request()->routeIs('change-requests.create')">

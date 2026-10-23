@@ -37,6 +37,37 @@
         </div>
     </div>
 
+    {{-- Informasi Tiket dari Admin (baca-saja) --}}
+    @if (filled($rfc->ticket_number) || filled($rfc->priority) || filled($rfc->category) || filled($rfc->admin_note))
+        <div class="bg-white p-5 border border-slate-200 rounded-xl shadow-sm space-y-4">
+            <h2 class="text-sm font-bold text-slate-800">Informasi Tiket dari Admin</h2>
+            <div class="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
+                <div>
+                    <span class="block text-slate-500 text-xs font-semibold uppercase tracking-wider">Nomor Tiket</span>
+                    <strong class="text-slate-800">{{ $rfc->ticket_number ?: '-' }}</strong>
+                </div>
+                <div>
+                    <span class="block text-slate-500 text-xs font-semibold uppercase tracking-wider">Prioritas</span>
+                    <strong class="text-slate-800">
+                        {{ $rfc->priority instanceof \App\Enums\TicketPriority ? $rfc->priority->label() : (\App\Enums\TicketPriority::tryFrom((string) $rfc->priority)?->label() ?? '-') }}
+                    </strong>
+                </div>
+                <div>
+                    <span class="block text-slate-500 text-xs font-semibold uppercase tracking-wider">Kategori Layanan</span>
+                    <strong class="text-slate-800">
+                        {{ $rfc->category instanceof \App\Enums\ServiceCategory ? $rfc->category->label() : (\App\Enums\ServiceCategory::tryFrom((string) $rfc->category)?->label() ?? '-') }}
+                    </strong>
+                </div>
+            </div>
+            @if (filled($rfc->admin_note))
+                <div class="border-t border-slate-100 pt-3">
+                    <span class="block text-slate-500 text-xs font-semibold uppercase tracking-wider">Catatan Admin untuk Change Manager</span>
+                    <p class="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{{ $rfc->admin_note }}</p>
+                </div>
+            @endif
+        </div>
+    @endif
+
     @error('status')
         <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-medium text-rose-700">
             {{ $message }}</div>
