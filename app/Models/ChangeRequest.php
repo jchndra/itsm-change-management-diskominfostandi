@@ -22,6 +22,7 @@ class ChangeRequest extends Model
         'is_physical_letter',
         'physical_letter_number',
         'reason_for_change',
+        'description',
         'impact_description',
         'status',
         'change_type',
@@ -91,5 +92,10 @@ class ChangeRequest extends Model
     public function comments(): HasMany
     {
         return $this->hasMany(Comment::class);
+    }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(ChangeRequestAttachment::class);
     }
 }

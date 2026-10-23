@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ChangeRequestAttachmentController;
 use App\Livewire\Auth\Login;
 use App\Livewire\ChangeRequests\AssessRisk;
 use App\Livewire\ChangeRequests\CloseRfc;
@@ -74,6 +75,8 @@ Route::middleware('auth')->group(function () {
             ->withTrashed()
             ->name('deletions.show');
         Route::get('/{rfc}/edit', EditChangeRequest::class)->name('edit');
+        Route::get('/{rfc}/attachments/{attachment}', [ChangeRequestAttachmentController::class, 'show'])
+            ->name('attachments.show');
         Route::get('/{rfc}', ShowChangeRequest::class)->name('show'); // <-- SEKARANG MENGARAH KE KOMPONEN BARU
 
         // Rute Verifikasi Admin

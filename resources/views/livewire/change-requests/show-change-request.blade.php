@@ -2,6 +2,12 @@
 
     @php
         $isStaff = auth()->user()?->can('rfc.view_all') ?? false;
+        $submittedChangeType = match ((string) $rfc->change_type) {
+            'standard' => 'Standar',
+            'normal' => 'Normal',
+            'emergency' => 'Emergency',
+            default => null,
+        };
     @endphp
 
     <!-- Header & Tombol Kembali -->
@@ -48,6 +54,12 @@
                         <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Sistem / Aplikasi Target</span>
                         <p class="text-slate-800 font-medium">{{ $rfc->application?->name }}</p>
                     </div>
+                    @if (filled($submittedChangeType))
+                        <div>
+                            <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Kategori Perubahan</span>
+                            <p class="text-slate-800 font-medium">{{ $submittedChangeType }}</p>
+                        </div>
+                    @endif
                     <div>
                         <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Target Tanggal Pelaksanaan</span>
                         <p class="text-slate-800 font-medium">
@@ -85,22 +97,61 @@
                             </div>
                         @endif
                     @endif
+                    @if (filled($rfc->description))
+                        <div class="md:col-span-2">
+                            <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Deskripsi Perubahan</span>
+                            <p class="text-slate-800 whitespace-pre-wrap">{{ $rfc->description }}</p>
+                        </div>
+                    @endif
                     <div class="md:col-span-2">
                         <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Alasan Perubahan</span>
                         <p class="text-slate-800 whitespace-pre-wrap">{{ $rfc->reason_for_change }}</p>
                     </div>
-                    <div class="md:col-span-2">
-                        <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Estimasi Dampak</span>
-                        <p class="text-slate-800 whitespace-pre-wrap">{{ $rfc->impact_description }}</p>
-                    </div>
+                    @if (filled($rfc->impact_description))
+                        <div class="md:col-span-2">
+                            <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Estimasi Dampak</span>
+                            <p class="text-slate-800 whitespace-pre-wrap">{{ $rfc->impact_description }}</p>
+                        </div>
+                    @endif
                 </div>
             </div>
+
+            <!-- Lampiran -->
+            @if ($rfc->attachments->isNotEmpty())
+                <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Lampiran</h3>
+                    <ul class="divide-y divide-slate-100">
+                        @foreach ($rfc->attachments as $attachment)
+                            <li class="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-sm font-medium text-slate-800">{{ $attachment->original_name }}</p>
+                                    <p class="text-xs text-slate-400">
+                                        {{ number_format($attachment->size / 1024, 0, ',', '.') }} KB
+                                    </p>
+                                </div>
+                                <div class="flex items-center gap-3 text-xs font-semibold">
+                                    <a href="{{ route('change-requests.attachments.show', ['rfc' => $rfc, 'attachment' => $attachment]) }}"
+                                        target="_blank" rel="noopener" class="text-indigo-600 hover:text-indigo-700">
+                                        Lihat
+                                    </a>
+                                    <a href="{{ route('change-requests.attachments.show', ['rfc' => $rfc, 'attachment' => $attachment, 'download' => 1]) }}"
+                                        class="text-indigo-600 hover:text-indigo-700">
+                                        Unduh
+                                    </a>
+                                </div>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
 
             <!-- Ditetapkan Petugas -->
             @php
                 $officerCategory = $rfc->category ?? null;
                 $officerPriority = $rfc->priority ?? null;
-                $officerChangeType = $rfc->change_type ?: $rfc->riskAssessment?->classification;
+                $officerChangeType = filled($rfc->change_type)
+                    ? ($submittedChangeType ?: $rfc->change_type)
+                    : $rfc->riskAssessment?->classification;
             @endphp
             @if (filled($officerCategory) || filled($officerPriority) || filled($officerChangeType))
                 <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">

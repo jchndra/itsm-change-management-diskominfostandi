@@ -198,6 +198,8 @@ it('uses the same 100 character limit on the create form', function () {
     Livewire::test(CreateChangeRequest::class)
         ->set('title', 'Pengajuan dengan nomor surat terlalu panjang')
         ->set('application_id', (string) $this->application->id)
+        ->set('change_type', 'normal')
+        ->set('description', 'Deskripsi perubahan yang cukup jelas.')
         ->set('reason_for_change', 'Alasan perubahan yang cukup panjang.')
         ->set('impact_description', 'Dampak perubahan yang cukup jelas.')
         ->set('target_implementation_date', now()->addDays(3)->format('Y-m-d\TH:i'))

@@ -34,7 +34,7 @@ test('admin melihat panah kembali ke daftar RFC pada detail RFC', function () {
         ->html();
 
     expect($html)->toMatch(
-        '/<a[^>]+href="' . preg_quote(route('change-requests.index'), '/') . '"[^>]*class="[^"]*rounded-full/'
+        '/<a[^>]+href="'.preg_quote(route('change-requests.index'), '/').'"[^>]*class="[^"]*rounded-full/'
     );
 });
 
@@ -51,7 +51,7 @@ test('pemohon melihat panah kembali ke dashboard pemohon pada detail RFC', funct
         ->html();
 
     expect($html)->toMatch(
-        '/<a[^>]+href="' . preg_quote(route('requester.dashboard'), '/') . '"[^>]*class="[^"]*rounded-full/'
+        '/<a[^>]+href="'.preg_quote(route('requester.dashboard'), '/').'"[^>]*class="[^"]*rounded-full/'
     );
 });
 
@@ -102,6 +102,8 @@ test('RFC yang dibuat lewat komponen create memakai nomor berurutan dari generat
         Livewire::test(CreateChangeRequest::class)
             ->set('title', $title)
             ->set('application_id', (string) $application->id)
+            ->set('change_type', 'normal')
+            ->set('description', 'Deskripsi perubahan yang cukup jelas untuk pengujian.')
             ->set('reason_for_change', 'Alasan perubahan yang cukup panjang untuk pengujian.')
             ->set('impact_description', 'Dampak perubahan yang cukup jelas untuk pengujian.')
             ->set('target_implementation_date', now()->addDays(3)->format('Y-m-d\TH:i'))

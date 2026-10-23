@@ -18,6 +18,7 @@ class ShowChangeRequest extends Component
         $this->rfc = $rfc->load([
             'submittedBy.opd',
             'application.opd',
+            'attachments',
             'riskAssessment',
             'decisions.authority'
         ]);

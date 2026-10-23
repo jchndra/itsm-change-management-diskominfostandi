@@ -7,26 +7,36 @@ use App\Exceptions\InvalidRfcStatusTransitionException;
 use App\Livewire\ChangeRequests\Concerns\ValidatesChangeRequest;
 use App\Models\Application;
 use App\Models\ChangeRequest;
+use App\Models\ChangeRequestAttachment;
 use App\Models\User;
+use App\Services\RfcAttachmentService;
 use App\StateMachines\RfcStatusTransition;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Spatie\Activitylog\Models\Activity;
+use Throwable;
 
 #[Layout('layouts.app')]
 class EditChangeRequest extends Component
 {
     use ValidatesChangeRequest;
+    use WithFileUploads;
 
     public ChangeRequest $rfc;
 
     public string $title = '';
 
     public string $application_id = '';
+
+    public string $change_type = '';
+
+    public string $description = '';
 
     public string $reason_for_change = '';
 
@@ -38,6 +48,9 @@ class EditChangeRequest extends Component
 
     public string $physical_letter_number = '';
 
+    /** @var array<int, UploadedFile> */
+    public array $attachments = [];
+
     public function mount(ChangeRequest $rfc): void
     {
         $this->authorize('update', $rfc);
@@ -45,8 +58,10 @@ class EditChangeRequest extends Component
         $this->rfc = $rfc;
         $this->title = (string) $rfc->title;
         $this->application_id = (string) $rfc->application_id;
+        $this->change_type = (string) ($rfc->change_type ?? '');
+        $this->description = (string) ($rfc->description ?? '');
         $this->reason_for_change = (string) $rfc->reason_for_change;
-        $this->impact_description = (string) $rfc->impact_description;
+        $this->impact_description = (string) ($rfc->impact_description ?? '');
         $this->target_implementation_date = $rfc->target_implementation_date?->format('Y-m-d\TH:i') ?? '';
         $this->is_physical_letter = (bool) $rfc->is_physical_letter;
         $this->physical_letter_number = (string) ($rfc->physical_letter_number ?? '');
@@ -55,9 +70,22 @@ class EditChangeRequest extends Component
     public function saveChanges(): void
     {
         $this->authorize('update', $this->rfc);
-        $this->validateChangeRequest();
+        $this->validateChangeRequest($this->existingAttachmentCount());
 
-        DB::transaction(fn () => $this->persistChanges());
+        $newAttachments = [];
+
+        try {
+            DB::transaction(function () use (&$newAttachments): void {
+                $this->persistChanges();
+                $newAttachments = $this->storeAttachments();
+            });
+        } catch (Throwable $exception) {
+            app(RfcAttachmentService::class)->deleteStoredFiles($newAttachments);
+
+            throw $exception;
+        }
+
+        $this->attachments = [];
 
         session()->flash('message', 'Perubahan RFC berhasil disimpan.');
 
@@ -67,7 +95,8 @@ class EditChangeRequest extends Component
     public function submit(): void
     {
         $this->authorize('update', $this->rfc);
-        $this->validateChangeRequest();
+        $this->validateChangeRequest($this->existingAttachmentCount());
+        $this->validatePhysicalLetterAttachment($this->existingAttachmentCount());
 
         $oldStatus = RfcStatus::fromValue($this->rfc->status);
 
@@ -79,10 +108,12 @@ class EditChangeRequest extends Component
 
         /** @var User $user */
         $user = Auth::user();
+        $newAttachments = [];
 
         try {
-            DB::transaction(function () use ($oldStatus, $user): void {
+            DB::transaction(function () use ($oldStatus, $user, &$newAttachments): void {
                 $this->persistChanges();
+                $newAttachments = $this->storeAttachments();
 
                 if ($oldStatus === RfcStatus::NEEDS_REVISION) {
                     // Pastikan alasan revisi sudah tercatat sebelum rejection_note dikosongkan.
@@ -96,11 +127,18 @@ class EditChangeRequest extends Component
                 }
             });
         } catch (InvalidRfcStatusTransitionException $exception) {
+            app(RfcAttachmentService::class)->deleteStoredFiles($newAttachments);
             $this->rfc->refresh();
             $this->addError('status', $exception->getMessage());
 
             return;
+        } catch (Throwable $exception) {
+            app(RfcAttachmentService::class)->deleteStoredFiles($newAttachments);
+
+            throw $exception;
         }
+
+        $this->attachments = [];
 
         session()->flash(
             'message',
@@ -112,8 +150,24 @@ class EditChangeRequest extends Component
         $this->redirectRoute('change-requests.show', ['rfc' => $this->rfc], navigate: true);
     }
 
+    public function deleteAttachment(int $attachmentId): void
+    {
+        $this->authorize('update', $this->rfc);
+
+        /** @var ChangeRequestAttachment $attachment */
+        $attachment = $this->rfc->attachments()->findOrFail($attachmentId);
+
+        app(RfcAttachmentService::class)->delete($attachment, Auth::user());
+
+        $this->rfc->load('attachments');
+
+        session()->flash('message', 'Lampiran berhasil dihapus.');
+    }
+
     public function render(): View
     {
+        $this->rfc->loadMissing(['submittedBy.opd', 'attachments']);
+
         $isRevision = RfcStatus::fromValue($this->rfc->status) === RfcStatus::NEEDS_REVISION;
         $applications = Application::with('opd')->orderBy('name')->get();
 
@@ -121,7 +175,26 @@ class EditChangeRequest extends Component
             'applications' => $applications,
             'isRevision' => $isRevision,
             'revisionReason' => $isRevision ? $this->revisionReason() : null,
+            'requester' => $this->rfc->submittedBy,
+            'submittedAt' => $this->rfc->created_at,
         ])->title(($isRevision ? 'Revisi RFC - ' : 'Edit RFC - ').$this->rfc->rfc_number);
+    }
+
+    /**
+     * @return array<int, ChangeRequestAttachment>
+     */
+    private function storeAttachments(): array
+    {
+        if ($this->attachments === []) {
+            return [];
+        }
+
+        return app(RfcAttachmentService::class)->storeMany($this->rfc, $this->attachments, Auth::user());
+    }
+
+    private function existingAttachmentCount(): int
+    {
+        return $this->rfc->attachments()->count();
     }
 
     /**
@@ -137,11 +210,14 @@ class EditChangeRequest extends Component
         $this->rfc->update([
             'title' => $this->title,
             'application_id' => $this->application_id,
+            'change_type' => $this->change_type,
+            'description' => $this->description,
             'reason_for_change' => $this->reason_for_change,
-            'impact_description' => $this->impact_description,
+            'impact_description' => filled($this->impact_description) ? $this->impact_description : null,
             'target_implementation_date' => $this->target_implementation_date,
             'is_physical_letter' => $this->is_physical_letter,
             'physical_letter_number' => $this->is_physical_letter ? $this->physical_letter_number : null,
+            'emergency_unconfirmed' => $this->change_type === 'emergency',
         ]);
 
         $after = $this->rfc->only($fields);
@@ -213,6 +289,12 @@ class EditChangeRequest extends Component
     {
         return match ($field) {
             'application_id' => $applicationNames[(int) $value] ?? (filled($value) ? '#'.$value : '-'),
+            'change_type' => match ((string) $value) {
+                'standard' => 'Standar',
+                'normal' => 'Normal',
+                'emergency' => 'Emergency',
+                default => filled($value) ? (string) $value : '-',
+            },
             'is_physical_letter' => $value ? 'Ya' : 'Tidak',
             'target_implementation_date' => filled($value)
                 ? Carbon::parse($value)->format('d/m/Y H:i')
@@ -230,9 +312,11 @@ class EditChangeRequest extends Component
         return [
             'title' => 'Judul',
             'application_id' => 'Sistem / Aplikasi',
-            'reason_for_change' => 'Alasan Perubahan',
+            'change_type' => 'Kategori Perubahan',
+            'description' => 'Deskripsi Perubahan',
+            'reason_for_change' => 'Alasan Bisnis',
             'impact_description' => 'Estimasi Dampak',
-            'target_implementation_date' => 'Target Pelaksanaan',
+            'target_implementation_date' => 'Usulan Tanggal dan Jam',
             'is_physical_letter' => 'Surat Fisik',
             'physical_letter_number' => 'Nomor Surat',
         ];

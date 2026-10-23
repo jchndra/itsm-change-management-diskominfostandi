@@ -76,6 +76,24 @@ class RfcHistoryService
                 continue;
             }
 
+            if (in_array($eventType, ['attachment_added', 'attachment_deleted'], true)) {
+                $fileName = data_get($activity->properties, 'file_name');
+
+                $events[] = [
+                    'key' => $eventType,
+                    'label' => $eventType === 'attachment_added' ? 'Lampiran ditambahkan' : 'Lampiran dihapus',
+                    'note' => filled($fileName) ? 'Berkas: '.$fileName : null,
+                    'time' => $activity->created_at,
+                    'tone' => $eventType === 'attachment_added' ? 'info' : 'warning',
+                    'actor_name' => $forStaff ? $activity->causer?->name : null,
+                    'actor_role' => 'Pemohon',
+                    'legacy' => false,
+                    'order' => $sequence,
+                ];
+
+                continue;
+            }
+
             if (blank($newStatusRaw)) {
                 if ($this->isCreationActivity($activity)) {
                     $isSubmitted = str_contains(strtolower((string) $activity->description), 'diajukan');

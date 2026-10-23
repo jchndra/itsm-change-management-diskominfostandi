@@ -12,12 +12,15 @@ use App\Models\Opd;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
+    Storage::fake('local');
 });
 
 it('allows requester to view their own RFC', function () {
@@ -151,11 +154,14 @@ it('shows submitted request details and hides the old purpose section', function
     Livewire::test(CreateChangeRequest::class)
         ->set('title', 'Migrasi Sistem Persuratan')
         ->set('application_id', (string) $application->id)
+        ->set('change_type', 'normal')
+        ->set('description', "Modul persuratan akan dimigrasikan ke server baru.\nTujuannya menjaga ketersediaan layanan.")
         ->set('reason_for_change', "Server lama sudah tidak layak.\nPerlu migrasi ke server baru.")
         ->set('impact_description', "Layanan surat berhenti sementara.\nPengguna diberi notifikasi.")
         ->set('target_implementation_date', now()->addDays(3)->format('Y-m-d\TH:i'))
         ->set('is_physical_letter', true)
         ->set('physical_letter_number', 'ND-123/2026')
+        ->set('attachments', [UploadedFile::fake()->create('nota-dinas.pdf', 100, 'application/pdf')])
         ->call('save', RfcStatus::SUBMITTED->value)
         ->assertHasNoErrors();
 

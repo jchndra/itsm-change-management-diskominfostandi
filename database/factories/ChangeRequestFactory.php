@@ -15,12 +15,13 @@ class ChangeRequestFactory extends Factory
     public function definition(): array
     {
         return [
-            'rfc_number' => 'RFC-' . date('Y') . '-' . str_pad((string) $this->faker->unique()->numberBetween(1, 9999), 4, '0', STR_PAD_LEFT),
+            'rfc_number' => 'RFC-'.date('Y').'-'.str_pad((string) $this->faker->unique()->numberBetween(1, 9999), 4, '0', STR_PAD_LEFT),
             'title' => $this->faker->sentence(),
             'application_id' => Application::factory(),
             'submitted_by_id' => User::factory(),
             'created_by_id' => User::factory(),
             'is_physical_letter' => false,
+            'description' => $this->faker->paragraph(),
             'reason_for_change' => $this->faker->paragraph(),
             'impact_description' => $this->faker->paragraph(),
             'change_type' => 'normal',
