@@ -22,7 +22,7 @@
     <span class="flex-1 truncate">{{ $slot }}</span>
 
     @if (! is_null($badge))
-        <span
+        <span data-notification-badge
             class="grid h-5 min-w-5 place-items-center rounded-full bg-rose-500 px-1.5 text-[10px] font-bold leading-none text-white">{{ $badge }}</span>
     @endif
 </a>

@@ -8,6 +8,12 @@
             'emergency' => 'Emergency',
             default => null,
         };
+        $visibleDecisions = $isStaff
+            ? $rfc->decisions
+            : $rfc->decisions->filter(fn ($decision) => in_array($decision->decision_status, [
+                \App\Enums\DecisionStatus::APPROVED->value,
+                \App\Enums\DecisionStatus::REJECTED->value,
+            ], true));
     @endphp
 
     <!-- Header & Tombol Kembali -->
@@ -70,6 +76,10 @@
                         <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Tanggal Diajukan</span>
                         <p class="text-slate-800 font-medium">
                             {{ $rfc->created_at?->copy()->locale('id')->translatedFormat('d M Y, H:i') }}
+                            @if ($rfc->created_at)
+                                <span class="text-slate-500 font-normal">&middot;
+                                    {{ $rfc->created_at->copy()->locale('id')->diffForHumans() }}</span>
+                            @endif
                         </p>
                     </div>
                     <div>
@@ -145,13 +155,17 @@
                 </div>
             @endif
 
-            <!-- Ditetapkan Petugas -->
+            {{-- Ditetapkan Petugas --}}
             @php
-                $officerCategory = $rfc->category ?? null;
-                $officerPriority = $rfc->priority ?? null;
-                $officerChangeType = filled($rfc->change_type)
-                    ? ($submittedChangeType ?: $rfc->change_type)
-                    : $rfc->riskAssessment?->classification;
+                // Nilai di blok ini adalah hasil penetapan staf. Untuk Pemohon,
+                // kategori usulannya sudah tampil di Informasi Permintaan Perubahan.
+                $officerCategory = $isStaff ? ($rfc->category ?? null) : null;
+                $officerPriority = $isStaff ? ($rfc->priority ?? null) : null;
+                $officerChangeType = $isStaff
+                    ? (filled($rfc->change_type)
+                        ? ($submittedChangeType ?: $rfc->change_type)
+                        : $rfc->riskAssessment?->classification)
+                    : null;
             @endphp
             @if (filled($officerCategory) || filled($officerPriority) || filled($officerChangeType))
                 <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
@@ -205,11 +219,11 @@
             @endif
 
             <!-- Panel Keputusan -->
-            @if ($rfc->riskAssessment || $rfc->decisions->isNotEmpty())
+            @if (($isStaff && $rfc->riskAssessment) || $visibleDecisions->isNotEmpty())
                 <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
                     <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Hasil Evaluasi & Keputusan</h3>
 
-                    @if ($rfc->riskAssessment)
+                    @if ($isStaff && $rfc->riskAssessment)
                         <div class="mb-6">
                             <h4 class="text-sm font-bold text-slate-700 mb-3">Penilaian Risiko (Change Manager)</h4>
                             <div class="flex flex-wrap gap-4">
@@ -232,10 +246,10 @@
                         </div>
                     @endif
 
-                    @if ($rfc->decisions->isNotEmpty())
+                    @if ($visibleDecisions->isNotEmpty())
                         <div>
                             <h4 class="text-sm font-bold text-slate-700 mb-3">Keputusan Change Manager</h4>
-                            @foreach ($rfc->decisions as $decision)
+                            @foreach ($visibleDecisions as $decision)
                                 @php
                                     $decisionCard = match ($decision->decision_status) {
                                         \App\Enums\DecisionStatus::APPROVED->value => 'bg-green-50 border-green-100',
@@ -251,24 +265,22 @@
                                     };
                                 @endphp
                                 <div class="p-4 rounded-lg border {{ $decisionCard }}">
-                                    <div class="flex justify-between items-start mb-2">
-                                        <div>
-                                            <span
-                                                class="font-bold text-slate-800">{{ $decision->snapshot_authority_name ?? 'Otoritas' }}</span>
-                                            <span
-                                                class="block text-xs text-slate-500">{{ $decision->snapshot_authority_position }}</span>
-                                        </div>
-                                        <span class="text-xs font-bold px-2 py-1 rounded {{ $decisionBadge }}">
+                                    <div class="flex justify-between items-start gap-3 mb-2">
+                                        @if ($isStaff)
+                                            <div>
+                                                <span
+                                                    class="font-bold text-slate-800">{{ $decision->snapshot_authority_name ?? 'Otoritas' }}</span>
+                                                <span
+                                                    class="block text-xs text-slate-500">{{ $decision->snapshot_authority_position }}</span>
+                                            </div>
+                                        @endif
+                                        <span class="ml-auto text-xs font-bold px-2 py-1 rounded {{ $decisionBadge }}">
                                             {{ \App\Enums\DecisionStatus::labelFor($decision->decision_status) }}
                                         </span>
                                     </div>
                                     <p class="text-sm text-slate-700 mt-2"><span
                                             class="font-semibold">Catatan/Alasan:</span>
-                                        @if (!$isStaff && $decision->decision_status === \App\Enums\DecisionStatus::RETURNED_TO_ADMIN->value)
-                                            <span class="italic text-slate-500">Catatan internal tidak ditampilkan.</span>
-                                        @else
-                                            {{ $decision->reason ?? '-' }}
-                                        @endif
+                                        {{ $decision->reason ?? '-' }}
                                     </p>
                                 </div>
                             @endforeach

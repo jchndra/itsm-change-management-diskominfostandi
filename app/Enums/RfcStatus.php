@@ -5,9 +5,13 @@ namespace App\Enums;
 enum RfcStatus: string
 {
     public const LEGACY_COMPLETE = 'complete';
+
     public const LEGACY_ASSESSED = 'assessed';
+
     public const LEGACY_EXECUTING = 'executing';
+
     public const LEGACY_SUCCESSFUL = 'successful';
+
     public const LEGACY_ROLLED_BACK = 'rolled_back';
 
     case DRAFT = 'draft';
@@ -119,8 +123,16 @@ enum RfcStatus: string
     public function shouldNotifyPemohon(): bool
     {
         return match ($this) {
-            self::DRAFT, self::CANCELLED => false,
-            default => true,
+            self::SUBMITTED,
+            self::TICKET_CREATED,
+            self::NEEDS_REVISION,
+            self::APPROVED,
+            self::REJECTED,
+            self::IN_PROGRESS,
+            self::IMPLEMENTED,
+            self::CLOSED,
+            self::FAILED => true,
+            default => false,
         };
     }
 

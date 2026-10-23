@@ -228,9 +228,9 @@
                 'chevron' => 'text-emerald-400',
             ],
             [
-                'label' => \App\Enums\RfcStatus::groupLabel('rejected'),
+                'label' => 'Ditolak',
                 'value' => $stats['rejected'],
-                'hint' => 'Tidak dapat diproses',
+                'hint' => 'Ditolak atau tidak terlaksana',
                 'wrapper' => 'border-rose-200 bg-rose-50/70 hover:border-rose-300',
                 'icon' => 'bg-rose-100 text-rose-600',
                 'path' => 'm9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
@@ -242,7 +242,7 @@
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         @foreach ($cards as $card)
             <a href="{{ route('change-requests.index') }}" wire:navigate
-                class="group flex items-center gap-4 rounded-2xl border p-5 shadow-sm transition {{ $card['wrapper'] }}">
+                class="group flex h-full min-h-[112px] items-center gap-4 rounded-2xl border p-5 shadow-sm transition {{ $card['wrapper'] }}">
                 <span class="grid h-12 w-12 shrink-0 place-items-center rounded-xl {{ $card['icon'] }}">
                     <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
@@ -251,7 +251,7 @@
                 </span>
 
                 <div class="min-w-0 flex-1">
-                    <p class="text-sm font-semibold text-slate-700">{{ $card['label'] }}</p>
+                    <p class="whitespace-nowrap text-sm font-semibold text-slate-700">{{ $card['label'] }}</p>
                     <p class="mt-0.5 text-[26px] font-bold leading-none text-slate-800">{{ $card['value'] }}</p>
                     <p class="mt-1.5 text-[11px] text-slate-500">{{ $card['hint'] }}</p>
                 </div>
@@ -302,8 +302,8 @@
                                     {{ $rfc->title }}
                                 </td>
                                 <td data-label="Tanggal" class="whitespace-nowrap px-5 py-4 text-[12px] leading-tight text-slate-500">
-                                    {{ $rfc->created_at->format('d M Y') }}<br>
-                                    <span class="text-slate-400">{{ $rfc->created_at->format('H:i') }}</span>
+                                    {{ $rfc->created_at?->copy()->locale('id')->translatedFormat('d M Y') }}<br>
+                                    <span class="text-slate-400">{{ $rfc->created_at?->copy()->locale('id')->translatedFormat('H:i') }}</span>
                                 </td>
                                 <td data-label="Status" class="whitespace-nowrap px-5 py-4">
                                     <x-status-badge :status="$rfc->status" />
@@ -474,14 +474,17 @@
 
                 <div class="space-y-3.5">
                     @forelse ($notifications as $notification)
-                        <a href="{{ route('notifications.index') }}" wire:navigate class="flex items-start gap-3">
+                        <a href="{{ route('notifications.index', ['open' => $notification->id]) }}"
+                            class="flex items-start gap-3">
                             <x-notification-icon :status="data_get($notification->data, 'status')" class="h-8 w-8" />
                             <div class="min-w-0 flex-1">
                                 <p class="line-clamp-2 text-[12px] leading-snug text-slate-700">
                                     {{ data_get($notification->data, 'message', 'Notifikasi baru') }}
                                 </p>
                                 <p class="mt-0.5 text-[10px] text-slate-400">
-                                    {{ $notification->created_at->format('d M Y, H:i') }}
+                                    {{ $notification->created_at?->copy()->locale('id')->translatedFormat('d M Y, H:i') }}
+                                    &middot;
+                                    {{ $notification->created_at?->copy()->locale('id')->diffForHumans() }}
                                 </p>
                             </div>
                         </a>

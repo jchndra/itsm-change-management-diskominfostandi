@@ -110,7 +110,7 @@ test('keputusan returned_to_admin tidak menandai persetujuan', function () {
     Livewire::test(ShowChangeRequest::class, ['rfc' => $rfc->fresh()])
         ->assertOk()
         ->assertSee('Sedang ditinjau')
-        ->assertSee('Dikembalikan ke Admin')
+        ->assertDontSee('Dikembalikan ke Admin')
         ->assertDontSee('Disetujui')
         ->assertDontSee('Persetujuan');
 });

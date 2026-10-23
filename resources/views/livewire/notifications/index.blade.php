@@ -33,8 +33,8 @@
             </div>
 
             <p class="text-xs text-slate-500">
-                {{ $totalCount }} notifikasi &middot; <span class="font-semibold text-rose-600">{{ $unreadCount }}
-                    belum dibaca</span>
+                {{ $totalCount }} notifikasi &middot;
+                <span class="font-semibold text-rose-600">{{ $unreadCount }} belum dibaca</span>
             </p>
         </div>
 
@@ -62,8 +62,9 @@
                             {{ data_get($notification->data, 'message', 'Pesan notifikasi') }}
                         </p>
                         <p class="mt-1 text-xs text-slate-400">
-                            {{ $notification->created_at->format('d M Y, H:i') }} &middot;
-                            {{ $notification->created_at->diffForHumans() }}
+                            {{ $notification->created_at?->copy()->locale('id')->translatedFormat('d M Y, H:i') }}
+                            &middot;
+                            {{ $notification->created_at?->copy()->locale('id')->diffForHumans() }}
                         </p>
                     </div>
 

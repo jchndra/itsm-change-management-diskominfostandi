@@ -17,6 +17,19 @@ class Notifications extends Component
 
     public string $filter = 'all';
 
+    public function mount(): void
+    {
+        $notificationId = request()->query('open');
+
+        if (! is_string($notificationId) || $notificationId === '') {
+            return;
+        }
+
+        // Membuka notifikasi dari lonceng/dashboard: tandai dibaca lalu arahkan
+        // ke RFC terkait. Kepemilikan diverifikasi di markAsRead().
+        $this->markAsRead($notificationId);
+    }
+
     public function markAsRead(string $id): void
     {
         /** @var User $user */
@@ -24,9 +37,7 @@ class Notifications extends Component
 
         $notification = $user->notifications()->whereKey($id)->first();
 
-        if (! $notification) {
-            return;
-        }
+        abort_if(! $notification, 403);
 
         $notification->markAsRead();
 
@@ -48,7 +59,8 @@ class Notifications extends Component
 
         $user->unreadNotifications->markAsRead();
 
-        $this->dispatch('$refresh');
+        // Muat ulang halaman agar lencana sidebar dan lonceng ikut diperbarui.
+        $this->redirectRoute('notifications.index', navigate: true);
     }
 
     public function setFilter(string $filter): void

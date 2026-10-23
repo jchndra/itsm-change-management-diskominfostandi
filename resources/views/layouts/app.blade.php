@@ -232,9 +232,9 @@
                                         d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
                                 </svg>
                                 @if ($unreadCount > 0)
-                                    <span
+                                    <span data-notification-badge
                                         class="absolute right-0 top-0 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">
-                                        {{ $unreadCount > 9 ? '9+' : $unreadCount }}
+                                        {{ $unreadCount }}
                                     </span>
                                 @endif
                             </button>
@@ -248,7 +248,7 @@
                                 </div>
                                 <div class="max-h-80 overflow-y-auto p-2">
                                     @forelse ($headerNotifications as $notification)
-                                        <a href="{{ route('notifications.index') }}" wire:navigate
+                                        <a href="{{ route('notifications.index', ['open' => $notification->id]) }}"
                                             class="flex gap-3 rounded-xl p-2.5 transition hover:bg-slate-50">
                                             <x-notification-icon :status="data_get($notification->data, 'status')"
                                                 class="h-8 w-8" />
@@ -256,7 +256,7 @@
                                                 <p class="line-clamp-2 text-xs leading-relaxed text-slate-700">
                                                     {{ data_get($notification->data, 'message', 'Notifikasi baru') }}</p>
                                                 <p class="mt-1 text-[10px] text-slate-400">
-                                                    {{ $notification->created_at->diffForHumans() }}</p>
+                                                    {{ $notification->created_at?->copy()->locale('id')->diffForHumans() }}</p>
                                             </div>
                                         </a>
                                     @empty

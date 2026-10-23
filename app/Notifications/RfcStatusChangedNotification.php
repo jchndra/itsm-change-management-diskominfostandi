@@ -38,15 +38,15 @@ class RfcStatusChangedNotification extends Notification
         $number = $this->rfc->rfc_number;
 
         return match ($this->newStatus) {
-            RfcStatus::SUBMITTED => "RFC {$number} telah diajukan.",
-            RfcStatus::NEEDS_REVISION => $this->withNote("RFC {$number} perlu revisi"),
-            RfcStatus::TICKET_CREATED, RfcStatus::RETURNED_TO_ADMIN => "RFC {$number} sedang ditinjau.",
-            RfcStatus::APPROVED => "RFC {$number} telah disetujui.",
-            RfcStatus::REJECTED => "RFC {$number} ditolak.",
-            RfcStatus::IN_PROGRESS => "RFC {$number} sedang dikerjakan.",
-            RfcStatus::IMPLEMENTED, RfcStatus::CLOSED => "RFC {$number} telah selesai.",
-            RfcStatus::FAILED => "RFC {$number} gagal dilaksanakan.",
-            RfcStatus::DRAFT, RfcStatus::CANCELLED => "RFC {$number} diperbarui.",
+            RfcStatus::SUBMITTED => "RFC {$number} berhasil diajukan",
+            RfcStatus::NEEDS_REVISION => $this->withNote("RFC {$number} perlu direvisi"),
+            RfcStatus::TICKET_CREATED => "RFC {$number} sedang ditinjau",
+            RfcStatus::APPROVED => "RFC {$number} disetujui",
+            RfcStatus::REJECTED => $this->withNote("RFC {$number} ditolak"),
+            RfcStatus::IN_PROGRESS => "RFC {$number} sedang dikerjakan",
+            RfcStatus::IMPLEMENTED, RfcStatus::CLOSED => "RFC {$number} telah selesai",
+            RfcStatus::FAILED => "RFC {$number} gagal dilaksanakan",
+            RfcStatus::DRAFT, RfcStatus::CANCELLED => "RFC {$number} diperbarui",
         };
     }
 
@@ -54,6 +54,6 @@ class RfcStatusChangedNotification extends Notification
     {
         $note = $this->note ?? $this->rfc->rejection_note;
 
-        return $note ? "{$message}: {$note}" : "{$message}.";
+        return filled($note) ? "{$message}: ".trim((string) $note) : $message;
     }
 }

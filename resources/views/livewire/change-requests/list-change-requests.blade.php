@@ -259,7 +259,10 @@
                                 {{ $rfc->submittedBy?->name ?? '-' }}
                             </td>
                             <td data-label="Tanggal" class="px-5 py-3.5 text-slate-500">
-                                {{ $rfc->created_at?->format('d M Y') }}
+                                {{ $rfc->created_at?->copy()->locale('id')->translatedFormat('d M Y') }}
+                                <span class="block text-[11px] text-slate-400">
+                                    {{ $rfc->created_at?->copy()->locale('id')->diffForHumans() }}
+                                </span>
                             </td>
                             <td data-label="Status" class="px-5 py-3.5">
                                 <x-status-badge :status="$statusVal ?? $rfc->status" />
