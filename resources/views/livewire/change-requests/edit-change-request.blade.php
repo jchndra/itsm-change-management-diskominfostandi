@@ -12,10 +12,13 @@
                     : 'Perbarui data RFC sebelum mengajukannya.' }}
             </p>
         </div>
-        <a href="{{ route('change-requests.show', $rfc) }}" wire:navigate
-            class="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-            Batal
-        </a>
+        <div class="flex flex-wrap items-center gap-2">
+            <livewire:change-requests.cancel-rfc :rfc="$rfc" />
+            <a href="{{ route('change-requests.show', $rfc) }}" wire:navigate
+                class="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                Batal
+            </a>
+        </div>
     </div>
 
     @if ($isRevision && filled($revisionReason))

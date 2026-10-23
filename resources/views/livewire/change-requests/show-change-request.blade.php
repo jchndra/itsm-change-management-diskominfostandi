@@ -37,11 +37,17 @@
             <p class="text-sm text-slate-500 mt-1 ml-12">{{ $rfc->title }}</p>
         </div>
 
-        @if (! $rfc->trashed() && auth()->user()?->can('update', $rfc))
-            <a href="{{ route('change-requests.edit', $rfc) }}" wire:navigate
-                class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700">
-                {{ $status === \App\Enums\RfcStatus::NEEDS_REVISION ? 'Revisi RFC' : 'Edit RFC' }}
-            </a>
+        @if (! $rfc->trashed())
+            <div class="flex flex-wrap items-center gap-2">
+                @if (auth()->user()?->can('update', $rfc))
+                    <a href="{{ route('change-requests.edit', $rfc) }}" wire:navigate
+                        class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700">
+                        {{ $status === \App\Enums\RfcStatus::NEEDS_REVISION ? 'Revisi RFC' : 'Edit RFC' }}
+                    </a>
+                @endif
+
+                <livewire:change-requests.cancel-rfc :rfc="$rfc" />
+            </div>
         @endif
     </div>
 
@@ -215,6 +221,18 @@
                 <div class="bg-amber-50 rounded-xl border border-amber-100 p-6">
                     <h3 class="text-lg font-bold text-amber-800 mb-2">Alasan Permintaan Revisi</h3>
                     <p class="text-sm text-amber-900 whitespace-pre-wrap">{{ $revisionReason }}</p>
+                </div>
+            @endif
+
+            @php
+                $cancellationReason = $status === \App\Enums\RfcStatus::CANCELLED
+                    ? app(\App\Services\RfcHistoryService::class)->cancellationReason($rfc)
+                    : null;
+            @endphp
+            @if (filled($cancellationReason))
+                <div class="bg-slate-50 rounded-xl border border-slate-200 p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-2">Alasan Pembatalan</h3>
+                    <p class="text-sm text-slate-700 whitespace-pre-wrap">{{ $cancellationReason }}</p>
                 </div>
             @endif
 

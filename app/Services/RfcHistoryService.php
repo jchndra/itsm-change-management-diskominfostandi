@@ -208,13 +208,19 @@ class RfcHistoryService
                     RfcStatus::REJECTED->value,
                     RfcStatus::NEEDS_REVISION->value,
                     RfcStatus::FAILED->value,
+                    RfcStatus::CANCELLED->value,
                     'rfc_revised',
                     'revision_reason',
                 ], true)) {
                     $event['note'] = null;
                 }
 
-                $event['actor_name'] = null;
+                // Pelaku pembatalan boleh terlihat oleh Pemohon hanya jika pelakunya
+                // sendiri, bukan staf yang membatalkan lewat jalur lain.
+                if ($event['key'] !== RfcStatus::CANCELLED->value
+                    || ($event['actor_role'] ?? null) !== 'Pemohon') {
+                    $event['actor_name'] = null;
+                }
             }
             unset($event);
         }
@@ -223,6 +229,21 @@ class RfcHistoryService
             'events' => $events,
             'next_steps' => $this->nextSteps($rfc),
         ];
+    }
+
+    public function cancellationReason(ChangeRequest $rfc): ?string
+    {
+        $activity = Activity::query()
+            ->where('subject_type', $rfc->getMorphClass())
+            ->where('subject_id', $rfc->id)
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->get()
+            ->first(fn (Activity $activity): bool => data_get($activity->properties, 'new_status') === RfcStatus::CANCELLED->value
+                && filled(data_get($activity->properties, 'note'))
+            );
+
+        return $activity ? trim((string) data_get($activity->properties, 'note')) : null;
     }
 
     /**
@@ -401,7 +422,9 @@ class RfcHistoryService
         int $order,
     ): array {
         $actorRole = $this->actorRole($activity->causer, $oldStatus, $status);
-        $actorName = $forStaff ? $activity->causer?->name : null;
+        $canShowActor = $forStaff
+            || ($status === RfcStatus::CANCELLED && $actorRole === 'Pemohon');
+        $actorName = $canShowActor ? $activity->causer?->name : null;
         $safeNote = filled($note) ? trim((string) $note) : null;
 
         [$label, $tone, $key] = match ($status) {
@@ -688,6 +711,7 @@ class RfcHistoryService
                 RfcStatus::SUBMITTED,
                 RfcStatus::RETURNED_TO_ADMIN,
             ], true) ? 'Admin' : 'Change Manager',
+            RfcStatus::CANCELLED => 'Pemohon',
             default => null,
         };
     }

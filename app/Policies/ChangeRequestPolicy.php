@@ -37,6 +37,17 @@ class ChangeRequestPolicy
         return false;
     }
 
+    public function cancel(User $user, ChangeRequest $rfc): bool
+    {
+        if ($rfc->trashed()) {
+            return false;
+        }
+
+        // Pembatalan oleh Pemohon hanya untuk RFC miliknya yang masih dapat direvisi.
+        return $rfc->submitted_by_id === $user->id
+            && in_array(RfcStatus::fromValue($rfc->status), [RfcStatus::DRAFT, RfcStatus::NEEDS_REVISION], true);
+    }
+
     public function delete(User $user, ChangeRequest $rfc): bool
     {
         if ($rfc->trashed()) {
