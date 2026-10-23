@@ -54,31 +54,68 @@ it('blocks requester from viewing another users RFC with 403', function () {
         ->assertForbidden(); // Memastikan respons HTTP 403
 });
 
-it('hides the edit button because the edit feature is not available yet', function () {
-    // Perilaku lama: tombol "Edit / Revisi RFC" tampil untuk status draft/needs_revision,
-    // tetapi mengarah ke halaman create. Fitur edit belum ada, jadi tombol disembunyikan.
+it('shows the edit button only for the owner with an editable status', function () {
+    // Perilaku lama: tombol edit disembunyikan karena fitur edit belum ada.
+    // Sekarang tombol harus muncul hanya untuk pemilik draft/needs_revision dan tidak untuk RFC terhapus.
     $requester = User::factory()->create();
     $requester->assignRole('Pemohon');
 
-    // Test for Draft
+    $otherRequester = User::factory()->create();
+    $otherRequester->assignRole('Pemohon');
+
     $draftRfc = ChangeRequest::factory()->create([
         'submitted_by_id' => $requester->id,
         'status' => RfcStatus::DRAFT->value,
     ]);
 
-    // Test for Approved
+    $revisionRfc = ChangeRequest::factory()->create([
+        'submitted_by_id' => $requester->id,
+        'status' => RfcStatus::NEEDS_REVISION->value,
+        'rejection_note' => 'Lengkapi dokumen pendukung.',
+    ]);
+
+    $submittedRfc = ChangeRequest::factory()->create([
+        'submitted_by_id' => $requester->id,
+        'status' => RfcStatus::SUBMITTED->value,
+    ]);
+
     $approvedRfc = ChangeRequest::factory()->create([
         'submitted_by_id' => $requester->id,
         'status' => RfcStatus::APPROVED->value,
     ]);
 
+    $deletedDraftRfc = ChangeRequest::factory()->create([
+        'submitted_by_id' => $requester->id,
+        'status' => RfcStatus::DRAFT->value,
+    ]);
+    $deletedDraftRfc->delete();
+
     $this->actingAs($requester);
 
     Livewire::test(ShowChangeRequest::class, ['rfc' => $draftRfc])
-        ->assertDontSee('Edit / Revisi RFC');
+        ->assertSee('Edit RFC')
+        ->assertDontSee('Revisi RFC');
+
+    Livewire::test(ShowChangeRequest::class, ['rfc' => $revisionRfc])
+        ->assertSee('Revisi RFC')
+        ->assertDontSee('Edit RFC');
+
+    Livewire::test(ShowChangeRequest::class, ['rfc' => $submittedRfc])
+        ->assertDontSee('Edit RFC')
+        ->assertDontSee('Revisi RFC');
 
     Livewire::test(ShowChangeRequest::class, ['rfc' => $approvedRfc])
-        ->assertDontSee('Edit / Revisi RFC');
+        ->assertDontSee('Edit RFC')
+        ->assertDontSee('Revisi RFC');
+
+    Livewire::test(ShowChangeRequest::class, ['rfc' => $deletedDraftRfc])
+        ->assertDontSee('Edit RFC')
+        ->assertDontSee('Revisi RFC');
+
+    $this->actingAs($otherRequester);
+
+    Livewire::test(ShowChangeRequest::class, ['rfc' => $draftRfc])
+        ->assertForbidden();
 });
 
 it('allows change manager to bypass ownership check', function () {

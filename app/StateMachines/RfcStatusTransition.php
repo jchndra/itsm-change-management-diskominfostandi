@@ -59,6 +59,7 @@ class RfcStatusTransition
                 ->withProperties([
                     'old_status' => $oldStatus,
                     'new_status' => $newStatus->value,
+                    'note' => $note,
                 ])
                 ->log("Status RFC diubah dari {$currentStatus->label()} menjadi {$newStatus->label()}.");
         }

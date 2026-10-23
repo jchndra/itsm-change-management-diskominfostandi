@@ -5,6 +5,7 @@ use App\Livewire\ChangeRequests\AssessRisk;
 use App\Livewire\ChangeRequests\CloseRfc;
 use App\Livewire\ChangeRequests\CreateChangeRequest;
 use App\Livewire\ChangeRequests\DeletionHistory;
+use App\Livewire\ChangeRequests\EditChangeRequest;
 use App\Livewire\ChangeRequests\ImplementChange;
 use App\Livewire\ChangeRequests\ListChangeRequests;
 use App\Livewire\ChangeRequests\RecordDecision;
@@ -72,6 +73,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/deletion-history/{rfc}', ShowDeletedChangeRequest::class)
             ->withTrashed()
             ->name('deletions.show');
+        Route::get('/{rfc}/edit', EditChangeRequest::class)->name('edit');
         Route::get('/{rfc}', ShowChangeRequest::class)->name('show'); // <-- SEKARANG MENGARAH KE KOMPONEN BARU
 
         // Rute Verifikasi Admin

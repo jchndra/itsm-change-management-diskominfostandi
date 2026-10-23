@@ -135,6 +135,17 @@ class AssessRisk extends Component
             $assessmentData
         );
 
+        activity('rfc')
+            ->performedOn($this->rfc)
+            ->causedBy($user)
+            ->withProperties([
+                'event' => 'risk_assessment',
+                'risk_level' => $this->risk_level,
+                'impact_level' => $this->impact_level,
+                'classification' => $this->classification,
+            ])
+            ->log('Analisis risiko oleh Change Manager');
+
         session()->flash('message', 'Penilaian risiko dan klasifikasi RFC berhasil disimpan.');
         $this->redirectRoute('change-requests.index');
     }

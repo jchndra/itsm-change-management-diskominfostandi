@@ -331,8 +331,10 @@
                                                 <a href="{{ route('change-requests.show', $rfc) }}" wire:navigate
                                                     class="block px-3.5 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">Lihat Detail</a>
                                                 @if (in_array(\App\Enums\RfcStatus::fromValue($rfc->status), [\App\Enums\RfcStatus::DRAFT, \App\Enums\RfcStatus::NEEDS_REVISION], true))
-                                                    <a href="{{ route('change-requests.show', $rfc) }}" wire:navigate
-                                                        class="block px-3.5 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">Edit / Revisi</a>
+                                                    <a href="{{ route('change-requests.edit', $rfc) }}" wire:navigate
+                                                        class="block px-3.5 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
+                                                        {{ \App\Enums\RfcStatus::fromValue($rfc->status) === \App\Enums\RfcStatus::NEEDS_REVISION ? 'Revisi RFC' : 'Edit RFC' }}
+                                                    </a>
                                                 @endif
                                                 @if (\App\Enums\RfcStatus::fromValue($rfc->status) === \App\Enums\RfcStatus::DRAFT)
                                                     <livewire:change-requests.delete-rfc :rfc="$rfc" variant="menu"
@@ -439,7 +441,7 @@
                                     </p>
                                     @if ($step['time'])
                                         <p class="mt-0.5 text-[10px] text-slate-400">
-                                            {{ $step['time']->format('d M Y, H:i') }}
+                                            {{ $step['time']->copy()->locale('id')->translatedFormat('d M Y, H:i') }}
                                         </p>
                                     @endif
                                 </div>

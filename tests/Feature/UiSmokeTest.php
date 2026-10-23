@@ -52,5 +52,6 @@ it('renders dashboard timeline states for active rfc', function () {
         ->test(Dashboard::class)
         ->assertOk()
         ->assertSee('RFC-2026-9001')
-        ->assertSee('RFC disetujui untuk diimplementasikan');
+        ->assertSee('Dikerjakan')
+        ->assertSee('Review Change Manager');
 });

@@ -3,6 +3,7 @@
 namespace App\Livewire\ChangeRequests;
 
 use App\Enums\RfcStatus;
+use App\Livewire\ChangeRequests\Concerns\ValidatesChangeRequest;
 use App\Models\Application;
 use App\Models\ChangeRequest;
 use App\Models\User;
@@ -16,6 +17,7 @@ use Livewire\WithFileUploads;
 #[Layout('layouts.app')]
 class CreateChangeRequest extends Component
 {
+    use ValidatesChangeRequest;
     use WithFileUploads;
 
     public string $title = '';
@@ -35,25 +37,7 @@ class CreateChangeRequest extends Component
     {
         $this->authorize('create', ChangeRequest::class);
 
-        $this->validate([
-            'title' => 'required|string|max:255',
-            'application_id' => 'required|exists:applications,id',
-            'reason_for_change' => 'required|string|min:10',
-            'impact_description' => 'required|string|min:10',
-            'target_implementation_date' => 'required|date|after:now',
-            'is_physical_letter' => 'boolean',
-            'physical_letter_number' => 'nullable|required_if:is_physical_letter,true|string|max:255',
-        ], [
-            'title.required' => 'Judul perubahan wajib diisi.',
-            'application_id.required' => 'Silakan pilih aplikasi/sistem tujuan.',
-            'reason_for_change.required' => 'Alasan perubahan wajib diisi.',
-            'reason_for_change.min' => 'Alasan perubahan minimal 10 karakter.',
-            'impact_description.required' => 'Deskripsi dampak sistem wajib diisi.',
-            'impact_description.min' => 'Deskripsi dampak minimal 10 karakter.',
-            'target_implementation_date.required' => 'Target tanggal pelaksanaan wajib diisi.',
-            'target_implementation_date.after' => 'Tanggal pelaksanaan harus di masa mendatang.',
-            'physical_letter_number.required_if' => 'Nomor surat fisik wajib diisi jika opsi surat fisik dipilih.',
-        ]);
+        $this->validateChangeRequest();
 
         /** @var User $user */
         $user = Auth::user();
@@ -81,6 +65,11 @@ class CreateChangeRequest extends Component
         activity('rfc')
             ->performedOn($rfc)
             ->causedBy($user)
+            ->withProperties([
+                'old_status' => null,
+                'new_status' => $status->value,
+                'note' => null,
+            ])
             ->log($status === RfcStatus::SUBMITTED ? 'RFC resmi diajukan' : 'Draft RFC disimpan');
 
         $statusMessage = $status === RfcStatus::SUBMITTED ? 'berhasil diajukan' : 'berhasil disimpan sebagai draft';

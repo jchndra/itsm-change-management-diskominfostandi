@@ -270,6 +270,13 @@
                                     Detail
                                 </a>
 
+                                @if ($roleView === 'pemohon' && auth()->user()?->can('update', $rfc))
+                                    <a href="{{ route('change-requests.edit', $rfc) }}"
+                                        class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg text-xs transition">
+                                        {{ $statusVal === \App\Enums\RfcStatus::NEEDS_REVISION ? 'Revisi' : 'Edit' }}
+                                    </a>
+                                @endif
+
                                 @if ($roleView === 'pemohon' && $statusVal === \App\Enums\RfcStatus::DRAFT)
                                     <livewire:change-requests.delete-rfc :rfc="$rfc" variant="button"
                                         :key="'delete-rfc-' . $rfc->id" />

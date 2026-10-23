@@ -25,7 +25,12 @@
             <p class="text-sm text-slate-500 mt-1 ml-12">{{ $rfc->title }}</p>
         </div>
 
-        {{-- Tombol "Edit / Revisi RFC" disembunyikan sementara karena fitur edit RFC belum tersedia. --}}
+        @if (! $rfc->trashed() && auth()->user()?->can('update', $rfc))
+            <a href="{{ route('change-requests.edit', $rfc) }}" wire:navigate
+                class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700">
+                {{ $status === \App\Enums\RfcStatus::NEEDS_REVISION ? 'Revisi RFC' : 'Edit RFC' }}
+            </a>
+        @endif
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
@@ -178,10 +183,23 @@
 
                     @if ($rfc->decisions->isNotEmpty())
                         <div>
-                            <h4 class="text-sm font-bold text-slate-700 mb-3">Keputusan Otorisasi (CAB/ECAB)</h4>
+                            <h4 class="text-sm font-bold text-slate-700 mb-3">Keputusan Change Manager</h4>
                             @foreach ($rfc->decisions as $decision)
-                                <div
-                                    class="p-4 rounded-lg border {{ $decision->decision_status === \App\Enums\DecisionStatus::APPROVED->value ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100' }}">
+                                @php
+                                    $decisionCard = match ($decision->decision_status) {
+                                        \App\Enums\DecisionStatus::APPROVED->value => 'bg-green-50 border-green-100',
+                                        \App\Enums\DecisionStatus::REJECTED->value => 'bg-rose-50 border-rose-100',
+                                        \App\Enums\DecisionStatus::RETURNED_TO_ADMIN->value => 'bg-amber-50 border-amber-100',
+                                        default => 'bg-slate-50 border-slate-200',
+                                    };
+                                    $decisionBadge = match ($decision->decision_status) {
+                                        \App\Enums\DecisionStatus::APPROVED->value => 'bg-green-200 text-green-800',
+                                        \App\Enums\DecisionStatus::REJECTED->value => 'bg-rose-200 text-rose-800',
+                                        \App\Enums\DecisionStatus::RETURNED_TO_ADMIN->value => 'bg-amber-200 text-amber-800',
+                                        default => 'bg-slate-200 text-slate-700',
+                                    };
+                                @endphp
+                                <div class="p-4 rounded-lg border {{ $decisionCard }}">
                                     <div class="flex justify-between items-start mb-2">
                                         <div>
                                             <span
@@ -189,8 +207,7 @@
                                             <span
                                                 class="block text-xs text-slate-500">{{ $decision->snapshot_authority_position }}</span>
                                         </div>
-                                        <span
-                                            class="text-xs font-bold px-2 py-1 rounded {{ $decision->decision_status === \App\Enums\DecisionStatus::APPROVED->value ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800' }}">
+                                        <span class="text-xs font-bold px-2 py-1 rounded {{ $decisionBadge }}">
                                             {{ \App\Enums\DecisionStatus::labelFor($decision->decision_status) }}
                                         </span>
                                     </div>
@@ -220,138 +237,97 @@
                 Riwayat Proses
             </h3>
 
-            <div
-                class="relative pl-6 space-y-8 before:absolute before:inset-0 before:ml-[11px] before:-translate-x-px before:h-full before:w-0.5 before:bg-slate-200">
+            @php
+                $history = app(\App\Services\RfcHistoryService::class)->build($rfc, $isStaff);
+                $events = $history['events'];
+                $nextSteps = $history['next_steps'];
+            @endphp
 
-                <!-- Timeline 1: Pengajuan -->
-                <div class="relative flex items-start group">
+            @if (empty($events))
+                <p class="text-sm text-slate-500">Belum ada riwayat proses untuk RFC ini.</p>
+            @else
+                <div
+                    class="relative pl-6 space-y-6 before:absolute before:inset-0 before:ml-[11px] before:-translate-x-px before:h-full before:w-0.5 before:bg-slate-200">
+                    @foreach ($events as $event)
+                        @php
+                            $tone = $event['tone'] ?? 'neutral';
+                            $circle = match ($tone) {
+                                'success' => 'bg-emerald-500 text-white ring-emerald-50',
+                                'danger' => 'bg-rose-500 text-white ring-rose-50',
+                                'warning' => 'bg-amber-500 text-white ring-amber-50',
+                                'info' => 'bg-blue-500 text-white ring-blue-50',
+                                default => 'bg-slate-300 text-white ring-slate-50',
+                            };
+                        @endphp
+
+                        <div class="relative flex items-start">
+                            <div
+                                class="absolute left-[-29px] flex items-center justify-center w-6 h-6 rounded-full {{ $circle }} shadow-sm ring-4 ring-white">
+                                @if ($tone === 'success')
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                            d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                @elseif ($tone === 'danger')
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                            d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                @elseif ($tone === 'warning')
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"
+                                            d="M12 9v4m0 4h.01"></path>
+                                    </svg>
+                                @else
+                                    <span class="h-2 w-2 rounded-full bg-white"></span>
+                                @endif
+                            </div>
+
+                            <div class="flex-1 min-w-0">
+                                <div class="flex flex-wrap items-start justify-between gap-1">
+                                    <h4 class="text-sm font-bold text-slate-800">{{ $event['label'] }}</h4>
+                                    @if ($event['time'])
+                                        <time class="text-[11px] text-slate-400 whitespace-nowrap">
+                                            {{ $event['time']->copy()->locale('id')->translatedFormat('d M Y, H:i') }}
+                                        </time>
+                                    @endif
+                                </div>
+
+                                @if (filled($event['actor_name']))
+                                    <p class="text-[11px] text-slate-500 mt-1">
+                                        Oleh {{ $event['actor_name'] }}
+                                        @if (filled($event['actor_role']))
+                                            &middot; {{ $event['actor_role'] }}
+                                        @endif
+                                    </p>
+                                @endif
+
+                                @if (filled($event['note']))
+                                    <p class="mt-1 text-xs text-slate-600 whitespace-pre-wrap">{{ $event['note'] }}</p>
+                                @endif
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+
+            @if (count($nextSteps) > 0)
+                <div class="mt-6 border-t border-slate-100 pt-4">
+                    <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">Langkah Berikutnya</p>
                     <div
-                        class="absolute left-[-29px] flex items-center justify-center w-6 h-6 rounded-full bg-green-500 text-white shadow-sm ring-4 ring-white">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7">
-                            </path>
-                        </svg>
-                    </div>
-                    <div class="flex-1">
-                        <h4 class="text-sm font-bold text-slate-800">Dokumen Dibuat</h4>
-                        <p class="text-xs text-slate-500 mt-0.5">{{ $rfc->created_at->format('d M Y, H:i') }}</p>
+                        class="relative pl-6 space-y-4 before:absolute before:inset-0 before:ml-[11px] before:-translate-x-px before:h-full before:w-0.5 before:bg-slate-100">
+                        @foreach ($nextSteps as $step)
+                            <div class="relative flex items-center">
+                                <span
+                                    class="absolute left-[-29px] flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 ring-4 ring-white">
+                                    <span class="h-2 w-2 rounded-full bg-slate-300"></span>
+                                </span>
+                                <p class="text-xs font-medium text-slate-400">{{ $step['label'] }}</p>
+                            </div>
+                        @endforeach
                     </div>
                 </div>
-
-                <!-- Timeline 2: Evaluasi Risiko -->
-                @php $hasRisk = !is_null($rfc->riskAssessment); @endphp
-                <div class="relative flex items-start group">
-                    <div
-                        class="absolute left-[-29px] flex items-center justify-center w-6 h-6 rounded-full {{ $hasRisk ? 'bg-green-500 text-white' : 'bg-slate-200 text-slate-400' }} shadow-sm ring-4 ring-white">
-                        @if ($hasRisk)
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
-                                    d="M5 13l4 4L19 7"></path>
-                            </svg>
-                        @endif
-                    </div>
-                    <div class="flex-1">
-                        <h4 class="text-sm font-bold {{ $hasRisk ? 'text-slate-800' : 'text-slate-400' }}">Analisis
-                            Change Manager</h4>
-                        @if ($hasRisk)
-                            <p class="text-xs text-slate-500 mt-0.5">
-                                {{ $rfc->riskAssessment->created_at->format('d M Y, H:i') }}</p>
-                        @else
-                            <p class="text-xs text-slate-400 mt-0.5">Menunggu proses evaluasi</p>
-                        @endif
-                    </div>
-                </div>
-
-                <!-- Timeline 3: Keputusan CAB -->
-                @php
-                    $hasDecision = $rfc->decisions->isNotEmpty();
-                    $decisionData = $hasDecision ? $rfc->decisions->last() : null;
-                    $isRejected = $decisionData && $decisionData->decision_status === \App\Enums\DecisionStatus::REJECTED->value;
-                @endphp
-                <div class="relative flex items-start group">
-                    <div
-                        class="absolute left-[-29px] flex items-center justify-center w-6 h-6 rounded-full {{ $hasDecision ? ($isRejected ? 'bg-red-500' : 'bg-green-500') : 'bg-slate-200' }} text-white shadow-sm ring-4 ring-white">
-                        @if ($hasDecision)
-                            @if ($isRejected)
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
-                                        d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            @else
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
-                                        d="M5 13l4 4L19 7"></path>
-                                </svg>
-                            @endif
-                        @endif
-                    </div>
-                    <div class="flex-1">
-                        <h4 class="text-sm font-bold {{ $hasDecision ? 'text-slate-800' : 'text-slate-400' }}">
-                            Persetujuan Otoritas</h4>
-                        @if ($hasDecision)
-                            <p class="text-xs text-slate-500 mt-0.5">
-                                {{ $decisionData->created_at->format('d M Y, H:i') }}</p>
-                            <p
-                                class="text-xs font-semibold {{ $isRejected ? 'text-red-600' : 'text-green-600' }} mt-1">
-                                {{ $isRejected ? 'Ditolak' : 'Disetujui' }}</p>
-                        @else
-                            <p class="text-xs text-slate-400 mt-0.5">Menunggu persetujuan</p>
-                        @endif
-                    </div>
-                </div>
-
-                <!-- Timeline 4: Implementasi -->
-                @php
-                    $isImplemented = in_array($status, [
-                        \App\Enums\RfcStatus::IMPLEMENTED,
-                        \App\Enums\RfcStatus::CLOSED,
-                    ], true);
-                    $isFailed = $status === \App\Enums\RfcStatus::FAILED;
-                    $implementationDone = $isImplemented || $isFailed;
-                @endphp
-                <div class="relative flex items-start group">
-                    <div
-                        class="absolute left-[-29px] flex items-center justify-center w-6 h-6 rounded-full {{ $isFailed ? 'bg-red-600 text-white' : ($implementationDone ? 'bg-green-500 text-white' : 'bg-slate-200') }} shadow-sm ring-4 ring-white">
-                        @if ($implementationDone)
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
-                                    d="{{ $isFailed ? 'M6 18 18 6M6 6l12 12' : 'M5 13l4 4L19 7' }}"></path>
-                            </svg>
-                        @endif
-                    </div>
-                    <div class="flex-1">
-                        <h4 class="text-sm font-bold {{ $implementationDone ? 'text-slate-800' : 'text-slate-400' }}">
-                            Implementasi Perubahan</h4>
-                        <p class="text-xs text-slate-500 mt-0.5">
-                            {{ $isFailed ? 'Implementasi gagal dilaksanakan' : ($isImplemented ? 'Perubahan telah dieksekusi di lapangan' : 'Menunggu pelaksanaan teknis') }}
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Timeline 5: Penutupan (Closed) -->
-                @php
-                    $isClosed = $status === \App\Enums\RfcStatus::CLOSED;
-                @endphp
-                <div class="relative flex items-start group">
-                    <div
-                        class="absolute left-[-29px] flex items-center justify-center w-6 h-6 rounded-full {{ $isClosed ? 'bg-slate-800 text-white' : 'bg-slate-200' }} shadow-sm ring-4 ring-white">
-                        @if ($isClosed)
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
-                                    d="M5 13l4 4L19 7"></path>
-                            </svg>
-                        @endif
-                    </div>
-                    <div class="flex-1">
-                        <h4 class="text-sm font-bold {{ $isClosed ? 'text-slate-800' : 'text-slate-400' }}">RFC
-                            Ditutup</h4>
-                        <p class="text-xs text-slate-500 mt-0.5">
-                            {{ $isClosed ? 'Siklus manajemen perubahan selesai' : 'Menunggu review pasca-implementasi' }}
-                        </p>
-                    </div>
-                </div>
-
-            </div>
+            @endif
         </div>
     </div>
 </div>
