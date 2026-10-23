@@ -325,9 +325,11 @@
                                         @if ($isStaff)
                                             <div>
                                                 <span
-                                                    class="font-bold text-slate-800">{{ $decision->snapshot_authority_name ?? 'Otoritas' }}</span>
-                                                <span
-                                                    class="block text-xs text-slate-500">{{ $decision->snapshot_authority_position }}</span>
+                                                    class="font-bold text-slate-800">{{ $decision->snapshot_authority_name ?? 'Change Manager' }}</span>
+                                                @if (filled($decision->snapshot_authority_position))
+                                                    <span
+                                                        class="block text-xs text-slate-500">{{ $decision->snapshot_authority_position }}</span>
+                                                @endif
                                             </div>
                                         @endif
                                         <span class="ml-auto text-xs font-bold px-2 py-1 rounded {{ $decisionBadge }}">

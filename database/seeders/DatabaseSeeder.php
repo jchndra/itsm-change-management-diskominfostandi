@@ -95,7 +95,7 @@ class DatabaseSeeder extends Seeder
             'criticality_level' => 'medium',
         ]);
 
-        // 5. Seed Register Pejabat Berwenang Dummy
+        // 5. Seed Register Pejabat Berwenang Dummy (legacy; tidak dipakai form keputusan baru)
         Authority::create([
             'name' => 'Pejabat Penyetuju A',
             'nip' => '197501011998011004',

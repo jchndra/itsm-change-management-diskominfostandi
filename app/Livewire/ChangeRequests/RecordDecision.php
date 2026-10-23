@@ -5,7 +5,6 @@ namespace App\Livewire\ChangeRequests;
 use App\Enums\DecisionStatus;
 use App\Enums\RfcStatus;
 use App\Exceptions\InvalidRfcStatusTransitionException;
-use App\Models\Authority;
 use App\Models\ChangeRequest;
 use App\Models\Decision;
 use App\StateMachines\RfcStatusTransition;
@@ -19,19 +18,12 @@ class RecordDecision extends Component
 
     public string $decisionStatus = DecisionStatus::APPROVED->value;
 
-    public ?int $authorityId = null;
-
     public string $notes = '';
 
     public function mount(ChangeRequest $rfc): void
     {
         $this->authorize('recordDecision', $rfc);
         $this->rfc = $rfc->load(['submittedBy', 'application.opd', 'riskAssessment']);
-
-        $defaultAuthority = Authority::where('is_active', true)->first();
-        if ($defaultAuthority) {
-            $this->authorityId = $defaultAuthority->id;
-        }
     }
 
     public function saveDecision(): void
@@ -40,7 +32,6 @@ class RecordDecision extends Component
 
         $this->validate([
             'decisionStatus' => 'required|in:'.implode(',', DecisionStatus::values()),
-            'authorityId' => 'required|exists:authorities,id',
             'notes' => 'required|string|max:1000',
         ]);
 
@@ -53,7 +44,6 @@ class RecordDecision extends Component
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        $authority = Authority::where('is_active', true)->findOrFail($this->authorityId);
         $decisionStatus = DecisionStatus::from($this->decisionStatus);
 
         $targetStatus = match ($decisionStatus) {
@@ -63,14 +53,14 @@ class RecordDecision extends Component
         };
 
         try {
-            DB::transaction(function () use ($authority, $decisionStatus, $targetStatus, $user) {
+            DB::transaction(function () use ($decisionStatus, $targetStatus, $user) {
                 Decision::create([
                     'change_request_id' => $this->rfc->id,
-                    'authority_id' => $authority->id,
+                    'authority_id' => null,
                     'recorded_by_id' => $user->id,
-                    'snapshot_authority_name' => $authority->name ?? $authority->nama ?? null,
-                    'snapshot_authority_nip' => $authority->nip ?? null,
-                    'snapshot_authority_position' => $authority->position ?? $authority->jabatan ?? null,
+                    'snapshot_authority_name' => $user->name,
+                    'snapshot_authority_nip' => filled($user->nip) ? $user->nip : null,
+                    'snapshot_authority_position' => filled($user->position) ? $user->position : 'Change Manager',
                     'decision_status' => $decisionStatus->value,
                     'decision_date' => now(),
                     'reason' => $this->notes,
@@ -84,16 +74,14 @@ class RecordDecision extends Component
             return;
         }
 
-        session()->flash('message', 'Keputusan rapat CAB / ECAB berhasil dicatat.');
+        session()->flash('message', 'Keputusan Change Manager berhasil dicatat.');
         $this->redirectRoute('change-requests.index');
     }
 
     public function render()
     {
-        $authorities = Authority::where('is_active', true)->get();
-
         return view('livewire.change-requests.record-decision', [
-            'authorities' => $authorities,
+            'recordedBy' => Auth::user(),
         ]);
     }
 }

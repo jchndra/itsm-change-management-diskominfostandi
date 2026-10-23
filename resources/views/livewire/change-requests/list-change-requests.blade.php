@@ -331,7 +331,7 @@
                                     @if ($rfc->riskAssessment)
                                         <a href="{{ route('change-requests.record-decision', $rfc) }}"
                                             class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg text-xs transition">
-                                            Keputusan CAB
+                                            Keputusan Change Manager
                                         </a>
                                     @else
                                         <a href="{{ route('change-requests.assess-risk', $rfc) }}"

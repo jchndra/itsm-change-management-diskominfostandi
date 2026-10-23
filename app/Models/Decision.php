@@ -19,6 +19,9 @@ class Decision extends Model
         return $this->belongsTo(ChangeRequest::class);
     }
 
+    /**
+     * Relasi legacy; keputusan baru menyimpan authority_id null.
+     */
     public function authority()
     {
         return $this->belongsTo(Authority::class);

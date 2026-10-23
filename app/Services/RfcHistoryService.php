@@ -558,13 +558,22 @@ class RfcHistoryService
         $status = DecisionStatus::tryFrom((string) $decision->decision_status);
         $reason = filled($decision->reason) ? trim((string) $decision->reason) : null;
 
+        // Nama pejabat diambil dari snapshot agar keputusan lama tetap tampil
+        // benar dan keputusan baru menyebut nama Change Manager yang mencatat.
+        $actorName = filled($decision->snapshot_authority_name)
+            ? trim((string) $decision->snapshot_authority_name)
+            : $decision->recordedBy?->name;
+
         $key = $status?->value;
-        $label = match ($status) {
+        $baseLabel = match ($status) {
             DecisionStatus::APPROVED => 'Disetujui oleh Change Manager',
             DecisionStatus::REJECTED => 'Ditolak oleh Change Manager',
             DecisionStatus::RETURNED_TO_ADMIN => $forStaff ? 'Dikembalikan ke Admin' : 'Sedang ditinjau',
             default => 'Keputusan Change Manager (legacy)',
         };
+        $label = $forStaff && filled($actorName)
+            ? $baseLabel.' — '.$actorName
+            : $baseLabel;
         $tone = match ($status) {
             DecisionStatus::APPROVED => 'success',
             DecisionStatus::REJECTED => 'danger',
@@ -579,9 +588,8 @@ class RfcHistoryService
                 }
 
                 if (abs($event['time']->getTimestamp() - $decisionTime->getTimestamp()) <= 300) {
-                    $events[$index]['actor_name'] = $forStaff
-                        ? ($decision->recordedBy?->name ?? $decision->snapshot_authority_name)
-                        : null;
+                    $events[$index]['label'] = $label;
+                    $events[$index]['actor_name'] = $forStaff ? $actorName : null;
                     $events[$index]['actor_role'] = 'Change Manager';
 
                     if ($reason && ($forStaff || $status === DecisionStatus::REJECTED)) {
@@ -599,9 +607,7 @@ class RfcHistoryService
             'note' => $reason && ($forStaff || $status === DecisionStatus::REJECTED) ? $reason : null,
             'time' => $decisionTime,
             'tone' => $tone,
-            'actor_name' => $forStaff
-                ? ($decision->recordedBy?->name ?? $decision->snapshot_authority_name)
-                : null,
+            'actor_name' => $forStaff ? $actorName : null,
             'actor_role' => 'Change Manager',
             'legacy' => $status === null,
             'order' => $order,

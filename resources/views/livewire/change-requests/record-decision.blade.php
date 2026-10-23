@@ -10,9 +10,9 @@
                             d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
                 </a>
-                <h1 class="text-2xl font-bold text-slate-900">Pencatatan Keputusan Otorisasi</h1>
+                <h1 class="text-2xl font-bold text-slate-900">Pencatatan Keputusan Change Manager</h1>
             </div>
-            <p class="text-sm text-slate-500 mt-1 pl-9">Otorisasi Resmi dan Pengunggahan Berkas untuk
+            <p class="text-sm text-slate-500 mt-1 pl-9">Keputusan resmi Change Manager untuk
                 {{ $rfc->rfc_number }}</p>
         </div>
         <a href="{{ route('change-requests.show', $rfc->id) }}"
@@ -75,7 +75,7 @@
 
     @unless ($rfc->riskAssessment)
         <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-medium text-amber-700">
-            Analisis risiko belum dilakukan. Keputusan otorisasi belum dapat direkam.
+            Analisis risiko belum dilakukan. Keputusan Change Manager belum dapat direkam.
         </div>
     @endunless
 
@@ -84,26 +84,17 @@
         class="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm space-y-6">
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Pejabat Berwenang -->
+            <!-- Pencatat Keputusan -->
             <div>
-                <label for="authorityId" class="block text-sm font-semibold text-slate-700 mb-1">Pejabat Berwenang /
-                    Penyetuju *</label>
-                <select id="authorityId" wire:model="authorityId"
-                    class="w-full text-sm px-3.5 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 {{ $errors->has('authorityId') ? 'border-red-500' : 'border-slate-300' }}">
-                    <option value="">-- Pilih Pejabat Penyetuju --</option>
-                    @foreach ($authorities as $auth)
-                        <option value="{{ $auth->id }}">{{ $auth->name }} - {{ $auth->position }} (NIP:
-                            {{ $auth->nip ?? '-' }})</option>
-                    @endforeach
-                </select>
-                @error('authorityId')
-                    <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>
-                @enderror
+                <span class="block text-sm font-semibold text-slate-700 mb-1">Pencatat Keputusan</span>
+                <p class="w-full text-sm px-3.5 py-2.5 border border-slate-200 rounded-lg bg-slate-50 text-slate-700">
+                    Dicatat atas nama: {{ $recordedBy?->name }}, {{ filled($recordedBy?->position) ? $recordedBy->position : 'Change Manager' }}
+                </p>
             </div>
 
-            <!-- Keputusan Otorisasi -->
+            <!-- Keputusan Change Manager -->
             <div>
-                <label for="decisionStatus" class="block text-sm font-semibold text-slate-700 mb-1">Keputusan Otorisasi
+                <label for="decisionStatus" class="block text-sm font-semibold text-slate-700 mb-1">Keputusan Change Manager
                     *</label>
                 <select id="decisionStatus" wire:model="decisionStatus"
                     class="w-full text-sm px-3.5 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 {{ $errors->has('decisionStatus') ? 'border-red-500' : 'border-slate-300' }}">
@@ -118,15 +109,15 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Jenis Dokumen Otorisasi -->
+            <!-- Jenis Dokumen Pendukung -->
             <div>
                 <label for="documentType" class="block text-sm font-semibold text-slate-700 mb-1">Jenis Dokumen
-                    Otorisasi *</label>
+                    Pendukung *</label>
                 <select id="documentType" wire:model="documentType"
                     class="w-full text-sm px-3.5 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 {{ $errors->has('documentType') ? 'border-red-500' : 'border-slate-300' }}">
-                    <option value="cab_minutes">Notulen / Risalah Sidang CAB (CAB Minutes)</option>
-                    <option value="ecab_approval">Persetujuan E-CAB (Emergency CAB)</option>
-                    <option value="delegation_letter">Surat Mandat / Delagasi Keputusan</option>
+                    <option value="cab_minutes">Notulen / Risalah Rapat</option>
+                    <option value="ecab_approval">Persetujuan Darurat</option>
+                    <option value="delegation_letter">Surat Mandat / Delegasi Keputusan</option>
                     <option value="emergency_confirmation">Konfirmasi Darurat (Emergency Confirmation)</option>
                 </select>
                 @error('documentType')
@@ -137,9 +128,9 @@
             <!-- Nomor Dokumen/Surat -->
             <div>
                 <label for="documentNumber" class="block text-sm font-semibold text-slate-700 mb-1">Nomor Dokumen /
-                    Surat Otorisasi *</label>
+                    Surat Pendukung *</label>
                 <input type="text" id="documentNumber" wire:model="documentNumber"
-                    placeholder="Contoh: 800/045/BA-CAB/2026"
+                    placeholder="Contoh: 800/045/BA/2026"
                     class="w-full text-sm px-3.5 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 {{ $errors->has('documentNumber') ? 'border-red-500' : 'border-slate-300' }}">
                 @error('documentNumber')
                     <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>
@@ -149,7 +140,7 @@
 
         <!-- Unggah File PDF -->
         <div>
-            <label for="documentFile" class="block text-sm font-semibold text-slate-700 mb-1">Unggah Dokumen Otorisasi
+            <label for="documentFile" class="block text-sm font-semibold text-slate-700 mb-1">Unggah Dokumen Pendukung
                 (PDF, Maksimal 10MB) *</label>
             <input type="file" id="documentFile" wire:model="documentFile" accept="application/pdf"
                 class="w-full text-sm px-3.5 py-2 border rounded-lg border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">

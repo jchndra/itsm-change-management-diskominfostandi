@@ -7,6 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * Legacy: register pejabat dipertahankan untuk keputusan lama.
+ * Form keputusan baru mencatat snapshot dari akun Change Manager.
+ */
 class Authority extends Model
 {
     use HasFactory;
