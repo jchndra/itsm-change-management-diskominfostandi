@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\RfcStatus;
 use App\Livewire\ChangeRequests\CreateChangeRequest;
 use App\Livewire\ChangeRequests\ShowChangeRequest;
 use App\Models\Application;
@@ -121,13 +122,19 @@ test('RFC yang dibuat lewat komponen create memakai nomor berurutan dari generat
         ]);
 });
 
-test('pengguna tanpa rfc.assign_release mendapat 403 di halaman upload evidence', function () {
+test('pengguna tanpa izin implement mendapat 403 di halaman implementasi', function () {
     $pemohon = makeUserWithRole('Pemohon');
+    $admin = makeUserWithRole('Admin');
     $rfc = ChangeRequest::factory()->create([
         'submitted_by_id' => $pemohon->id,
+        'status' => RfcStatus::APPROVED->value,
     ]);
 
     $this->actingAs($pemohon)
-        ->get(route('change-requests.upload-evidence', $rfc))
+        ->get(route('change-requests.implement', $rfc))
+        ->assertForbidden();
+
+    $this->actingAs($admin)
+        ->get(route('change-requests.implement', $rfc))
         ->assertForbidden();
 });

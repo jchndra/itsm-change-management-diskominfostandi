@@ -39,6 +39,13 @@
 
         @if (! $rfc->trashed())
             <div class="flex flex-wrap items-center gap-2">
+                @if (auth()->user()?->can('implement', $rfc))
+                    <a href="{{ route('change-requests.implement', $rfc) }}" wire:navigate
+                        class="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700">
+                        Catat Implementasi
+                    </a>
+                @endif
+
                 @if (auth()->user()?->can('update', $rfc))
                     <a href="{{ route('change-requests.edit', $rfc) }}" wire:navigate
                         class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700">
@@ -164,6 +171,153 @@
                             </li>
                         @endforeach
                     </ul>
+                </div>
+            @endif
+
+            @php
+                $implementation = $rfc->implementation;
+                $implementationEvidences = $implementation
+                    ? $rfc->evidences->where('evidence_type', 'implementation')->values()
+                    : collect();
+            @endphp
+
+            @if ($implementation)
+                <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Hasil Implementasi</h3>
+
+                    @if ($isStaff)
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6 text-sm">
+                            <div>
+                                <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Hasil</span>
+                                <p class="text-slate-800 font-medium">
+                                    {{ \App\Enums\ImplementationResult::labelFor($implementation->implementation_result) }}
+                                </p>
+                            </div>
+                            <div>
+                                <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Pelaksana Perubahan</span>
+                                <p class="text-slate-800 font-medium">{{ $implementation->executor_name }}</p>
+                            </div>
+                            <div>
+                                <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Waktu Mulai</span>
+                                <p class="text-slate-800 font-medium">
+                                    {{ $implementation->started_at?->copy()->locale('id')->translatedFormat('d M Y, H:i') }}
+                                </p>
+                            </div>
+                            <div>
+                                <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Waktu Selesai</span>
+                                <p class="text-slate-800 font-medium">
+                                    {{ $implementation->finished_at?->copy()->locale('id')->translatedFormat('d M Y, H:i') }}
+                                </p>
+                            </div>
+                            <div class="md:col-span-2">
+                                <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Sumber Laporan</span>
+                                <p class="text-slate-800 font-medium">{{ $implementation->report_source ?? '-' }}</p>
+                            </div>
+                            <div class="md:col-span-2">
+                                <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Ringkasan Hasil</span>
+                                <p class="text-slate-800 whitespace-pre-wrap">{{ $implementation->summary }}</p>
+                            </div>
+                            <div class="md:col-span-2">
+                                <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Hasil Pengujian</span>
+                                <p class="text-slate-800 whitespace-pre-wrap">{{ $implementation->test_results }}</p>
+                            </div>
+                            @if (filled($implementation->failure_notes))
+                                <div class="md:col-span-2">
+                                    <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Catatan Kegagalan / Rollback</span>
+                                    <p class="text-slate-800 whitespace-pre-wrap">{{ $implementation->failure_notes }}</p>
+                                </div>
+                            @endif
+                            <div>
+                                <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Tindak Lanjut</span>
+                                <p class="text-slate-800 font-medium">
+                                    {{ filled($implementation->follow_up_action) ? \App\Enums\FollowUpAction::labelFor($implementation->follow_up_action) : '-' }}
+                                </p>
+                            </div>
+                            @if (filled($implementation->follow_up_notes))
+                                <div>
+                                    <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Keterangan Tindak Lanjut</span>
+                                    <p class="text-slate-800 whitespace-pre-wrap">{{ $implementation->follow_up_notes }}</p>
+                                </div>
+                            @endif
+                        </div>
+
+                        <div class="mt-6 border-t border-slate-100 pt-4">
+                            <h4 class="text-sm font-bold text-slate-700 mb-3">
+                                Bukti Pendukung ({{ $implementationEvidences->count() }} file)
+                            </h4>
+
+                            @if ($implementationEvidences->isEmpty())
+                                <p class="text-sm text-slate-500">Tidak ada berkas bukti.</p>
+                            @else
+                                <ul class="divide-y divide-slate-100">
+                                    @foreach ($implementationEvidences as $evidence)
+                                        <li class="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                                            <div class="min-w-0 flex-1">
+                                                <p class="truncate text-sm font-medium text-slate-800">{{ $evidence->original_filename }}</p>
+                                                <p class="text-xs text-slate-400">
+                                                    {{ number_format($evidence->file_size / 1024, 0, ',', '.') }} KB
+                                                    &middot; {{ $evidence->mime_type }}
+                                                </p>
+                                            </div>
+                                            <div class="flex items-center gap-3 text-xs font-semibold">
+                                                <a href="{{ route('change-requests.evidences.show', ['rfc' => $rfc, 'evidence' => $evidence]) }}"
+                                                    target="_blank" rel="noopener" class="text-indigo-600 hover:text-indigo-700">
+                                                    Lihat
+                                                </a>
+                                                <a href="{{ route('change-requests.evidences.show', ['rfc' => $rfc, 'evidence' => $evidence, 'download' => 1]) }}"
+                                                    class="text-indigo-600 hover:text-indigo-700">
+                                                    Unduh
+                                                </a>
+                                            </div>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            @endif
+                        </div>
+                    @else
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6 text-sm">
+                            <div>
+                                <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Hasil</span>
+                                <p class="text-slate-800 font-medium">
+                                    {{ \App\Enums\ImplementationResult::labelFor($implementation->implementation_result) }}
+                                </p>
+                            </div>
+                            <div>
+                                <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Waktu Pelaksanaan</span>
+                                <p class="text-slate-800 font-medium">
+                                    {{ $implementation->started_at?->copy()->locale('id')->translatedFormat('d M Y, H:i') }}
+                                    s.d.
+                                    {{ $implementation->finished_at?->copy()->locale('id')->translatedFormat('d M Y, H:i') }}
+                                </p>
+                            </div>
+                            <div class="md:col-span-2">
+                                <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Ringkasan Hasil</span>
+                                <p class="text-slate-800 whitespace-pre-wrap">{{ $implementation->summary }}</p>
+                            </div>
+                            @if (filled($implementation->failure_notes))
+                                <div class="md:col-span-2">
+                                    <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Catatan Kegagalan / Rollback</span>
+                                    <p class="text-slate-800 whitespace-pre-wrap">{{ $implementation->failure_notes }}</p>
+                                </div>
+                            @endif
+                            <div>
+                                <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Tindak Lanjut</span>
+                                <p class="text-slate-800 font-medium">
+                                    {{ filled($implementation->follow_up_action) ? \App\Enums\FollowUpAction::labelFor($implementation->follow_up_action) : '-' }}
+                                </p>
+                            </div>
+                            @if (filled($implementation->follow_up_notes))
+                                <div>
+                                    <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Keterangan Tindak Lanjut</span>
+                                    <p class="text-slate-800 whitespace-pre-wrap">{{ $implementation->follow_up_notes }}</p>
+                                </div>
+                            @endif
+                            <div class="md:col-span-2">
+                                <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Bukti Pendukung</span>
+                                <p class="text-slate-800 font-medium">Bukti pendukung: {{ $implementationEvidences->count() }} file</p>
+                            </div>
+                        </div>
+                    @endif
                 </div>
             @endif
 

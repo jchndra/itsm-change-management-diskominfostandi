@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ChangeRequestAttachmentController;
+use App\Http\Controllers\ImplementationEvidenceController;
 use App\Livewire\Auth\Login;
 use App\Livewire\ChangeRequests\AssessRisk;
 use App\Livewire\ChangeRequests\CloseRfc;
@@ -13,7 +14,6 @@ use App\Livewire\ChangeRequests\RecordDecision;
 use App\Livewire\ChangeRequests\ReviewCompleteness;
 use App\Livewire\ChangeRequests\ShowChangeRequest;
 use App\Livewire\ChangeRequests\ShowDeletedChangeRequest;
-use App\Livewire\ChangeRequests\UploadEvidence;
 use App\Livewire\Notifications;
 use App\Livewire\Profile;
 use App\Livewire\Requester\Dashboard;
@@ -77,6 +77,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/{rfc}/edit', EditChangeRequest::class)->name('edit');
         Route::get('/{rfc}/attachments/{attachment}', [ChangeRequestAttachmentController::class, 'show'])
             ->name('attachments.show');
+        Route::get('/{rfc}/evidences/{evidence}', [ImplementationEvidenceController::class, 'show'])
+            ->middleware('can:viewEvidence,rfc')
+            ->name('evidences.show');
         Route::get('/{rfc}', ShowChangeRequest::class)->name('show'); // <-- SEKARANG MENGARAH KE KOMPONEN BARU
 
         // Rute Verifikasi Admin
@@ -94,8 +97,9 @@ Route::middleware('auth')->group(function () {
             ->name('record-decision');
 
         // Rute Eksekusi Rilis & Penutupan
-        Route::get('/{rfc}/implement', ImplementChange::class)->name('implement');
-        Route::get('/{rfc}/upload-evidence', UploadEvidence::class)->name('upload-evidence');
+        Route::get('/{rfc}/implement', ImplementChange::class)
+            ->middleware('can:implement,rfc')
+            ->name('implement');
         Route::get('/{rfc}/close', CloseRfc::class)
             ->middleware('can:rfc.close')
             ->name('close');

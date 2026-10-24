@@ -14,7 +14,8 @@ class RfcStatusTransition
         ChangeRequest $rfc,
         RfcStatus $newStatus,
         User $actor,
-        ?string $note = null
+        ?string $note = null,
+        array $properties = []
     ): void {
         $currentStatus = RfcStatus::fromValue($rfc->status);
 
@@ -56,11 +57,11 @@ class RfcStatusTransition
             activity()
                 ->performedOn($rfc)
                 ->causedBy($actor)
-                ->withProperties([
+                ->withProperties(array_merge([
                     'old_status' => $oldStatus,
                     'new_status' => $newStatus->value,
                     'note' => $note,
-                ])
+                ], $properties))
                 ->log("Status RFC diubah dari {$currentStatus->label()} menjadi {$newStatus->label()}.");
         }
     }

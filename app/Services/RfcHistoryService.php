@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Enums\DecisionStatus;
+use App\Enums\FollowUpAction;
+use App\Enums\ImplementationResult;
 use App\Enums\RfcStatus;
 use App\Enums\ServiceCategory;
 use App\Enums\TicketPriority;
@@ -279,6 +281,14 @@ class RfcHistoryService
 
         if (! $forStaff) {
             foreach ($events as &$event) {
+                // Kejadian implementasi sudah disusun dalam versi aman untuk
+                // Pemohon (hanya hasil dan ringkasan), jadi catatannya dipertahankan.
+                if (($event['implementation'] ?? false) === true) {
+                    $event['actor_name'] = null;
+
+                    continue;
+                }
+
                 if (! in_array($event['key'], [
                     RfcStatus::REJECTED->value,
                     RfcStatus::NEEDS_REVISION->value,
@@ -502,6 +512,12 @@ class RfcHistoryService
             || ($status === RfcStatus::CANCELLED && $actorRole === 'Pemohon');
         $actorName = $canShowActor ? $activity->causer?->name : null;
         $safeNote = filled($note) ? trim((string) $note) : null;
+        $implementationResult = data_get($activity->properties, 'implementation_result');
+        $isImplementation = filled($implementationResult);
+
+        if ($isImplementation) {
+            $safeNote = $this->implementationEventNote($activity, $forStaff);
+        }
 
         [$label, $tone, $key] = match ($status) {
             RfcStatus::DRAFT => ['Disimpan sebagai draft', 'neutral', 'draft_created'],
@@ -539,8 +555,98 @@ class RfcHistoryService
             'actor_name' => $actorName,
             'actor_role' => $actorRole,
             'legacy' => false,
+            'implementation' => $isImplementation,
             'order' => $order,
         ];
+    }
+
+    private function implementationEventNote(Activity $activity, bool $forStaff): ?string
+    {
+        $result = ImplementationResult::labelFor((string) data_get($activity->properties, 'implementation_result'));
+        $summary = trim((string) data_get($activity->properties, 'summary', ''));
+
+        if (! $forStaff) {
+            return implode("\n", array_filter([
+                'Hasil: '.$result,
+                filled($summary) ? 'Ringkasan: '.$summary : null,
+            ]));
+        }
+
+        $startedAt = $this->activityDate(data_get($activity->properties, 'started_at'));
+        $finishedAt = $this->activityDate(data_get($activity->properties, 'finished_at'));
+        $executorName = trim((string) data_get($activity->properties, 'executor_name', ''));
+        $reportSource = trim((string) data_get($activity->properties, 'report_source', ''));
+        $testResults = trim((string) data_get($activity->properties, 'test_results', ''));
+        $failureNotes = trim((string) data_get($activity->properties, 'failure_notes', ''));
+        $followUpAction = data_get($activity->properties, 'follow_up_action');
+        $followUpNotes = trim((string) data_get($activity->properties, 'follow_up_notes', ''));
+        $evidenceFiles = data_get($activity->properties, 'evidence_files', []);
+        $evidenceFiles = is_array($evidenceFiles) ? $evidenceFiles : [];
+
+        $lines = [
+            'Hasil: '.$result,
+            'Pelaksana: '.($executorName !== '' ? $executorName : '-'),
+            ($startedAt !== null || $finishedAt !== null)
+                ? 'Waktu pelaksanaan: '.($startedAt ?? '-').' s.d. '.($finishedAt ?? '-')
+                : null,
+            'Sumber laporan: '.($reportSource !== '' ? $reportSource : '-'),
+            'Ringkasan: '.($summary !== '' ? $summary : '-'),
+            'Hasil pengujian: '.($testResults !== '' ? $testResults : '-'),
+        ];
+
+        if ($failureNotes !== '') {
+            $lines[] = 'Catatan kegagalan/rollback: '.$failureNotes;
+        }
+
+        if (filled($followUpAction)) {
+            $followUp = 'Tindak lanjut: '.FollowUpAction::labelFor($followUpAction);
+
+            if ($followUpNotes !== '') {
+                $followUp .= ' — '.$followUpNotes;
+            }
+
+            $lines[] = $followUp;
+        }
+
+        $lines[] = 'Jumlah bukti: '.count($evidenceFiles).' file';
+
+        foreach ($evidenceFiles as $file) {
+            if (! is_array($file)) {
+                continue;
+            }
+
+            $lines[] = sprintf(
+                'Bukti: %s (%s, %s, SHA-256 %s)',
+                (string) ($file['name'] ?? '-'),
+                $this->formatFileSize((int) ($file['size'] ?? 0)),
+                (string) ($file['mime'] ?? '-'),
+                (string) ($file['checksum'] ?? '-'),
+            );
+        }
+
+        return implode("\n", array_filter($lines));
+    }
+
+    private function activityDate(mixed $value): ?string
+    {
+        if (blank($value)) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value)->copy()->locale('id')->translatedFormat('d M Y, H:i');
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function formatFileSize(int $bytes): string
+    {
+        if ($bytes >= 1024 * 1024) {
+            return number_format($bytes / (1024 * 1024), 2, ',', '.').' MB';
+        }
+
+        return number_format($bytes / 1024, 0, ',', '.').' KB';
     }
 
     private function makeEvent(

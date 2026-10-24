@@ -2,18 +2,18 @@
 
 namespace App\Livewire\ChangeRequests;
 
-use App\Enums\RfcStatus;
+use App\Enums\FollowUpAction;
+use App\Enums\ImplementationResult;
 use App\Exceptions\InvalidRfcStatusTransitionException;
 use App\Models\ChangeRequest;
-use App\Models\Evidence;
 use App\Models\User;
-use App\StateMachines\RfcStatusTransition;
+use App\Services\RfcImplementationService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 
 #[Layout('layouts.app')]
@@ -23,144 +23,156 @@ class ImplementChange extends Component
 
     public ChangeRequest $rfc;
 
-    public string $execution_result = 'success'; // success | failed
-    public ?string $actual_start_time = null;
-    public ?string $actual_end_time = null;
-    public string $implementation_notes = '';
-    public string $testing_notes = '';
-    public string $rollback_notes = '';
+    public string $implementation_result = '';
 
-    /** @var mixed */
-    public $evidence_file;
-    public string $evidence_description = '';
+    public string $started_at = '';
+
+    public string $finished_at = '';
+
+    public string $executor_name = '';
+
+    public string $report_source = '';
+
+    public string $summary = '';
+
+    public string $test_results = '';
+
+    public string $failure_notes = '';
+
+    public string $follow_up_action = '';
+
+    public string $follow_up_notes = '';
+
+    /** @var array<int, TemporaryUploadedFile> */
+    public array $files = [];
+
+    public bool $confirmed = false;
 
     protected function rules(): array
     {
-        $rules = [
-            'execution_result' => 'required|in:success,failed',
-            'actual_start_time' => 'required|date',
-            'actual_end_time' => 'required|date|after_or_equal:actual_start_time',
-            'implementation_notes' => 'required|string|min:10',
-            'testing_notes' => 'required|string|min:10',
-            'evidence_file' => 'required|file|mimes:pdf,png,jpg,jpeg,zip|max:10240',
-            'evidence_description' => 'required|string|max:255',
+        $isFailure = in_array($this->implementation_result, [
+            ImplementationResult::FAILED->value,
+            ImplementationResult::ROLLED_BACK->value,
+        ], true);
+
+        return [
+            'implementation_result' => ['required', Rule::in(ImplementationResult::values())],
+            'started_at' => ['required', 'date', 'before_or_equal:now'],
+            'finished_at' => ['required', 'date', 'after_or_equal:started_at', 'before_or_equal:now'],
+            'executor_name' => ['required', 'string', 'max:255'],
+            'report_source' => ['required', 'string', 'max:255'],
+            'summary' => ['required', 'string'],
+            'test_results' => ['required', 'string'],
+            'failure_notes' => $isFailure ? ['required', 'string'] : ['nullable', 'string'],
+            'follow_up_action' => $isFailure
+                ? ['required', Rule::in(FollowUpAction::values())]
+                : ['nullable'],
+            'follow_up_notes' => [
+                Rule::requiredIf($isFailure && $this->follow_up_action !== FollowUpAction::NONE->value),
+                'nullable',
+                'string',
+            ],
+            'files' => ['required', 'array', 'min:1', 'max:'.RfcImplementationService::MAX_FILES],
+            'files.*' => ['file', 'max:5120', 'mimetypes:application/pdf,image/png,image/jpeg,image/jpg'],
+            'confirmed' => ['accepted'],
         ];
-
-        if ($this->execution_result === 'failed') {
-            $rules['rollback_notes'] = 'required|string|min:10';
-        }
-
-        return $rules;
     }
 
     protected array $messages = [
-        'execution_result.required' => 'Hasil pelaksanaan wajib ditentukan.',
-        'actual_start_time.required' => 'Waktu mulai pelaksanaan wajib diisi.',
-        'actual_end_time.required' => 'Waktu selesai pelaksanaan wajib diisi.',
-        'actual_end_time.after_or_equal' => 'Waktu selesai tidak boleh lebih awal dari waktu mulai.',
-        'implementation_notes.required' => 'Catatan pelaksanaan wajib diisi.',
-        'implementation_notes.min' => 'Catatan pelaksanaan minimal 10 karakter.',
-        'testing_notes.required' => 'Catatan pengujian wajib diisi.',
-        'testing_notes.min' => 'Catatan pengujian minimal 10 karakter.',
-        'rollback_notes.required' => 'Catatan tindakan rollback wajib diisi jika implementasi gagal.',
-        'rollback_notes.min' => 'Catatan rollback minimal 10 karakter.',
-        'evidence_file.required' => 'Bukti pengujian/implementasi wajib diunggah.',
-        'evidence_file.mimes' => 'Bukti berkas harus berformat PDF, PNG, JPG, JPEG, atau ZIP.',
-        'evidence_file.max' => 'Ukuran berkas maksimal 10MB.',
-        'evidence_description.required' => 'Deskripsi bukti wajib diisi.',
+        'implementation_result.required' => 'Hasil implementasi wajib dipilih.',
+        'implementation_result.in' => 'Hasil implementasi tidak dikenali.',
+        'started_at.required' => 'Waktu mulai pelaksanaan wajib diisi.',
+        'started_at.date' => 'Waktu mulai pelaksanaan tidak valid.',
+        'started_at.before_or_equal' => 'Waktu mulai pelaksanaan tidak boleh di masa depan.',
+        'finished_at.required' => 'Waktu selesai pelaksanaan wajib diisi.',
+        'finished_at.date' => 'Waktu selesai pelaksanaan tidak valid.',
+        'finished_at.after_or_equal' => 'Waktu selesai tidak boleh lebih awal dari waktu mulai.',
+        'finished_at.before_or_equal' => 'Waktu selesai pelaksanaan tidak boleh di masa depan.',
+        'executor_name.required' => 'Pelaksana perubahan wajib diisi.',
+        'executor_name.max' => 'Nama pelaksana perubahan maksimal 255 karakter.',
+        'report_source.required' => 'Sumber laporan wajib diisi.',
+        'report_source.max' => 'Sumber laporan maksimal 255 karakter.',
+        'summary.required' => 'Ringkasan hasil wajib diisi.',
+        'test_results.required' => 'Hasil pengujian wajib diisi.',
+        'failure_notes.required' => 'Catatan kegagalan atau rollback wajib diisi.',
+        'follow_up_action.required' => 'Pilihan tindak lanjut wajib ditentukan.',
+        'follow_up_action.in' => 'Pilihan tindak lanjut tidak dikenali.',
+        'follow_up_notes.required' => 'Keterangan tindak lanjut wajib diisi.',
+        'files.required' => 'Minimal satu berkas bukti wajib diunggah.',
+        'files.min' => 'Minimal satu berkas bukti wajib diunggah.',
+        'files.max' => 'Jumlah berkas bukti maksimal 5 file.',
+        'files.*.file' => 'Berkas bukti tidak valid.',
+        'files.*.max' => 'Ukuran setiap berkas bukti maksimal 5 MB.',
+        'files.*.mimetypes' => 'Berkas bukti harus berformat PDF, PNG, JPG, atau JPEG.',
+        'confirmed.accepted' => 'Konfirmasi pemeriksaan data dan bukti wajib dicentang.',
     ];
 
     public function mount(ChangeRequest $rfc): void
     {
-        /** @var User|null $user */
-        $user = Auth::user();
-
-        if (! $user || ! $user->can('rfc.assign_release')) {
-            abort(403, 'Anda tidak memiliki otorisasi untuk mencatat hasil implementasi RFC.');
-        }
+        $this->authorize('implement', $rfc);
 
         $this->rfc = $rfc->load(['application.opd', 'submittedBy']);
-        $this->actual_start_time = now()->format('Y-m-d\TH:i');
-        $this->actual_end_time = now()->addHours(1)->format('Y-m-d\TH:i');
+    }
+
+    public function removeFile(int $index): void
+    {
+        if (! isset($this->files[$index])) {
+            return;
+        }
+
+        $file = $this->files[$index];
+
+        if (method_exists($file, 'delete')) {
+            $file->delete();
+        }
+
+        unset($this->files[$index]);
+        $this->files = array_values($this->files);
+        $this->resetValidation('files');
+        $this->resetValidation('files.*');
     }
 
     public function saveImplementation(): void
     {
+        $this->authorize('implement', $this->rfc);
+
         $this->validate();
-
-        $currentStatus = RfcStatus::fromValue($this->rfc->status);
-
-        if (! in_array($currentStatus, [RfcStatus::APPROVED, RfcStatus::IN_PROGRESS], true)) {
-            $this->addError('status', 'Implementasi hanya dapat dicatat untuk RFC yang sudah disetujui atau sedang dikerjakan.');
-
-            return;
-        }
 
         /** @var User $user */
         $user = Auth::user();
 
-        $path = $this->evidence_file->store('implementation_evidences', 'public');
-        $checksum = hash('sha256', file_get_contents($this->evidence_file->getRealPath()));
+        $isFailure = in_array($this->implementation_result, [
+            ImplementationResult::FAILED->value,
+            ImplementationResult::ROLLED_BACK->value,
+        ], true);
+
+        $data = [
+            'implementation_result' => $this->implementation_result,
+            'started_at' => $this->started_at,
+            'finished_at' => $this->finished_at,
+            'executor_name' => $this->executor_name,
+            'report_source' => $this->report_source,
+            'summary' => $this->summary,
+            'test_results' => $this->test_results,
+            'failure_notes' => $isFailure ? $this->failure_notes : null,
+            'follow_up_action' => $isFailure ? $this->follow_up_action : null,
+            'follow_up_notes' => $isFailure ? $this->follow_up_notes : null,
+        ];
 
         try {
-            DB::transaction(function () use ($user, $path, $checksum) {
-                Evidence::create([
-                    'change_request_id' => $this->rfc->id,
-                    'uploaded_by_id' => $user->id,
-                    'evidence_type' => 'test_results',
-                    'file_path' => $path,
-                    'original_filename' => $this->evidence_file->getClientOriginalName(),
-                    'mime_type' => $this->evidence_file->getMimeType(),
-                    'file_size' => $this->evidence_file->getSize(),
-                    'checksum_sha256' => $checksum,
-                    'description' => $this->evidenceDescription(),
-                ]);
-
-                if (RfcStatus::fromValue($this->rfc->status) === RfcStatus::APPROVED) {
-                    RfcStatusTransition::transitionTo($this->rfc, RfcStatus::IN_PROGRESS, $user);
-                }
-
-                RfcStatusTransition::transitionTo(
-                    $this->rfc,
-                    $this->execution_result === 'success' ? RfcStatus::IMPLEMENTED : RfcStatus::FAILED,
-                    $user,
-                    $this->execution_result === 'failed' ? $this->rollback_notes : null
-                );
-            });
+            app(RfcImplementationService::class)->record($this->rfc, $user, $data, $this->files);
         } catch (InvalidRfcStatusTransitionException $exception) {
-            Storage::disk('public')->delete($path);
             $this->addError('status', $exception->getMessage());
 
             return;
-        } catch (\Throwable $exception) {
-            Storage::disk('public')->delete($path);
-
-            throw $exception;
         }
 
-        $message = $this->execution_result === 'success'
+        $message = $this->implementation_result === ImplementationResult::SUCCESS->value
             ? "Implementasi RFC {$this->rfc->rfc_number} berhasil dicatat dan diselesaikan."
             : "Implementasi RFC {$this->rfc->rfc_number} dicatat gagal / mengalami rollback.";
 
         session()->flash('message', $message);
         $this->redirect(route('change-requests.show', $this->rfc->id), navigate: true);
-    }
-
-    private function evidenceDescription(): string
-    {
-        $parts = [
-            $this->evidence_description,
-            'Mulai: '.$this->actual_start_time,
-            'Selesai: '.$this->actual_end_time,
-            $this->implementation_notes,
-            $this->testing_notes,
-        ];
-
-        if ($this->execution_result === 'failed') {
-            $parts[] = 'Rollback: '.$this->rollback_notes;
-        }
-
-        return implode("\n\n", array_filter($parts));
     }
 
     public function render(): View

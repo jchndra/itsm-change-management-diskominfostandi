@@ -20,7 +20,9 @@ class ShowChangeRequest extends Component
             'application.opd',
             'attachments',
             'riskAssessment',
-            'decisions.authority'
+            'decisions.authority',
+            'implementation',
+            'evidences',
         ]);
     }
 
