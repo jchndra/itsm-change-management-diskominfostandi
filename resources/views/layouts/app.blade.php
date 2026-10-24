@@ -107,7 +107,7 @@
                 @endif
 
                 @unless ($isStaff)
-                    <x-sidebar-link :href="route('change-requests.index')" :active="request()->routeIs('change-requests.*') && !request()->routeIs('change-requests.create')">
+                    <x-sidebar-link :href="route('change-requests.index')" :active="request()->routeIs('change-requests.*') && !request()->routeIs('change-requests.create') && !request()->routeIs('change-requests.deletions.*')">
                         <x-slot:icon>
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"

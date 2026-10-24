@@ -38,6 +38,8 @@ class ChangeRequest extends Model
         'rejection_note',
         'target_implementation_date',
         'closed_at',
+        'closed_by_id',
+        'closure_notes',
         'deleted_by_id',
         'deletion_reason',
     ];
@@ -73,6 +75,16 @@ class ChangeRequest extends Model
     public function deletedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'deleted_by_id');
+    }
+
+    public function closedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'closed_by_id');
+    }
+
+    public function implementation(): HasOne
+    {
+        return $this->hasOne(ChangeRequestImplementation::class);
     }
 
     public function riskAssessment(): HasOne

@@ -85,8 +85,43 @@ class ChangeRequestPolicy
         return $user->hasPermissionTo('rfc.record_decision');
     }
 
-    public function close(User $user): bool
+    public function implement(User $user, ChangeRequest $rfc): bool
     {
-        return $user->hasPermissionTo('rfc.close');
+        if ($rfc->trashed() || ! $user->hasPermissionTo('rfc.assign_release')) {
+            return false;
+        }
+
+        return in_array(RfcStatus::fromValue($rfc->status), [RfcStatus::APPROVED, RfcStatus::IN_PROGRESS], true);
+    }
+
+    public function evaluate(User $user, ChangeRequest $rfc): bool
+    {
+        if ($rfc->trashed() || ! $user->hasPermissionTo('rfc.close')) {
+            return false;
+        }
+
+        if (! in_array(RfcStatus::fromValue($rfc->status), [RfcStatus::IMPLEMENTED, RfcStatus::FAILED], true)) {
+            return false;
+        }
+
+        return $rfc->implementation()->whereNull('evaluated_at')->exists();
+    }
+
+    public function close(User $user, ChangeRequest $rfc): bool
+    {
+        if ($rfc->trashed() || ! $user->hasPermissionTo('rfc.close')) {
+            return false;
+        }
+
+        if (! in_array(RfcStatus::fromValue($rfc->status), [RfcStatus::IMPLEMENTED, RfcStatus::FAILED], true)) {
+            return false;
+        }
+
+        return $rfc->implementation()->whereNotNull('evaluated_at')->exists();
+    }
+
+    public function viewEvidence(User $user, ChangeRequest $rfc): bool
+    {
+        return ! $rfc->trashed() && $user->hasPermissionTo('rfc.view_all');
     }
 }
