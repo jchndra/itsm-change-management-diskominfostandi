@@ -6,6 +6,7 @@ use App\Enums\RfcStatus;
 use App\Models\ChangeRequest;
 use App\Models\RiskAssessment;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Component;
 
@@ -44,6 +45,15 @@ class AssessRisk extends Component
         return $this->valueMap[$lower] ?? $value;
     }
 
+    private function classificationForChangeType(?string $changeType): string
+    {
+        return match ((string) $changeType) {
+            'standard' => 'Standard Change',
+            'emergency' => 'Emergency Change',
+            default => 'Normal Change',
+        };
+    }
+
     public function mount(ChangeRequest $rfc): void
     {
         $this->authorize('assessRisk', $rfc);
@@ -56,6 +66,8 @@ class AssessRisk extends Component
             $this->urgency_level = $this->normalizeValue($this->rfc->riskAssessment->urgency_level, 'Normal');
             $this->classification = $this->rfc->riskAssessment->classification ?? 'Normal Change';
             $this->analysis_notes = $this->rfc->riskAssessment->analysis_notes ?? '';
+        } else {
+            $this->classification = $this->classificationForChangeType($this->rfc->change_type);
         }
     }
 
@@ -130,21 +142,51 @@ class AssessRisk extends Component
             }
         }
 
-        RiskAssessment::updateOrCreate(
-            ['change_request_id' => $this->rfc->id],
-            $assessmentData
-        );
+        $emergencyWasUnconfirmed = (bool) $this->rfc->fresh()->emergency_unconfirmed;
+        $emergencyDescription = null;
 
-        activity('rfc')
-            ->performedOn($this->rfc)
-            ->causedBy($user)
-            ->withProperties([
-                'event' => 'risk_assessment',
-                'risk_level' => $this->risk_level,
-                'impact_level' => $this->impact_level,
-                'classification' => $this->classification,
-            ])
-            ->log('Analisis risiko oleh Change Manager');
+        if ($emergencyWasUnconfirmed) {
+            $emergencyDescription = $this->classification === 'Emergency Change'
+                ? 'Kategori Emergency dikonfirmasi oleh Change Manager'
+                : 'Usulan Emergency diubah Change Manager menjadi '.$this->classification;
+        }
+
+        DB::transaction(function () use ($assessmentData, $user, $emergencyWasUnconfirmed, $emergencyDescription): void {
+            RiskAssessment::updateOrCreate(
+                ['change_request_id' => $this->rfc->id],
+                $assessmentData
+            );
+
+            activity('rfc')
+                ->performedOn($this->rfc)
+                ->causedBy($user)
+                ->withProperties([
+                    'event' => 'risk_assessment',
+                    'risk_level' => $this->risk_level,
+                    'impact_level' => $this->impact_level,
+                    'classification' => $this->classification,
+                ])
+                ->log('Analisis risiko oleh Change Manager');
+
+            if (! $emergencyWasUnconfirmed) {
+                return;
+            }
+
+            $this->rfc->update(['emergency_unconfirmed' => false]);
+
+            activity('rfc')
+                ->performedOn($this->rfc)
+                ->causedBy($user)
+                ->withProperties([
+                    'event' => 'emergency_classification_review',
+                    'submitted_change_type' => $this->rfc->change_type,
+                    'proposed_category' => 'Emergency',
+                    'classification' => $this->classification,
+                    'emergency_unconfirmed_before' => true,
+                    'emergency_unconfirmed_after' => false,
+                ])
+                ->log($emergencyDescription);
+        });
 
         session()->flash('message', 'Penilaian risiko dan klasifikasi RFC berhasil disimpan.');
         $this->redirectRoute('change-requests.index');

@@ -223,14 +223,27 @@ class RfcHistoryService
             );
         }
 
+        $emergencyClassificationNote = null;
+
+        if ($forStaff) {
+            $emergencyActivity = $activities->last(
+                fn (Activity $activity): bool => data_get($activity->properties, 'event') === 'emergency_classification_review'
+            );
+
+            $emergencyClassificationNote = $emergencyActivity
+                ? trim((string) $emergencyActivity->description)
+                : null;
+        }
+
         if ($rfc->riskAssessment) {
             $risk = $rfc->riskAssessment;
+            $riskDetails = trim(implode(' • ', array_filter([
+                filled($risk->risk_level) ? 'Risiko: '.$risk->risk_level : null,
+                filled($risk->impact_level) ? 'Dampak: '.$risk->impact_level : null,
+                filled($risk->classification) ? 'Klasifikasi: '.$risk->classification : null,
+            ])));
             $riskNote = $forStaff
-                ? trim(implode(' • ', array_filter([
-                    filled($risk->risk_level) ? 'Risiko: '.$risk->risk_level : null,
-                    filled($risk->impact_level) ? 'Dampak: '.$risk->impact_level : null,
-                    filled($risk->classification) ? 'Klasifikasi: '.$risk->classification : null,
-                ])))
+                ? trim(implode("\n", array_filter([$riskDetails, $emergencyClassificationNote])))
                 : null;
 
             $events[] = [

@@ -1,4 +1,12 @@
 <div class="max-w-4xl mx-auto space-y-6">
+    @php
+        $submittedCategory = match ((string) $rfc->change_type) {
+            'standard' => 'Standar',
+            'normal' => 'Normal',
+            'emergency' => 'Emergency',
+            default => '-',
+        };
+    @endphp
     {{-- Top Bar Navigation --}}
     <div class="flex items-center justify-between">
         <a href="{{ route('change-requests.index') }}"
@@ -93,6 +101,16 @@
                 {{ $message }}</div>
         @enderror
 
+        <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-medium text-slate-700">
+            Kategori yang diusulkan Pemohon: {{ $submittedCategory }}
+        </div>
+
+        @if ($rfc->emergency_unconfirmed)
+            <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-medium text-amber-800">
+                Pemohon mengusulkan kategori Emergency. Konfirmasi dengan mempertahankan klasifikasi Emergency Change, atau pilih klasifikasi lain bila tidak memenuhi syarat darurat.
+            </div>
+        @endif
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
             {{-- Tingkat Risiko --}}
             <div class="space-y-2">
@@ -149,8 +167,8 @@
                 <select wire:model.live="classification"
                     class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
                     <option value="Standard Change">Standard Change (Rutin & Ter-pre-otorisasi)</option>
-                    <option value="Normal Change">Normal Change (Membutuhkan Persetujuan CAB)</option>
-                    <option value="Emergency Change">Emergency Change (Membutuhkan Persetujuan ECAB)</option>
+                    <option value="Normal Change">Normal Change (Melalui review dan persetujuan Change Manager)</option>
+                    <option value="Emergency Change">Emergency Change (Penanganan segera dan diprioritaskan)</option>
                 </select>
                 @error('classification')
                     <span class="text-rose-600 font-medium">{{ $message }}</span>

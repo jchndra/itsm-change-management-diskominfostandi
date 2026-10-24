@@ -191,13 +191,20 @@
                 }
 
                 $officerAdminNote = $isStaff ? ($rfc->admin_note ?? null) : null;
-                $officerChangeType = $isStaff
-                    ? (filled($rfc->change_type)
-                        ? ($submittedChangeType ?: $rfc->change_type)
-                        : $rfc->riskAssessment?->classification)
+                $officerSubmittedChangeType = $isStaff && filled($rfc->change_type)
+                    ? ($submittedChangeType ?: (string) $rfc->change_type)
                     : null;
+                $officerFinalClassification = $isStaff ? $rfc->riskAssessment?->classification : null;
+                $submittedClassification = match ((string) $rfc->change_type) {
+                    'standard' => 'Standard Change',
+                    'normal' => 'Normal Change',
+                    'emergency' => 'Emergency Change',
+                    default => null,
+                };
+                $showSubmittedChangeType = filled($officerSubmittedChangeType)
+                    && (blank($officerFinalClassification) || $submittedClassification !== $officerFinalClassification);
             @endphp
-            @if (filled($officerTicketNumber) || filled($officerCategory) || filled($officerPriority) || filled($officerChangeType) || filled($officerAdminNote))
+            @if (filled($officerTicketNumber) || filled($officerCategory) || filled($officerPriority) || filled($officerSubmittedChangeType) || filled($officerFinalClassification) || filled($officerAdminNote))
                 <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
                     <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Ditetapkan Petugas</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6 text-sm">
@@ -222,10 +229,16 @@
                                 <p class="text-slate-800 font-medium">{{ $officerPriority }}</p>
                             </div>
                         @endif
-                        @if (filled($officerChangeType))
+                        @if ($showSubmittedChangeType)
                             <div>
-                                <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Jenis Perubahan</span>
-                                <p class="text-slate-800 font-medium">{{ $officerChangeType }}</p>
+                                <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Kategori diusulkan Pemohon</span>
+                                <p class="text-slate-800 font-medium">{{ $officerSubmittedChangeType }}</p>
+                            </div>
+                        @endif
+                        @if (filled($officerFinalClassification))
+                            <div>
+                                <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Klasifikasi ditetapkan Change Manager</span>
+                                <p class="text-slate-800 font-medium">{{ $officerFinalClassification }}</p>
                             </div>
                         @endif
                         @if (filled($officerAdminNote))
