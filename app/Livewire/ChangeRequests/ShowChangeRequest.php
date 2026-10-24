@@ -21,13 +21,14 @@ class ShowChangeRequest extends Component
             'attachments',
             'riskAssessment',
             'decisions.authority',
-            'implementation',
+            'implementation.evaluatedBy',
             'evidences',
+            'closedBy',
         ]);
     }
 
     public function render()
     {
-        return view('livewire.change-requests.show-change-request')->title('Detail RFC - ' . $this->rfc->rfc_number);
+        return view('livewire.change-requests.show-change-request')->title('Detail RFC - '.$this->rfc->rfc_number);
     }
 }

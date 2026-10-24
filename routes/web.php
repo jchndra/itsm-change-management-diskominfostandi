@@ -8,6 +8,7 @@ use App\Livewire\ChangeRequests\CloseRfc;
 use App\Livewire\ChangeRequests\CreateChangeRequest;
 use App\Livewire\ChangeRequests\DeletionHistory;
 use App\Livewire\ChangeRequests\EditChangeRequest;
+use App\Livewire\ChangeRequests\EvaluateRfc;
 use App\Livewire\ChangeRequests\ImplementChange;
 use App\Livewire\ChangeRequests\ListChangeRequests;
 use App\Livewire\ChangeRequests\RecordDecision;
@@ -100,8 +101,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/{rfc}/implement', ImplementChange::class)
             ->middleware('can:implement,rfc')
             ->name('implement');
+        Route::get('/{rfc}/evaluate', EvaluateRfc::class)
+            ->middleware('can:evaluate,rfc')
+            ->name('evaluate');
         Route::get('/{rfc}/close', CloseRfc::class)
-            ->middleware('can:rfc.close')
+            ->middleware('can:close,rfc')
             ->name('close');
     });
 });

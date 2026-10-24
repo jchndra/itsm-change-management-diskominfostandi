@@ -149,6 +149,36 @@ class RfcHistoryService
                 continue;
             }
 
+            if ($eventType === 'evaluation_recorded') {
+                // Evaluasi adalah catatan internal staf. Jangan tampilkan
+                // kepada Pemohon dan jangan dianggap sebagai perubahan status.
+                if (! $forStaff) {
+                    continue;
+                }
+
+                $result = ImplementationResult::labelFor(
+                    (string) data_get($activity->properties, 'implementation_result')
+                );
+                $evaluationNotes = trim((string) data_get($activity->properties, 'evaluation_notes', ''));
+
+                $events[] = [
+                    'key' => 'evaluation_recorded',
+                    'label' => 'Evaluasi dicatat',
+                    'note' => implode("\n", array_filter([
+                        'Hasil implementasi: '.$result,
+                        filled($evaluationNotes) ? 'Catatan evaluasi: '.$evaluationNotes : null,
+                    ])),
+                    'time' => $activity->created_at,
+                    'tone' => 'info',
+                    'actor_name' => $activity->causer?->name,
+                    'actor_role' => 'Change Manager',
+                    'legacy' => false,
+                    'order' => $sequence,
+                ];
+
+                continue;
+            }
+
             if (blank($newStatusRaw)) {
                 if ($this->isCreationActivity($activity)) {
                     $isSubmitted = str_contains(strtolower((string) $activity->description), 'diajukan');
@@ -512,10 +542,13 @@ class RfcHistoryService
             || ($status === RfcStatus::CANCELLED && $actorRole === 'Pemohon');
         $actorName = $canShowActor ? $activity->causer?->name : null;
         $safeNote = filled($note) ? trim((string) $note) : null;
+        $eventType = data_get($activity->properties, 'event');
         $implementationResult = data_get($activity->properties, 'implementation_result');
         $isImplementation = filled($implementationResult);
 
-        if ($isImplementation) {
+        if ($eventType === 'closure_recorded') {
+            $safeNote = $forStaff ? $this->closureEventNote($activity) : null;
+        } elseif ($isImplementation) {
             $safeNote = $this->implementationEventNote($activity, $forStaff);
         }
 
@@ -558,6 +591,28 @@ class RfcHistoryService
             'implementation' => $isImplementation,
             'order' => $order,
         ];
+    }
+
+    private function closureEventNote(Activity $activity): ?string
+    {
+        $result = ImplementationResult::labelFor(
+            (string) data_get($activity->properties, 'implementation_result')
+        );
+        $outcome = (string) data_get($activity->properties, 'outcome');
+        $outcomeLabel = match ($outcome) {
+            'successful' => 'Berhasil',
+            'unsuccessful' => 'Tidak berhasil',
+            default => null,
+        };
+        $closureNotes = trim((string) data_get($activity->properties, 'closure_notes', ''));
+        $evaluationNotes = trim((string) data_get($activity->properties, 'evaluation_notes', ''));
+
+        return implode("\n", array_filter([
+            'Hasil implementasi: '.$result,
+            $outcomeLabel !== null ? 'Outcome: '.$outcomeLabel : null,
+            $closureNotes !== '' ? 'Catatan penutupan: '.$closureNotes : null,
+            $evaluationNotes !== '' ? 'Ringkasan evaluasi: '.$evaluationNotes : null,
+        ]));
     }
 
     private function implementationEventNote(Activity $activity, bool $forStaff): ?string

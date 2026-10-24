@@ -14,6 +14,24 @@
                 \App\Enums\DecisionStatus::APPROVED->value,
                 \App\Enums\DecisionStatus::REJECTED->value,
             ], true));
+        $status = \App\Enums\RfcStatus::fromValue($rfc->status);
+        $implementation = $rfc->implementation;
+        $implementationEvidences = $implementation
+            ? $rfc->evidences->where('evidence_type', 'implementation')->values()
+            : collect();
+        $canEvaluate = ! $rfc->trashed()
+            && (auth()->user()?->can('evaluate', $rfc) ?? false)
+            && in_array($status, [\App\Enums\RfcStatus::IMPLEMENTED, \App\Enums\RfcStatus::FAILED], true)
+            && $implementation
+            && $implementation->evaluated_at === null;
+        $canClose = ! $rfc->trashed()
+            && (auth()->user()?->can('close', $rfc) ?? false)
+            && $implementation
+            && $implementation->evaluated_at !== null;
+        $awaitingEvaluation = $isStaff
+            && in_array($status, [\App\Enums\RfcStatus::IMPLEMENTED, \App\Enums\RfcStatus::FAILED], true)
+            && $implementation
+            && $implementation->evaluated_at === null;
     @endphp
 
     <!-- Header & Tombol Kembali -->
@@ -29,9 +47,6 @@
                 </a>
                 <h1 class="text-2xl font-bold text-slate-900">{{ $rfc->rfc_number ?? 'Draft RFC' }}</h1>
 
-                @php
-                    $status = \App\Enums\RfcStatus::fromValue($rfc->status);
-                @endphp
                 <x-status-badge :status="$status ?? $rfc->status" />
             </div>
             <p class="text-sm text-slate-500 mt-1 ml-12">{{ $rfc->title }}</p>
@@ -44,6 +59,26 @@
                         class="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700">
                         Catat Implementasi
                     </a>
+                @endif
+
+                @if ($canEvaluate)
+                    <a href="{{ route('change-requests.evaluate', $rfc) }}" wire:navigate
+                        class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700">
+                        Catat Evaluasi
+                    </a>
+                @endif
+
+                @if ($canClose)
+                    <a href="{{ route('change-requests.close', $rfc) }}" wire:navigate
+                        class="inline-flex items-center justify-center rounded-lg bg-slate-800 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-900">
+                        Tutup RFC
+                    </a>
+                @endif
+
+                @if ($awaitingEvaluation && $canEvaluate)
+                    <p class="text-xs font-medium text-amber-700">
+                        Tutup RFC aktif setelah evaluasi dicatat
+                    </p>
                 @endif
 
                 @if (auth()->user()?->can('update', $rfc))
@@ -173,13 +208,6 @@
                     </ul>
                 </div>
             @endif
-
-            @php
-                $implementation = $rfc->implementation;
-                $implementationEvidences = $implementation
-                    ? $rfc->evidences->where('evidence_type', 'implementation')->values()
-                    : collect();
-            @endphp
 
             @if ($implementation)
                 <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
@@ -318,6 +346,48 @@
                             </div>
                         </div>
                     @endif
+                </div>
+            @endif
+
+            @if ($isStaff && ($implementation?->evaluated_at || $rfc->closed_at || filled($rfc->closure_notes)))
+                <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Evaluasi dan Penutupan</h3>
+
+                    <div class="space-y-5 text-sm">
+                        @if ($implementation?->evaluated_at)
+                            <div class="rounded-lg border border-emerald-100 bg-emerald-50 p-4">
+                                <div class="flex flex-wrap items-start justify-between gap-2">
+                                    <h4 class="text-sm font-bold text-emerald-900">Catatan Evaluasi</h4>
+                                    <span class="text-[11px] text-emerald-800">
+                                        {{ $implementation->evaluated_at->copy()->locale('id')->translatedFormat('d M Y, H:i') }}
+                                    </span>
+                                </div>
+                                <p class="mt-2 whitespace-pre-wrap text-emerald-950">{{ $implementation->evaluation_notes }}</p>
+                                <p class="mt-3 text-xs text-emerald-800">
+                                    Dievaluasi oleh {{ $implementation->evaluatedBy?->name ?? 'Change Manager' }}
+                                </p>
+                            </div>
+                        @endif
+
+                        @if ($rfc->closed_at || filled($rfc->closure_notes))
+                            <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                                <div class="flex flex-wrap items-start justify-between gap-2">
+                                    <h4 class="text-sm font-bold text-slate-800">Catatan Penutupan</h4>
+                                    @if ($rfc->closed_at)
+                                        <span class="text-[11px] text-slate-500">
+                                            {{ $rfc->closed_at->copy()->locale('id')->translatedFormat('d M Y, H:i') }}
+                                        </span>
+                                    @endif
+                                </div>
+                                <p class="mt-2 whitespace-pre-wrap text-slate-700">{{ $rfc->closure_notes ?: '-' }}</p>
+                                @if ($rfc->closedBy || $rfc->closed_at)
+                                    <p class="mt-3 text-xs text-slate-500">
+                                        Ditutup oleh {{ $rfc->closedBy?->name ?? '-' }}
+                                    </p>
+                                @endif
+                            </div>
+                        @endif
+                    </div>
                 </div>
             @endif
 

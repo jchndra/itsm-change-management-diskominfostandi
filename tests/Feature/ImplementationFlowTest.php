@@ -4,14 +4,19 @@ use App\Enums\FollowUpAction;
 use App\Enums\ImplementationResult;
 use App\Enums\RfcStatus;
 use App\Exceptions\InvalidRfcStatusTransitionException;
+use App\Exceptions\RfcClosureException;
+use App\Exceptions\RfcEvaluationException;
 use App\Exceptions\RfcImplementationException;
 use App\Livewire\ChangeRequests\CloseRfc;
+use App\Livewire\ChangeRequests\EvaluateRfc;
 use App\Livewire\ChangeRequests\ImplementChange;
 use App\Livewire\ChangeRequests\ShowChangeRequest;
 use App\Models\ChangeRequest;
 use App\Models\ChangeRequestImplementation;
 use App\Models\Evidence;
 use App\Models\User;
+use App\Services\RfcClosureService;
+use App\Services\RfcEvaluationService;
 use App\Services\RfcHistoryService;
 use App\Services\RfcImplementationService;
 use Database\Seeders\PermissionSeeder;
@@ -87,6 +92,29 @@ function recordImplementation(
         validImplementationFields($overrides),
         $files ?? [implementationPdf()],
     );
+}
+
+function implementationRecordRow(
+    ChangeRequest $rfc,
+    User $actor,
+    array $overrides = [],
+): ChangeRequestImplementation {
+    return ChangeRequestImplementation::create(array_merge([
+        'change_request_id' => $rfc->id,
+        'recorded_by_id' => $actor->id,
+        'implementation_result' => ImplementationResult::SUCCESS->value,
+        'started_at' => now()->subHour(),
+        'finished_at' => now(),
+        'executor_name' => 'Tim Rilis Diskominfostandi',
+        'report_source' => 'Laporan tertulis Tim Rilis',
+        'summary' => 'Perubahan diterapkan pada lingkungan produksi.',
+        'test_results' => 'Pengujian fungsional dan regresi berhasil.',
+    ], $overrides));
+}
+
+function evaluationNotes(string $suffix = 'implementasi'): string
+{
+    return 'Evaluasi menyeluruh terhadap hasil '.$suffix.' beserta bukti pendukungnya.';
 }
 
 test('CM mencatat implementasi sukses dengan bukti privat dan activity audit', function () {
@@ -561,17 +589,461 @@ test('RFC lama tanpa data implementasi tetap tampil tanpa error', function () {
         ->assertDontSee('Hasil Implementasi');
 });
 
-test('change manager dapat menutup rfc berstatus failed', function () {
+test('CM mencatat evaluasi untuk RFC implemented dan failed tanpa mengubah status', function () {
     $cm = implementationUser('Change Manager');
 
-    $rfc = ChangeRequest::factory()->create([
-        'status' => RfcStatus::FAILED->value,
+    foreach ([
+        [RfcStatus::IMPLEMENTED, ImplementationResult::SUCCESS],
+        [RfcStatus::FAILED, ImplementationResult::FAILED],
+    ] as [$status, $result]) {
+        $rfc = implementationRfc($status);
+        implementationRecordRow($rfc, $cm, [
+            'implementation_result' => $result->value,
+            'failure_notes' => $result === ImplementationResult::FAILED
+                ? 'Perubahan gagal dan layanan telah dipulihkan.'
+                : null,
+            'follow_up_action' => $result === ImplementationResult::FAILED
+                ? FollowUpAction::NONE->value
+                : null,
+        ]);
+
+        $notes = evaluationNotes($result->value);
+        $updated = app(RfcEvaluationService::class)->record($rfc->fresh(), $cm, $notes);
+
+        expect($rfc->fresh()->status)->toBe($status->value)
+            ->and($updated->evaluated_by_id)->toBe($cm->id)
+            ->and($updated->evaluated_at)->not->toBeNull()
+            ->and($updated->evaluation_notes)->toBe($notes);
+
+        $activity = Activity::query()
+            ->where('subject_type', $rfc->getMorphClass())
+            ->where('subject_id', $rfc->id)
+            ->get()
+            ->first(fn (Activity $activity): bool => data_get($activity->properties, 'event') === 'evaluation_recorded');
+
+        expect($activity)->not->toBeNull()
+            ->and($activity->causer_id)->toBe($cm->id)
+            ->and(data_get($activity->properties, 'status'))->toBe($status->value)
+            ->and(data_get($activity->properties, 'old_status'))->toBe($status->value)
+            ->and(data_get($activity->properties, 'new_status'))->toBe($status->value)
+            ->and(data_get($activity->properties, 'implementation_result'))->toBe($result->value)
+            ->and(data_get($activity->properties, 'evaluation_notes'))->toBe($notes)
+            ->and(data_get($activity->properties, 'evaluated_at'))->not->toBeNull();
+    }
+});
+
+test('CM mencatat evaluasi lewat halaman evaluasi dengan ringkasan implementasi baca-saja', function () {
+    $cm = implementationUser('Change Manager');
+    $rfc = implementationRfc(RfcStatus::IMPLEMENTED);
+
+    implementationRecordRow($rfc, $cm, [
+        'summary' => 'Ringkasan implementasi untuk halaman evaluasi.',
+        'test_results' => 'Pengujian evaluasi berhasil.',
+        'follow_up_action' => FollowUpAction::ESCALATION->value,
+        'follow_up_notes' => 'Tindak lanjut evaluasi untuk staf.',
     ]);
+
+    Evidence::create([
+        'change_request_id' => $rfc->id,
+        'uploaded_by_id' => $cm->id,
+        'evidence_type' => 'implementation',
+        'file_path' => 'implementation-evidences/'.$rfc->id.'/bukti-evaluasi.pdf',
+        'original_filename' => 'bukti-evaluasi.pdf',
+        'mime_type' => 'application/pdf',
+        'file_size' => 2048,
+        'checksum_sha256' => str_repeat('b', 64),
+    ]);
+
+    $notes = evaluationNotes('implementasi halaman evaluasi');
 
     $this->actingAs($cm);
 
-    Livewire::test(CloseRfc::class, ['rfc' => $rfc])
+    Livewire::test(EvaluateRfc::class, ['rfc' => $rfc->fresh()])
+        ->assertOk()
+        ->assertSee('Ringkasan Hasil Implementasi')
+        ->assertSee('Tim Rilis Diskominfostandi')
+        ->assertSee('Ringkasan implementasi untuk halaman evaluasi.')
+        ->assertSee('Pengujian evaluasi berhasil.')
+        ->assertSee('Eskalasi atau investigasi')
+        ->assertSee('Tindak lanjut evaluasi untuk staf.')
+        ->assertSee('bukti-evaluasi.pdf')
+        ->set('evaluation_notes', $notes)
+        ->call('saveEvaluation')
+        ->assertHasNoErrors()
+        ->assertRedirect(route('change-requests.show', $rfc->id));
+
+    expect($rfc->fresh()->implementation->evaluation_notes)->toBe($notes);
+});
+
+test('evaluasi ganda tanpa implementasi status salah dan catatan pendek ditolak', function () {
+    $cm = implementationUser('Change Manager');
+
+    $evaluatedRfc = implementationRfc(RfcStatus::IMPLEMENTED);
+    implementationRecordRow($evaluatedRfc, $cm);
+    app(RfcEvaluationService::class)->record($evaluatedRfc->fresh(), $cm, evaluationNotes('pertama'));
+
+    expect(fn () => app(RfcEvaluationService::class)->record(
+        $evaluatedRfc->fresh(),
+        $cm,
+        evaluationNotes('kedua'),
+    ))->toThrow(RfcEvaluationException::class);
+
+    $withoutImplementation = implementationRfc(RfcStatus::IMPLEMENTED);
+
+    expect(fn () => app(RfcEvaluationService::class)->record(
+        $withoutImplementation,
+        $cm,
+        evaluationNotes('tanpa implementasi'),
+    ))->toThrow(RfcEvaluationException::class);
+
+    $wrongStatus = implementationRfc(RfcStatus::APPROVED);
+    implementationRecordRow($wrongStatus, $cm);
+
+    expect(fn () => app(RfcEvaluationService::class)->record(
+        $wrongStatus,
+        $cm,
+        evaluationNotes('status salah'),
+    ))->toThrow(RfcEvaluationException::class);
+
+    $shortNotesRfc = implementationRfc(RfcStatus::IMPLEMENTED);
+    implementationRecordRow($shortNotesRfc, $cm);
+
+    $this->actingAs($cm);
+
+    Livewire::test(EvaluateRfc::class, ['rfc' => $shortNotesRfc])
+        ->set('evaluation_notes', 'Terlalu pendek')
+        ->call('saveEvaluation')
+        ->assertHasErrors(['evaluation_notes']);
+
+    expect(fn () => app(RfcEvaluationService::class)->record(
+        $shortNotesRfc->fresh(),
+        $cm,
+        'Terlalu pendek',
+    ))->toThrow(RfcEvaluationException::class);
+
+    expect($shortNotesRfc->fresh()->implementation->evaluated_at)->toBeNull();
+});
+
+test('penutupan sebelum evaluasi ditolak lewat komponen URL dan service Super Admin', function () {
+    $cm = implementationUser('Change Manager');
+    $superAdmin = implementationUser('Super Admin');
+
+    foreach ([RfcStatus::IMPLEMENTED, RfcStatus::FAILED] as $status) {
+        $rfc = implementationRfc($status);
+        implementationRecordRow($rfc, $cm);
+
+        Livewire::actingAs($cm)
+            ->test(CloseRfc::class, ['rfc' => $rfc])
+            ->assertForbidden();
+
+        $this->actingAs($cm)
+            ->get(route('change-requests.close', $rfc))
+            ->assertForbidden();
+
+        expect(fn () => app(RfcClosureService::class)->close(
+            $rfc->fresh(),
+            $cm,
+            'Catatan penutupan sebelum evaluasi.',
+        ))->toThrow(RfcClosureException::class);
+
+        expect(fn () => app(RfcClosureService::class)->close(
+            $rfc->fresh(),
+            $superAdmin,
+            'Catatan penutupan sebelum evaluasi.',
+        ))->toThrow(RfcClosureException::class);
+
+        $fresh = $rfc->fresh();
+
+        expect($fresh->status)->toBe($status->value)
+            ->and($fresh->closed_at)->toBeNull()
+            ->and($fresh->closed_by_id)->toBeNull()
+            ->and($fresh->closure_notes)->toBeNull();
+    }
+});
+
+test('penutupan setelah evaluasi menyimpan data dan activity outcome successful', function () {
+    $cm = implementationUser('Change Manager');
+    $rfc = implementationRfc(RfcStatus::IMPLEMENTED);
+
+    implementationRecordRow($rfc, $cm);
+    $evaluationNotes = evaluationNotes('implementasi sukses');
+    $closureNotes = 'RFC ditutup setelah seluruh bukti dan evaluasi diverifikasi.';
+
+    app(RfcEvaluationService::class)->record($rfc->fresh(), $cm, $evaluationNotes);
+
+    $this->actingAs($cm);
+
+    Livewire::test(CloseRfc::class, ['rfc' => $rfc->fresh()])
+        ->assertSee('Ringkasan Hasil Implementasi')
+        ->assertSee($evaluationNotes)
+        ->set('closure_notes', $closureNotes)
+        ->call('closeTicket')
+        ->assertHasErrors(['confirmed'])
+        ->set('confirmed', true)
+        ->call('closeTicket')
+        ->assertHasNoErrors()
+        ->assertRedirect(route('change-requests.show', $rfc->id));
+
+    $fresh = $rfc->fresh();
+
+    expect($fresh->status)->toBe(RfcStatus::CLOSED->value)
+        ->and($fresh->closed_at)->not->toBeNull()
+        ->and($fresh->closed_by_id)->toBe($cm->id)
+        ->and($fresh->closure_notes)->toBe($closureNotes);
+
+    $activity = Activity::query()
+        ->where('subject_type', $rfc->getMorphClass())
+        ->where('subject_id', $rfc->id)
+        ->get()
+        ->first(fn (Activity $activity): bool => data_get($activity->properties, 'event') === 'closure_recorded');
+
+    expect($activity)->not->toBeNull()
+        ->and($activity->causer_id)->toBe($cm->id)
+        ->and(data_get($activity->properties, 'old_status'))->toBe(RfcStatus::IMPLEMENTED->value)
+        ->and(data_get($activity->properties, 'new_status'))->toBe(RfcStatus::CLOSED->value)
+        ->and(data_get($activity->properties, 'outcome'))->toBe('successful')
+        ->and(data_get($activity->properties, 'implementation_result'))->toBe(ImplementationResult::SUCCESS->value)
+        ->and(data_get($activity->properties, 'closure_notes'))->toBe($closureNotes)
+        ->and(data_get($activity->properties, 'evaluation_notes'))->toBe($evaluationNotes);
+
+    $staffHistory = app(RfcHistoryService::class)->build($fresh, true);
+    $staffEvaluationEvent = collect($staffHistory['events'])->firstWhere('key', 'evaluation_recorded');
+    $staffClosureEvent = collect($staffHistory['events'])->firstWhere('key', RfcStatus::CLOSED->value);
+
+    expect($staffEvaluationEvent)->not->toBeNull()
+        ->and($staffEvaluationEvent['label'])->toBe('Evaluasi dicatat')
+        ->and($staffEvaluationEvent['note'])->toContain($evaluationNotes)
+        ->and($staffClosureEvent)->not->toBeNull()
+        ->and($staffClosureEvent['note'])->toContain('Outcome: Berhasil')
+        ->and($staffClosureEvent['note'])->toContain('Catatan penutupan: '.$closureNotes)
+        ->and($staffClosureEvent['note'])->toContain('Ringkasan evaluasi: '.$evaluationNotes);
+
+    $ownerHistory = app(RfcHistoryService::class)->build($fresh, false);
+    $ownerClosureEvent = collect($ownerHistory['events'])->firstWhere('key', RfcStatus::CLOSED->value);
+
+    expect(collect($ownerHistory['events'])->firstWhere('key', 'evaluation_recorded'))->toBeNull()
+        ->and($ownerClosureEvent)->not->toBeNull()
+        ->and($ownerClosureEvent['note'])->toBeNull()
+        ->and(json_encode($ownerHistory))->not->toContain($closureNotes)
+        ->and(json_encode($ownerHistory))->not->toContain($evaluationNotes);
+});
+
+test('RFC failed yang ditutup mencatat outcome unsuccessful', function () {
+    $cm = implementationUser('Change Manager');
+    $rfc = implementationRfc(RfcStatus::FAILED);
+
+    implementationRecordRow($rfc, $cm, [
+        'implementation_result' => ImplementationResult::FAILED->value,
+        'failure_notes' => 'Perubahan gagal dan rollback telah diverifikasi.',
+        'follow_up_action' => FollowUpAction::NONE->value,
+    ]);
+
+    app(RfcEvaluationService::class)->record($rfc->fresh(), $cm, evaluationNotes('kegagalan'));
+    app(RfcClosureService::class)->close(
+        $rfc->fresh(),
+        $cm,
+        'RFC ditutup setelah kegagalan dan rollback dievaluasi.',
+    );
+
+    $activity = Activity::query()
+        ->where('subject_type', $rfc->getMorphClass())
+        ->where('subject_id', $rfc->id)
+        ->get()
+        ->first(fn (Activity $activity): bool => data_get($activity->properties, 'event') === 'closure_recorded');
+
+    expect($rfc->fresh()->status)->toBe(RfcStatus::CLOSED->value)
+        ->and($activity)->not->toBeNull()
+        ->and(data_get($activity->properties, 'outcome'))->toBe('unsuccessful')
+        ->and(data_get($activity->properties, 'implementation_result'))->toBe(ImplementationResult::FAILED->value);
+});
+
+test('Pemohon dan Admin mendapat 403 di halaman evaluasi dan penutupan serta tidak melihat tombol', function () {
+    $cm = implementationUser('Change Manager');
+    $requester = implementationUser('Pemohon');
+    $admin = implementationUser('Admin');
+
+    $pending = implementationRfc(RfcStatus::IMPLEMENTED, $requester);
+    implementationRecordRow($pending, $cm);
+
+    $evaluated = implementationRfc(RfcStatus::IMPLEMENTED, $requester);
+    implementationRecordRow($evaluated, $cm);
+    $evaluationNotes = evaluationNotes('visibilitas');
+    app(RfcEvaluationService::class)->record($evaluated->fresh(), $cm, $evaluationNotes);
+
+    foreach ([$requester, $admin] as $user) {
+        $this->actingAs($user)
+            ->get(route('change-requests.evaluate', $pending))
+            ->assertForbidden();
+
+        $this->actingAs($user)
+            ->get(route('change-requests.close', $evaluated))
+            ->assertForbidden();
+    }
+
+    $this->actingAs($admin);
+
+    Livewire::test(ShowChangeRequest::class, ['rfc' => $pending->fresh()])
+        ->assertOk()
+        ->assertDontSee('Catat Evaluasi')
+        ->assertDontSee('Tutup RFC');
+
+    $closureNotes = 'Catatan penutupan internal yang hanya untuk staf.';
+    $closed = app(RfcClosureService::class)->close($evaluated->fresh(), $cm, $closureNotes);
+
+    $this->actingAs($requester);
+
+    Livewire::test(ShowChangeRequest::class, ['rfc' => $closed])
+        ->assertOk()
+        ->assertDontSee('Catat Evaluasi')
+        ->assertDontSee('Tutup RFC')
+        ->assertDontSee('Evaluasi dan Penutupan')
+        ->assertDontSee($evaluationNotes)
+        ->assertDontSee($closureNotes);
+
+    $this->actingAs($admin);
+
+    Livewire::test(ShowChangeRequest::class, ['rfc' => $closed])
+        ->assertOk()
+        ->assertSee('Evaluasi dan Penutupan')
+        ->assertSee($evaluationNotes)
+        ->assertSee($closureNotes)
+        ->assertDontSee('Catat Evaluasi')
+        ->assertDontSee('Tutup RFC');
+});
+
+test('penutupan kedua dan evaluasi ulang RFC closed ditolak', function () {
+    $cm = implementationUser('Change Manager');
+    $rfc = implementationRfc(RfcStatus::IMPLEMENTED);
+
+    implementationRecordRow($rfc, $cm);
+    app(RfcEvaluationService::class)->record($rfc->fresh(), $cm, evaluationNotes('sebelum penutupan'));
+
+    $firstNotes = 'Catatan penutupan pertama yang sah.';
+    $closed = app(RfcClosureService::class)->close($rfc->fresh(), $cm, $firstNotes);
+
+    expect(fn () => app(RfcClosureService::class)->close(
+        $closed,
+        $cm,
+        'Catatan penutupan kedua yang seharusnya ditolak.',
+    ))->toThrow(RfcClosureException::class);
+
+    expect(fn () => app(RfcEvaluationService::class)->record(
+        $closed,
+        $cm,
+        evaluationNotes('ulang'),
+    ))->toThrow(RfcEvaluationException::class);
+
+    $closureActivityCount = Activity::query()
+        ->where('subject_type', $rfc->getMorphClass())
+        ->where('subject_id', $rfc->id)
+        ->get()
+        ->filter(fn (Activity $activity): bool => data_get($activity->properties, 'event') === 'closure_recorded')
+        ->count();
+
+    expect($closed->fresh()->status)->toBe(RfcStatus::CLOSED->value)
+        ->and($closed->fresh()->closure_notes)->toBe($firstNotes)
+        ->and($closureActivityCount)->toBe(1);
+});
+
+test('kegagalan di tengah transaksi penutupan tidak meninggalkan perubahan setengah jalan', function () {
+    $cm = implementationUser('Change Manager');
+    $rfc = implementationRfc(RfcStatus::IMPLEMENTED);
+
+    implementationRecordRow($rfc, $cm);
+    app(RfcEvaluationService::class)->record($rfc->fresh(), $cm, evaluationNotes('sebelum kegagalan'));
+
+    ChangeRequest::updated(function (ChangeRequest $updated): void {
+        if ($updated->status === RfcStatus::CLOSED->value) {
+            throw new RuntimeException('Simulasi kegagalan penutupan.');
+        }
+    });
+
+    expect(fn () => app(RfcClosureService::class)->close(
+        $rfc->fresh(),
+        $cm,
+        'Catatan penutupan yang gagal di tengah transaksi.',
+    ))->toThrow(RuntimeException::class);
+
+    $fresh = $rfc->fresh();
+
+    expect($fresh->status)->toBe(RfcStatus::IMPLEMENTED->value)
+        ->and($fresh->closed_at)->toBeNull()
+        ->and($fresh->closed_by_id)->toBeNull()
+        ->and($fresh->closure_notes)->toBeNull()
+        ->and($fresh->implementation->evaluated_at)->not->toBeNull();
+
+    $closureActivity = Activity::query()
+        ->where('subject_type', $rfc->getMorphClass())
+        ->where('subject_id', $rfc->id)
+        ->get()
+        ->first(fn (Activity $activity): bool => data_get($activity->properties, 'event') === 'closure_recorded');
+
+    expect($closureActivity)->toBeNull();
+});
+
+test('RFC lama berstatus closed tanpa data implementasi tetap tampil tanpa error', function () {
+    $cm = implementationUser('Change Manager');
+    $requester = implementationUser('Pemohon');
+    $rfc = implementationRfc(RfcStatus::CLOSED, $requester);
+
+    $this->actingAs($cm);
+
+    Livewire::test(ShowChangeRequest::class, ['rfc' => $rfc])
+        ->assertOk()
+        ->assertDontSee('Hasil Implementasi')
+        ->assertDontSee('Evaluasi dan Penutupan');
+
+    $this->actingAs($requester);
+
+    Livewire::test(ShowChangeRequest::class, ['rfc' => $rfc])
+        ->assertOk()
+        ->assertDontSee('Hasil Implementasi')
+        ->assertDontSee('Evaluasi dan Penutupan');
+});
+
+test('tombol evaluasi dan penutupan mengikuti status serta prasyarat evaluasi', function () {
+    $cm = implementationUser('Change Manager');
+    $rfc = implementationRfc(RfcStatus::IMPLEMENTED);
+
+    implementationRecordRow($rfc, $cm);
+
+    $this->actingAs($cm);
+
+    Livewire::test(ShowChangeRequest::class, ['rfc' => $rfc->fresh()])
+        ->assertOk()
+        ->assertSee('Catat Evaluasi')
+        ->assertSee('Tutup RFC aktif setelah evaluasi dicatat')
+        ->assertDontSee(route('change-requests.close', $rfc));
+
+    app(RfcEvaluationService::class)->record($rfc->fresh(), $cm, evaluationNotes('tombol'));
+
+    $evaluated = $rfc->fresh();
+
+    Livewire::test(ShowChangeRequest::class, ['rfc' => $evaluated])
+        ->assertOk()
+        ->assertSee('Tutup RFC')
+        ->assertSee(route('change-requests.close', $evaluated))
+        ->assertDontSee('Catat Evaluasi')
+        ->assertDontSee('Tutup RFC aktif setelah evaluasi dicatat');
+});
+
+test('change manager dapat menutup rfc berstatus failed setelah evaluasi', function () {
+    $cm = implementationUser('Change Manager');
+    $rfc = implementationRfc(RfcStatus::FAILED);
+
+    implementationRecordRow($rfc, $cm, [
+        'implementation_result' => ImplementationResult::FAILED->value,
+        'failure_notes' => 'Perubahan gagal dan layanan dipulihkan.',
+        'follow_up_action' => FollowUpAction::NONE->value,
+    ]);
+
+    app(RfcEvaluationService::class)->record($rfc->fresh(), $cm, evaluationNotes('gagal'));
+
+    $this->actingAs($cm);
+
+    Livewire::test(CloseRfc::class, ['rfc' => $rfc->fresh()])
         ->set('closure_notes', 'Tiket ditutup setelah rollback diverifikasi.')
+        ->set('confirmed', true)
         ->call('closeTicket')
         ->assertHasNoErrors();
 
