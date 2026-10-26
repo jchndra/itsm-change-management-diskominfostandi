@@ -3,6 +3,7 @@
 namespace App\Livewire\Dashboard;
 
 use App\Models\User;
+use App\Services\DashboardMetricsService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -28,6 +29,7 @@ class ChangeManagerDashboard extends Component
         return view('livewire.dashboard.change-manager-dashboard', [
             'user' => $user,
             'now' => now()->locale('id'),
+            'overview' => app(DashboardMetricsService::class)->changeManagerOverview(),
         ])->title('Dashboard Change Manager');
     }
 }
