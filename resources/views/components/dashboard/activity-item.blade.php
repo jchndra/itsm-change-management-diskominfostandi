@@ -53,15 +53,22 @@
         ],
     };
     $fullDate = $occurredAt->copy()->timezone(config('app.timezone'))->locale('id');
+    $initials = collect(preg_split('/\s+/', trim($actorName)) ?: [])
+        ->filter()
+        ->take(2)
+        ->map(fn (string $word): string => mb_strtoupper(mb_substr($word, 0, 1)))
+        ->implode('');
 @endphp
 
-<li {{ $attributes->merge(['class' => 'relative flex items-start gap-3 px-5 py-4']) }}>
+<li
+    {{ $attributes->merge(['class' => 'relative flex items-start gap-3 px-5 py-4 transition-colors duration-200 hover:bg-slate-50/70']) }}>
     @unless ($isLast)
-        <span class="absolute left-[37px] top-12 h-[calc(100%-2.5rem)] w-px bg-slate-100" aria-hidden="true"></span>
+        <span class="absolute left-[37px] top-12 h-[calc(100%-2.75rem)] w-px bg-gradient-to-b from-slate-200 to-transparent"
+            aria-hidden="true"></span>
     @endunless
 
     <span
-        class="relative z-10 mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl ring-1 {{ $tone['tile'] }}">
+        class="relative z-10 mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl shadow-sm ring-1 {{ $tone['tile'] }}">
         @switch($tone['icon'])
             @case('x')
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -91,7 +98,8 @@
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
                         d="M12 3 4.5 6v5.25c0 4.42 3.04 8.36 7.5 9.75 4.46-1.39 7.5-5.33 7.5-9.75V6L12 3Z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m9.75 12 1.5 1.5 3-3" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                        d="m9.75 12 1.5 1.5 3-3" />
                 </svg>
                 @break
             @case('paperclip')
@@ -141,13 +149,16 @@
     <div class="min-w-0 flex-1">
         <div class="flex flex-wrap items-center gap-2">
             <span
-                class="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-700 ring-1 ring-blue-100">
+                class="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold tracking-wide text-slate-600 ring-1 ring-slate-200/80">
                 {{ $rfcNumber }}
             </span>
-            <span class="text-sm font-medium leading-snug text-slate-700">{{ $label }}</span>
+            <span class="text-sm font-semibold leading-snug text-slate-800">{{ $label }}</span>
         </div>
 
-        <div class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
+        <div class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
+            <span
+                class="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-gradient-to-br from-blue-500 to-sky-500 text-[8px] font-bold uppercase text-white shadow-sm"
+                aria-hidden="true">{{ $initials ?: '?' }}</span>
             <span class="font-medium text-slate-600">{{ $actorName }}</span>
             <span class="text-slate-300" aria-hidden="true">·</span>
             <time datetime="{{ $occurredAt->toIso8601String() }}"

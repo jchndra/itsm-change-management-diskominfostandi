@@ -17,7 +17,7 @@
 @endphp
 
 <span
-    {{ $attributes->merge(['class' => 'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold tabular-nums ring-1 ' . $tone]) }}
+    {{ $attributes->merge(['class' => 'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold tabular-nums shadow-sm ring-1 ' . $tone]) }}
     aria-label="Usia tunggu {{ number_format($days, 0, ',', '.') }} hari{{ $sinceLabel ? ', sejak ' . $sinceLabel : '' }}"
     @if ($sinceLabel) title="Sejak {{ $sinceLabel }}" @endif>
     <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
