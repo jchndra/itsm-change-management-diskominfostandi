@@ -370,8 +370,9 @@
         <div class="flex flex-col gap-6">
 
             {{-- Timeline status --}}
-            <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div class="mb-4 flex items-center justify-between gap-3">
+            <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" wire:poll.30s
+                aria-label="Status permohonan, diperbarui otomatis setiap 30 detik">
+                <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
                     <h3 class="flex items-center gap-2.5 text-[15px] font-bold text-slate-800">
                         <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7"
@@ -379,10 +380,23 @@
                         </svg>
                         Status Permohonan Saya
                     </h3>
-                    @if ($latestActiveRfc)
-                        <a href="{{ route('change-requests.show', $latestActiveRfc) }}" wire:navigate
-                            class="text-xs font-semibold text-blue-600 transition hover:text-blue-700">Lihat Semua</a>
-                    @endif
+
+                    <div class="flex items-center gap-2">
+                        <span title="Diperbarui otomatis setiap 30 detik"
+                            class="inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700">
+                            <span class="relative flex h-1.5 w-1.5" aria-hidden="true">
+                                <span
+                                    class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70"></span>
+                                <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                            </span>
+                            Otomatis
+                        </span>
+
+                        @if ($latestActiveRfc)
+                            <a href="{{ route('change-requests.show', $latestActiveRfc) }}" wire:navigate
+                                class="text-xs font-semibold text-blue-600 transition hover:text-blue-700">Lihat Semua</a>
+                        @endif
+                    </div>
                 </div>
 
                 @if ($latestActiveRfc)

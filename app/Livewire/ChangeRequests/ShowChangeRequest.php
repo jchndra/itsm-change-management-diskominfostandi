@@ -27,6 +27,16 @@ class ShowChangeRequest extends Component
         ]);
     }
 
+    /**
+     * Dipanggil oleh wire:poll agar riwayat proses mengikuti aksi role lain.
+     */
+    public function refreshProcessHistory(): void
+    {
+        $this->authorize('view', $this->rfc);
+
+        $this->rfc->refresh();
+    }
+
     public function render()
     {
         return view('livewire.change-requests.show-change-request')->title('Detail RFC - '.$this->rfc->rfc_number);

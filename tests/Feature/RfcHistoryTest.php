@@ -194,6 +194,52 @@ test('RFC dengan status legacy yang tidak dikenal tetap dapat dirender', functio
         ->assertSee('Mystery status');
 });
 
+test('riwayat proses pemohon mengikuti aksi Admin dan Change Manager tanpa muat ulang', function () {
+    $rfc = ($this->makeRfc)(['title' => 'RFC Integrasi Riwayat']);
+
+    activity('rfc')
+        ->performedOn($rfc)
+        ->causedBy($this->pemohon)
+        ->withProperties(['old_status' => null, 'new_status' => RfcStatus::SUBMITTED->value])
+        ->log('RFC resmi diajukan');
+
+    $this->actingAs($this->pemohon);
+
+    $component = Livewire::test(ShowChangeRequest::class, ['rfc' => $rfc->fresh()])
+        ->assertOk()
+        ->assertSee('RFC diajukan')
+        ->assertDontSee('Diverifikasi Admin dan diteruskan ke Change Manager');
+
+    expect($component->html())->toContain('wire:poll.30s="refreshProcessHistory"');
+
+    RfcStatusTransition::transitionTo($rfc->fresh(), RfcStatus::TICKET_CREATED, $this->admin);
+
+    $component->call('refreshProcessHistory')
+        ->assertSee('Diverifikasi Admin dan diteruskan ke Change Manager');
+
+    RfcStatusTransition::transitionTo($rfc->fresh(), RfcStatus::APPROVED, $this->cm);
+
+    $component->call('refreshProcessHistory')
+        ->assertSee('Disetujui oleh Change Manager');
+});
+
+test('timeline dashboard pemohon ikut diperbarui otomatis setelah status berubah', function () {
+    $rfc = ($this->makeRfc)(['status' => RfcStatus::TICKET_CREATED->value]);
+
+    $component = Livewire::actingAs($this->pemohon)
+        ->test(Dashboard::class)
+        ->assertOk()
+        ->assertSee('Menunggu review Change Manager');
+
+    expect($component->html())->toContain('wire:poll.30s');
+
+    RfcStatusTransition::transitionTo($rfc->fresh(), RfcStatus::APPROVED, $this->cm);
+
+    $component->call('$refresh')
+        ->assertSee('Menunggu pelaksanaan')
+        ->assertDontSee('Menunggu review Change Manager');
+});
+
 test('widget dashboard tidak menampilkan RFC closed, rejected, atau draft', function () {
     $active = ($this->makeRfc)(['title' => 'RFC Aktif Widget']);
     $closed = ($this->makeRfc)(['title' => 'RFC Ditutup Widget', 'status' => RfcStatus::CLOSED->value]);

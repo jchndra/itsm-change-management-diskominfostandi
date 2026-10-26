@@ -586,14 +586,28 @@
         </div>
 
         <!-- Kolom Kanan: Timeline Riwayat -->
-        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
-            <h3 class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
-                <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                Riwayat Proses
-            </h3>
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6"
+            wire:poll.30s="refreshProcessHistory"
+            aria-label="Riwayat proses, diperbarui otomatis setiap 30 detik">
+            <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+                <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Riwayat Proses
+                </h3>
+
+                <span title="Diperbarui otomatis setiap 30 detik"
+                    class="inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700">
+                    <span class="relative flex h-1.5 w-1.5" aria-hidden="true">
+                        <span
+                            class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70"></span>
+                        <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                    </span>
+                    Otomatis
+                </span>
+            </div>
 
             @php
                 $history = app(\App\Services\RfcHistoryService::class)->build($rfc, $isStaff);
