@@ -29,7 +29,7 @@
                 <h1 class="mt-2 text-xl font-bold text-slate-900">Buat Tiket Change</h1>
                 <p class="mt-1 text-sm text-slate-500">{{ $rfc->title }}</p>
             </div>
-            <x-status-badge :status="$rfc->status" />
+            <x-status-badge :status="$rfc->status" :tone="$rfc->displayStatusTone()" :label="$rfc->displayStatusLabel()" />
         </div>
 
         <div class="mt-5 grid grid-cols-1 gap-4 text-xs sm:grid-cols-2 lg:grid-cols-4">

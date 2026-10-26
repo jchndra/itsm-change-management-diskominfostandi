@@ -363,7 +363,8 @@ class RfcHistoryService
     }
 
     /**
-     * Langkah mendatang hanya untuk RFC yang masih berjalan.
+     * Langkah mendatang hanya untuk RFC yang masih berjalan. FAILED bukan
+     * status akhir karena masih dapat ditutup setelah evaluasi.
      *
      * @return array<int, array{key: string, label: string}>
      */
@@ -371,39 +372,45 @@ class RfcHistoryService
     {
         $status = RfcStatus::fromValue($rfc->status);
 
-        if (! $status || in_array($status, [
+        if (! $status) {
+            return [];
+        }
+
+        if (in_array($status, [
             RfcStatus::REJECTED,
             RfcStatus::CANCELLED,
-            RfcStatus::FAILED,
             RfcStatus::CLOSED,
         ], true)) {
             return [];
         }
 
-        $steps = [
-            ['key' => 'admin_review', 'label' => 'Diperiksa Admin'],
-            ['key' => 'cm_review', 'label' => 'Review Change Manager'],
-            ['key' => 'implementation', 'label' => 'Implementasi'],
-            ['key' => 'done', 'label' => 'Selesai'],
-        ];
+        $implementation = ['key' => 'implementation', 'label' => 'Implementasi'];
+        $evaluation = ['key' => 'evaluation', 'label' => 'Evaluasi'];
+        $closure = ['key' => 'closure', 'label' => 'Penutupan'];
 
-        $start = match ($status) {
-            RfcStatus::DRAFT,
-            RfcStatus::SUBMITTED,
-            RfcStatus::RETURNED_TO_ADMIN,
-            RfcStatus::NEEDS_REVISION => 0,
-            RfcStatus::TICKET_CREATED => 1,
-            RfcStatus::APPROVED => 2,
-            RfcStatus::IN_PROGRESS,
-            RfcStatus::IMPLEMENTED => 3,
-            default => 0,
+        return match ($status) {
+            RfcStatus::APPROVED, RfcStatus::IN_PROGRESS => [$implementation, $evaluation, $closure],
+            RfcStatus::IMPLEMENTED, RfcStatus::FAILED => $rfc->implementation?->evaluated_at !== null
+                ? [$closure]
+                : [$evaluation, $closure],
+            RfcStatus::TICKET_CREATED => [
+                ['key' => 'cm_review', 'label' => 'Review Change Manager'],
+                $implementation,
+                $evaluation,
+                $closure,
+            ],
+            default => [
+                ['key' => 'admin_review', 'label' => 'Diperiksa Admin'],
+                ['key' => 'cm_review', 'label' => 'Review Change Manager'],
+                $implementation,
+                $evaluation,
+                $closure,
+            ],
         };
-
-        return array_slice($steps, $start);
     }
 
     /**
-     * Timeline ringkas lima langkah untuk widget dashboard Pemohon.
+     * Timeline ringkas enam langkah untuk widget dashboard Pemohon.
      *
      * @return array<int, array{key: string, label: string, description: string, state: string, time: ?Carbon}>
      */
@@ -444,6 +451,7 @@ class RfcHistoryService
             RfcStatus::IMPLEMENTED->value,
             RfcStatus::FAILED->value,
         ]);
+        $evaluationEvent = $lastEvent(['evaluation_recorded']);
         $doneEvent = $lastEvent([RfcStatus::CLOSED->value]);
 
         $steps = [
@@ -476,15 +484,24 @@ class RfcHistoryService
                 'state' => 'pending',
             ],
             [
-                'key' => 'done',
-                'label' => 'Selesai',
+                'key' => 'evaluation',
+                'label' => 'Evaluasi',
+                'description' => 'Menunggu evaluasi',
+                'time' => $evaluationEvent['time'] ?? $rfc->implementation?->evaluated_at,
+                'state' => 'pending',
+            ],
+            [
+                'key' => 'closed',
+                // Label hasil keputusan: closed mengikuti hasil implementasi,
+                // status lain tampil netral sampai penutupan terjadi.
+                'label' => $status === RfcStatus::CLOSED ? $rfc->displayStatusLabel() : 'Ditutup',
                 'description' => 'Menunggu penutupan',
                 'time' => $doneEvent['time'] ?? null,
                 'state' => 'pending',
             ],
         ];
 
-        $this->applyDashboardStates($steps, $status, $events);
+        $this->applyDashboardStates($steps, $status, $events, $rfc);
 
         return $this->truncateDashboardSteps($steps, $status, $events);
     }
@@ -569,9 +586,9 @@ class RfcHistoryService
             ],
             RfcStatus::APPROVED => ['Disetujui oleh Change Manager', 'success', RfcStatus::APPROVED->value],
             RfcStatus::IN_PROGRESS => ['Implementasi dimulai', 'info', RfcStatus::IN_PROGRESS->value],
-            RfcStatus::IMPLEMENTED => ['Berhasil diimplementasikan', 'success', RfcStatus::IMPLEMENTED->value],
-            RfcStatus::FAILED => ['Gagal dilaksanakan', 'danger', RfcStatus::FAILED->value],
-            RfcStatus::CLOSED => ['RFC ditutup', 'neutral', RfcStatus::CLOSED->value],
+            RfcStatus::IMPLEMENTED => ['Implementasi berhasil dicatat — menunggu evaluasi', 'success', RfcStatus::IMPLEMENTED->value],
+            RfcStatus::FAILED => ['Implementasi gagal atau rollback — menunggu evaluasi', 'danger', RfcStatus::FAILED->value],
+            RfcStatus::CLOSED => [$this->closureEventLabel($activity), $this->closureEventTone($activity), RfcStatus::CLOSED->value],
             RfcStatus::CANCELLED => ['Dibatalkan', 'danger', RfcStatus::CANCELLED->value],
         };
 
@@ -613,6 +630,44 @@ class RfcHistoryService
             $closureNotes !== '' ? 'Catatan penutupan: '.$closureNotes : null,
             $evaluationNotes !== '' ? 'Ringkasan evaluasi: '.$evaluationNotes : null,
         ]));
+    }
+
+    /**
+     * Outcome penutupan dari activity: kolom outcome lebih dahulu, dengan
+     * hasil implementasi sebagai cadangan; RFC lama tanpa data tetap null.
+     */
+    private function activityClosureOutcome(Activity $activity): ?string
+    {
+        $outcome = data_get($activity->properties, 'outcome');
+
+        if (in_array($outcome, ['successful', 'unsuccessful'], true)) {
+            return $outcome;
+        }
+
+        return match ((string) data_get($activity->properties, 'implementation_result')) {
+            ImplementationResult::SUCCESS->value => 'successful',
+            ImplementationResult::FAILED->value,
+            ImplementationResult::ROLLED_BACK->value => 'unsuccessful',
+            default => null,
+        };
+    }
+
+    private function closureEventLabel(Activity $activity): string
+    {
+        return match ($this->activityClosureOutcome($activity)) {
+            'successful' => 'RFC ditutup — berhasil',
+            'unsuccessful' => 'RFC ditutup — tidak berhasil',
+            default => 'RFC ditutup',
+        };
+    }
+
+    private function closureEventTone(Activity $activity): string
+    {
+        return match ($this->activityClosureOutcome($activity)) {
+            'successful' => 'success',
+            'unsuccessful' => 'danger',
+            default => 'neutral',
+        };
     }
 
     private function implementationEventNote(Activity $activity, bool $forStaff): ?string
@@ -832,15 +887,25 @@ class RfcHistoryService
         $label = match ($status) {
             RfcStatus::REJECTED => 'Ditolak',
             RfcStatus::CANCELLED => 'Dibatalkan',
-            RfcStatus::FAILED => 'Gagal dilaksanakan',
-            RfcStatus::CLOSED => 'RFC ditutup',
+            RfcStatus::IMPLEMENTED => 'Implementasi berhasil dicatat — menunggu evaluasi',
+            RfcStatus::FAILED => 'Implementasi gagal atau rollback — menunggu evaluasi',
+            RfcStatus::CLOSED => match ($rfc->implementationOutcome()) {
+                'successful' => 'RFC ditutup — berhasil',
+                'unsuccessful' => 'RFC ditutup — tidak berhasil',
+                default => 'RFC ditutup',
+            },
             null => 'Pembaruan status (legacy): '.RfcStatus::labelFor($rfc->status),
             default => 'Status saat ini: '.$status->label(),
         };
 
         $tone = match ($status) {
             RfcStatus::REJECTED, RfcStatus::CANCELLED, RfcStatus::FAILED => 'danger',
-            RfcStatus::CLOSED => 'neutral',
+            RfcStatus::IMPLEMENTED => 'success',
+            RfcStatus::CLOSED => match ($rfc->implementationOutcome()) {
+                'successful' => 'success',
+                'unsuccessful' => 'danger',
+                default => 'neutral',
+            },
             default => 'neutral',
         };
 
@@ -976,7 +1041,7 @@ class RfcHistoryService
             : 'Change Manager';
     }
 
-    private function applyDashboardStates(array &$steps, RfcStatus $status, array $events): void
+    private function applyDashboardStates(array &$steps, RfcStatus $status, array $events, ChangeRequest $rfc): void
     {
         $hasEvent = fn (array $keys): bool => collect($events)->contains(
             fn (array $event): bool => in_array($event['key'], $keys, true)
@@ -1055,19 +1120,37 @@ class RfcHistoryService
             $steps[3]['description'] = 'Sedang diimplementasikan';
         }
 
-        if (in_array($status, [RfcStatus::IMPLEMENTED, RfcStatus::CLOSED], true)) {
-            $steps[3]['state'] = 'done';
-            $steps[3]['description'] = 'Implementasi selesai';
-        }
+        if (in_array($status, [RfcStatus::IMPLEMENTED, RfcStatus::FAILED], true)) {
+            // Dikerjakan selesai: hijau untuk berhasil, merah untuk gagal atau
+            // rollback; langkah berikutnya adalah evaluasi sebelum penutupan.
+            $steps[3]['state'] = $status === RfcStatus::FAILED ? 'danger' : 'done';
+            $steps[3]['description'] = $status === RfcStatus::FAILED
+                ? 'Implementasi gagal'
+                : 'Implementasi selesai';
 
-        if ($status === RfcStatus::IMPLEMENTED) {
-            $steps[4]['state'] = 'current';
-            $steps[4]['description'] = 'Menunggu penutupan';
+            if ($rfc->implementation?->evaluated_at !== null) {
+                // Evaluasi sudah tercatat: langkah berikutnya hanya penutupan.
+                $steps[4]['state'] = 'done';
+                $steps[4]['description'] = 'Evaluasi tercatat';
+                $steps[5]['state'] = 'current';
+                $steps[5]['description'] = 'Menunggu penutupan';
+            } else {
+                $steps[4]['state'] = 'current';
+                $steps[4]['description'] = 'Menunggu evaluasi';
+            }
         }
 
         if ($status === RfcStatus::CLOSED) {
+            $outcome = $rfc->implementationOutcome();
+
+            $steps[3]['state'] = $outcome === 'unsuccessful' ? 'danger' : 'done';
+            $steps[3]['description'] = $outcome === 'unsuccessful'
+                ? 'Implementasi gagal'
+                : 'Implementasi selesai';
             $steps[4]['state'] = 'done';
-            $steps[4]['description'] = 'RFC telah ditutup';
+            $steps[4]['description'] = 'Evaluasi tercatat';
+            $steps[5]['state'] = $outcome === 'unsuccessful' ? 'danger' : 'done';
+            $steps[5]['description'] = 'RFC telah ditutup';
         }
 
         if ($status === RfcStatus::REJECTED) {
@@ -1082,11 +1165,6 @@ class RfcHistoryService
             }
         }
 
-        if ($status === RfcStatus::FAILED) {
-            $steps[3]['state'] = 'danger';
-            $steps[3]['description'] = 'Implementasi gagal';
-        }
-
         if ($status === RfcStatus::CANCELLED) {
             $steps[0]['state'] = 'danger';
             $steps[0]['description'] = 'Dibatalkan';
@@ -1099,22 +1177,15 @@ class RfcHistoryService
      */
     private function truncateDashboardSteps(array $steps, RfcStatus $status, array $events): array
     {
-        if (! in_array($status, [
-            RfcStatus::REJECTED,
-            RfcStatus::FAILED,
-            RfcStatus::CANCELLED,
-            RfcStatus::CLOSED,
-        ], true)) {
-            return $steps;
-        }
-
-        if ($status === RfcStatus::CLOSED) {
+        // FAILED dan CLOSED memakai seluruh linimasa: FAILED masih menunggu
+        // evaluasi dan penutupan, sedangkan CLOSED adalah status akhir yang
+        // menandai hasilnya di langkah penutupan.
+        if (! in_array($status, [RfcStatus::REJECTED, RfcStatus::CANCELLED], true)) {
             return $steps;
         }
 
         $limit = match ($status) {
             RfcStatus::CANCELLED => 1,
-            RfcStatus::FAILED => 4,
             RfcStatus::REJECTED => (function () use ($events): int {
                 $rejectionEvent = collect($events)->last(
                     fn (array $event): bool => $event['key'] === RfcStatus::REJECTED->value
@@ -1122,7 +1193,7 @@ class RfcHistoryService
 
                 return ($rejectionEvent['actor_role'] ?? null) === 'Admin' ? 2 : 3;
             })(),
-            default => 5,
+            default => count($steps),
         };
 
         return array_slice($steps, 0, $limit);

@@ -29,8 +29,23 @@ class RfcStatusChangedNotification extends Notification
             'rfc_number' => $this->rfc->rfc_number,
             'title' => $this->rfc->title,
             'status' => $this->newStatus->value,
+            'outcome' => $this->outcome(),
             'message' => $this->message(),
         ];
+    }
+
+    /**
+     * Hasil akhir untuk ikon notifikasi: implemented tinggal menunggu
+     * evaluasi, sedangkan closed mengikuti hasil implementasi tercatat.
+     */
+    private function outcome(): ?string
+    {
+        return match ($this->newStatus) {
+            RfcStatus::IMPLEMENTED => 'successful',
+            RfcStatus::FAILED => 'unsuccessful',
+            RfcStatus::CLOSED => $this->rfc->implementationOutcome(),
+            default => null,
+        };
     }
 
     private function message(): string
@@ -44,8 +59,13 @@ class RfcStatusChangedNotification extends Notification
             RfcStatus::APPROVED => "RFC {$number} disetujui",
             RfcStatus::REJECTED => $this->withNote("RFC {$number} ditolak"),
             RfcStatus::IN_PROGRESS => "RFC {$number} sedang dikerjakan",
-            RfcStatus::IMPLEMENTED, RfcStatus::CLOSED => "RFC {$number} telah selesai",
-            RfcStatus::FAILED => "RFC {$number} gagal dilaksanakan",
+            RfcStatus::IMPLEMENTED => "RFC {$number} selesai diimplementasikan, menunggu evaluasi",
+            RfcStatus::FAILED => "RFC {$number} gagal atau rollback dilaksanakan, menunggu evaluasi",
+            RfcStatus::CLOSED => "RFC {$number} ".match ($this->outcome()) {
+                'successful' => 'ditutup — berhasil',
+                'unsuccessful' => 'ditutup — tidak berhasil',
+                default => 'ditutup',
+            },
             RfcStatus::DRAFT, RfcStatus::CANCELLED => "RFC {$number} diperbarui",
         };
     }

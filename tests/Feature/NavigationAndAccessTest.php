@@ -64,17 +64,17 @@ test('rute root mengarahkan pemohon ke dashboard pemohon', function () {
         ->assertRedirect(route('requester.dashboard'));
 });
 
-test('rute root mengarahkan admin dan change manager ke daftar RFC', function () {
+test('rute root mengarahkan admin dan change manager ke dashboard sesuai izin', function () {
     $admin = makeUserWithRole('Admin');
     $manager = makeUserWithRole('Change Manager');
 
     $this->actingAs($admin)
         ->get('/')
-        ->assertRedirect(route('change-requests.index'));
+        ->assertRedirect(route('admin.dashboard'));
 
     $this->actingAs($manager)
         ->get('/')
-        ->assertRedirect(route('change-requests.index'));
+        ->assertRedirect(route('change-manager.dashboard'));
 });
 
 test('admin tanpa rfc.create mendapat 403 di halaman create RFC', function () {

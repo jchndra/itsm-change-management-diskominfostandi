@@ -51,3 +51,76 @@ it('tetap menandai menu RFC Saya sebagai aktif pada detail RFC', function () {
         ->and(sidebarActiveLink($html, route('change-requests.index')))->toBeTrue()
         ->and(sidebarActiveLink($html, route('change-requests.deletions.index')))->toBeFalse();
 });
+
+it('hanya menandai menu Dashboard Admin aktif pada dashboard admin', function () {
+    $user = User::factory()->create();
+    $user->assignRole(['Admin', 'Change Manager']);
+
+    $html = $this->actingAs($user)
+        ->get(route('admin.dashboard'))
+        ->assertOk()
+        ->getContent();
+
+    expect(substr_count($html, 'aria-current="page"'))->toBe(1)
+        ->and(sidebarActiveLink($html, route('admin.dashboard')))->toBeTrue()
+        ->and(sidebarActiveLink($html, route('change-manager.dashboard')))->toBeFalse()
+        ->and(sidebarActiveLink($html, route('change-requests.index')))->toBeFalse();
+});
+
+it('hanya menandai menu Dashboard Change Manager aktif pada dashboard change manager', function () {
+    $user = User::factory()->create();
+    $user->assignRole(['Admin', 'Change Manager']);
+
+    $html = $this->actingAs($user)
+        ->get(route('change-manager.dashboard'))
+        ->assertOk()
+        ->getContent();
+
+    expect(substr_count($html, 'aria-current="page"'))->toBe(1)
+        ->and(sidebarActiveLink($html, route('change-manager.dashboard')))->toBeTrue()
+        ->and(sidebarActiveLink($html, route('admin.dashboard')))->toBeFalse()
+        ->and(sidebarActiveLink($html, route('change-requests.index')))->toBeFalse();
+});
+
+it('menandai menu Daftar RFC aktif pada daftar RFC staf', function () {
+    $manager = User::factory()->create();
+    $manager->assignRole('Change Manager');
+
+    $html = $this->actingAs($manager)
+        ->get(route('change-requests.index'))
+        ->assertOk()
+        ->getContent();
+
+    expect(substr_count($html, 'aria-current="page"'))->toBe(1)
+        ->and(sidebarActiveLink($html, route('change-requests.index')))->toBeTrue()
+        ->and(sidebarActiveLink($html, route('change-manager.dashboard')))->toBeFalse();
+});
+
+it('menandai menu Daftar RFC aktif pada detail RFC staf', function () {
+    $manager = User::factory()->create();
+    $manager->assignRole('Change Manager');
+    $rfc = ChangeRequest::factory()->create();
+
+    $html = $this->actingAs($manager)
+        ->get(route('change-requests.show', $rfc))
+        ->assertOk()
+        ->getContent();
+
+    expect(substr_count($html, 'aria-current="page"'))->toBe(1)
+        ->and(sidebarActiveLink($html, route('change-requests.index')))->toBeTrue()
+        ->and(sidebarActiveLink($html, route('change-manager.dashboard')))->toBeFalse();
+});
+
+it('tidak menandai menu Buat Tiket Change maupun Daftar RFC pada antrean masuk', function () {
+    $admin = User::factory()->create();
+    $admin->assignRole('Admin');
+
+    $html = $this->actingAs($admin)
+        ->get(route('change-requests.index', ['queue' => 'incoming']))
+        ->assertOk()
+        ->getContent();
+
+    expect(substr_count($html, 'aria-current="page"'))->toBe(0)
+        ->and(sidebarActiveLink($html, route('change-requests.index', ['queue' => 'incoming'])))->toBeFalse()
+        ->and(sidebarActiveLink($html, route('change-requests.index')))->toBeFalse();
+});

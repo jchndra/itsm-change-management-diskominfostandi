@@ -18,7 +18,7 @@
             </div>
             <p class="mt-1 pl-9 text-sm text-slate-500">Evaluasi implementasi untuk {{ $rfc->rfc_number }}</p>
         </div>
-        <x-status-badge :status="$rfc->status" />
+        <x-status-badge :status="$rfc->status" :tone="$rfc->displayStatusTone()" :label="$rfc->displayStatusLabel()" />
     </div>
 
     @error('status')

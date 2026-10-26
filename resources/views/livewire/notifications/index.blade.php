@@ -47,7 +47,7 @@
                 <button type="button" wire:key="notification-{{ $notification->id }}"
                     wire:click="markAsRead('{{ $notification->id }}')"
                     class="flex w-full items-start gap-4 px-5 py-4 text-left transition hover:bg-slate-50 {{ $isUnread ? 'bg-blue-50/40' : '' }}">
-                    <x-notification-icon :status="data_get($notification->data, 'status')" class="h-9 w-9" />
+                    <x-notification-icon :status="data_get($notification->data, 'status')" :outcome="data_get($notification->data, 'outcome')" class="h-9 w-9" />
 
                     <div class="min-w-0 flex-1">
                         <div class="flex flex-wrap items-center gap-2">

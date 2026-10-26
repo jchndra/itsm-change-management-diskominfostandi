@@ -3,6 +3,7 @@
 namespace App\Livewire\Auth;
 
 use App\Models\User;
+use App\Services\DashboardRedirector;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
@@ -26,7 +27,7 @@ class Login extends Component
     {
         $this->validate();
 
-        $throttleKey = Str::transliterate(Str::lower($this->email) . '|' . request()->ip());
+        $throttleKey = Str::transliterate(Str::lower($this->email).'|'.request()->ip());
 
         if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
             $seconds = RateLimiter::availableIn($throttleKey);
@@ -73,18 +74,12 @@ class Login extends Component
             ->withProperties(['ip' => request()->ip()])
             ->log('Login berhasil');
 
-        // --- GANTI BARIS TERAKHIR DENGAN KODE DI BAWAH INI ---
-
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
-        // Pemohon diarahkan ke dasbor pemohon, staf ke daftar RFC.
-        if (! $user->isStaff()) {
-            $this->redirectIntended(default: route('requester.dashboard', absolute: false), navigate: true);
-            return;
-        }
+        $defaultRoute = app(DashboardRedirector::class)->routeNameFor($user);
 
-        $this->redirectIntended(default: route('change-requests.index', absolute: false), navigate: true);
+        $this->redirectIntended(default: route($defaultRoute, absolute: false), navigate: true);
     }
 
     public function render()

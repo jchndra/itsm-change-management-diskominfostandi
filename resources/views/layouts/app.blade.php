@@ -23,11 +23,16 @@
         $headerNotifications = $currentUser ? $currentUser->unreadNotifications()->take(5)->get() : collect();
         $canCreateRfc = $currentUser?->can('rfc.create') ?? false;
         $canReviewCompleteness = $currentUser?->can('rfc.review_completeness') ?? false;
+        $canViewAdminDashboard = $currentUser?->can('viewAdminDashboard') ?? false;
+        $canViewChangeManagerDashboard = $currentUser?->can('viewChangeManagerDashboard') ?? false;
         $isTicketQueueActive = request()->routeIs('change-requests.index')
             && request()->query('queue') === 'incoming';
         $isDashboardActive = $isStaff
-            ? request()->routeIs('change-requests.index') && ! $isTicketQueueActive
+            ? false
             : request()->routeIs('requester.dashboard');
+        $isRfcListActive = $isStaff
+            && request()->routeIs(['change-requests.index', 'change-requests.show'])
+            && ! $isTicketQueueActive;
     @endphp
 
     <div x-data="{ sidebarOpen: false, mobileSearch: false }" class="min-h-screen">
@@ -68,18 +73,54 @@
 
             {{-- Navigasi --}}
             <nav class="mt-2 flex-1 space-y-1 overflow-y-auto px-3 pb-4">
-                <x-sidebar-link :href="$isStaff ? route('change-requests.index') : route('requester.dashboard')" :active="$isDashboardActive">
-                    <x-slot:icon>
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                                d="M3 10.5 12 3l9 7.5M5.25 9.75V20.25h5.25v-5.25h3v5.25h5.25V9.75" />
-                        </svg>
-                    </x-slot:icon>
-                    Dashboard
-                </x-sidebar-link>
+                @if ($isStaff)
+                    @if ($canViewAdminDashboard)
+                        <x-sidebar-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.dashboard')">
+                            <x-slot:icon>
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                        d="M4 5.25A1.25 1.25 0 0 1 5.25 4h4.5A1.25 1.25 0 0 1 11 5.25v4.5A1.25 1.25 0 0 1 9.75 11h-4.5A1.25 1.25 0 0 1 4 9.75v-4.5Zm9 0A1.25 1.25 0 0 1 14.25 4h4.5A1.25 1.25 0 0 1 20 5.25v4.5A1.25 1.25 0 0 1 18.75 11h-4.5A1.25 1.25 0 0 1 13 9.75v-4.5Zm-9 9A1.25 1.25 0 0 1 5.25 13h4.5A1.25 1.25 0 0 1 11 14.25v4.5A1.25 1.25 0 0 1 9.75 20h-4.5A1.25 1.25 0 0 1 4 18.75v-4.5Zm9 0A1.25 1.25 0 0 1 14.25 13h4.5A1.25 1.25 0 0 1 20 14.25v4.5A1.25 1.25 0 0 1 18.75 20h-4.5A1.25 1.25 0 0 1 13 18.75v-4.5Z" />
+                                </svg>
+                            </x-slot:icon>
+                            Dashboard Admin
+                        </x-sidebar-link>
+                    @endif
+
+                    @if ($canViewChangeManagerDashboard)
+                        <x-sidebar-link :href="route('change-manager.dashboard')" :active="request()->routeIs('change-manager.dashboard')">
+                            <x-slot:icon>
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                        d="M3.75 4.5h16.5M4.5 19.5h15M6.75 16.5V9m5.25 7.5V6m5.25 10.5v-5.25" />
+                                </svg>
+                            </x-slot:icon>
+                            Dashboard Change Manager
+                        </x-sidebar-link>
+                    @endif
+
+                    <x-sidebar-link :href="route('change-requests.index')" :active="$isRfcListActive">
+                        <x-slot:icon>
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                    d="M8.25 6.75h9M8.25 12h9M8.25 17.25h9M4.5 6.75h.008v.008H4.5V6.75Zm0 5.25h.008v.008H4.5V12Zm0 5.25h.008v.008H4.5v-.008Z" />
+                            </svg>
+                        </x-slot:icon>
+                        Daftar RFC
+                    </x-sidebar-link>
+                @else
+                    <x-sidebar-link :href="route('requester.dashboard')" :active="$isDashboardActive">
+                        <x-slot:icon>
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                    d="M3 10.5 12 3l9 7.5M5.25 9.75V20.25h5.25v-5.25h3v5.25h5.25V9.75" />
+                            </svg>
+                        </x-slot:icon>
+                        Dashboard
+                    </x-sidebar-link>
+                @endif
 
                 @if ($canReviewCompleteness)
-                    <x-sidebar-link :href="route('change-requests.index', ['queue' => 'incoming'])" :active="$isTicketQueueActive">
+                    <x-sidebar-link :href="route('change-requests.index', ['queue' => 'incoming'])">
                         <x-slot:icon>
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
@@ -268,7 +309,7 @@
                                         <a href="{{ route('notifications.index', ['open' => $notification->id]) }}"
                                             class="flex gap-3 rounded-xl p-2.5 transition hover:bg-slate-50">
                                             <x-notification-icon :status="data_get($notification->data, 'status')"
-                                                class="h-8 w-8" />
+                                                :outcome="data_get($notification->data, 'outcome')" class="h-8 w-8" />
                                             <div class="min-w-0">
                                                 <p class="line-clamp-2 text-xs leading-relaxed text-slate-700">
                                                     {{ data_get($notification->data, 'message', 'Notifikasi baru') }}</p>

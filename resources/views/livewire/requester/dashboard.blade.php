@@ -306,7 +306,7 @@
                                     <span class="text-slate-400">{{ $rfc->created_at?->copy()->locale('id')->translatedFormat('H:i') }}</span>
                                 </td>
                                 <td data-label="Status" class="whitespace-nowrap px-5 py-4">
-                                    <x-status-badge :status="$rfc->status" />
+                                    <x-status-badge :status="$rfc->status" :tone="$rfc->displayStatusTone()" :label="$rfc->displayStatusLabel()" />
                                 </td>
                                 <td data-label="Aksi" class="whitespace-nowrap px-5 py-4">
                                     <div class="flex items-center justify-center gap-1.5">
@@ -476,7 +476,7 @@
                     @forelse ($notifications as $notification)
                         <a href="{{ route('notifications.index', ['open' => $notification->id]) }}"
                             class="flex items-start gap-3">
-                            <x-notification-icon :status="data_get($notification->data, 'status')" class="h-8 w-8" />
+                            <x-notification-icon :status="data_get($notification->data, 'status')" :outcome="data_get($notification->data, 'outcome')" class="h-8 w-8" />
                             <div class="min-w-0 flex-1">
                                 <p class="line-clamp-2 text-[12px] leading-snug text-slate-700">
                                     {{ data_get($notification->data, 'message', 'Notifikasi baru') }}

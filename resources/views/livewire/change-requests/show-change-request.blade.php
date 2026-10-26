@@ -47,7 +47,7 @@
                 </a>
                 <h1 class="text-2xl font-bold text-slate-900">{{ $rfc->rfc_number ?? 'Draft RFC' }}</h1>
 
-                <x-status-badge :status="$status ?? $rfc->status" />
+                <x-status-badge :status="$rfc->status" :tone="$rfc->displayStatusTone()" :label="$rfc->displayStatusLabel()" />
             </div>
             <p class="text-sm text-slate-500 mt-1 ml-12">{{ $rfc->title }}</p>
         </div>

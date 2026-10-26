@@ -11,7 +11,7 @@ use Livewire\Livewire;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    RateLimiter::clear(Str::transliterate(Str::lower('user@paraf.local') . '|127.0.0.1'));
+    RateLimiter::clear(Str::transliterate(Str::lower('user@paraf.local').'|127.0.0.1'));
 });
 
 test('tamu dialihkan ke halaman login saat mengakses route terproteksi', function () {
@@ -36,7 +36,7 @@ test('pengguna dapat berhasil login dengan kredensial valid', function () {
     $this->assertAuthenticatedAs($user);
 });
 
-test('admin diarahkan ke daftar RFC setelah login', function () {
+test('admin diarahkan ke dashboard admin setelah login', function () {
     $this->seed(PermissionSeeder::class);
 
     $admin = User::factory()->create([
@@ -51,10 +51,43 @@ test('admin diarahkan ke daftar RFC setelah login', function () {
         ->set('password', 'secret123')
         ->call('login')
         ->assertHasNoErrors()
-        ->assertRedirect('/change-requests');
+        ->assertRedirect('/admin/dashboard');
 
     $this->assertAuthenticatedAs($admin);
 });
+
+test('pengguna diarahkan ke dashboard sesuai izin setelah login', function (array $roles, array $permissions, string $expectedPath) {
+    $this->seed(PermissionSeeder::class);
+
+    $user = User::factory()->create([
+        'email' => fake()->unique()->safeEmail(),
+        'password' => bcrypt('secret123'),
+        'is_active' => true,
+    ]);
+
+    if ($roles !== []) {
+        $user->assignRole($roles);
+    }
+
+    foreach ($permissions as $permission) {
+        $user->givePermissionTo($permission);
+    }
+
+    Livewire::test(Login::class)
+        ->set('email', $user->email)
+        ->set('password', 'secret123')
+        ->call('login')
+        ->assertHasNoErrors()
+        ->assertRedirect($expectedPath);
+
+    $this->assertAuthenticatedAs($user);
+})->with([
+    'pemohon' => [['Pemohon'], [], '/requester/dashboard'],
+    'change manager' => [['Change Manager'], [], '/change-manager/dashboard'],
+    'super admin' => [['Super Admin'], [], '/change-manager/dashboard'],
+    'akun dua peran' => [['Admin', 'Change Manager'], [], '/change-manager/dashboard'],
+    'staf tanpa izin dashboard' => [[], ['rfc.view_all'], '/change-requests'],
+]);
 
 test('gagal login dengan kata sandi salah', function () {
     User::factory()->create([

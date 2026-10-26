@@ -27,7 +27,7 @@
                     class="text-xs font-bold text-blue-900 bg-blue-50 px-2.5 py-1 rounded-md">{{ $rfc->rfc_number }}</span>
                 <h2 class="text-lg font-bold text-slate-800 mt-2">{{ $rfc->title }}</h2>
             </div>
-            <x-status-badge :status="$rfc->status" />
+            <x-status-badge :status="$rfc->status" :tone="$rfc->displayStatusTone()" :label="$rfc->displayStatusLabel()" />
         </div>
 
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">

@@ -194,11 +194,13 @@ test('RFC dengan status legacy yang tidak dikenal tetap dapat dirender', functio
         ->assertSee('Mystery status');
 });
 
-test('widget dashboard tidak menampilkan RFC berstatus closed atau rejected', function () {
+test('widget dashboard tidak menampilkan RFC closed, rejected, atau draft', function () {
     $active = ($this->makeRfc)(['title' => 'RFC Aktif Widget']);
     $closed = ($this->makeRfc)(['title' => 'RFC Ditutup Widget', 'status' => RfcStatus::CLOSED->value]);
     $rejected = ($this->makeRfc)(['title' => 'RFC Ditolak Widget', 'status' => RfcStatus::REJECTED->value]);
+    $draft = ($this->makeRfc)(['title' => 'RFC Draft Widget', 'status' => RfcStatus::DRAFT->value]);
 
+    DB::table('change_requests')->where('id', $draft->id)->update(['updated_at' => now()->addMinutes(6)]);
     DB::table('change_requests')->where('id', $closed->id)->update(['updated_at' => now()->addMinutes(5)]);
     DB::table('change_requests')->where('id', $rejected->id)->update(['updated_at' => now()->addMinutes(4)]);
     DB::table('change_requests')->where('id', $active->id)->update(['updated_at' => now()->subMinute()]);
@@ -211,5 +213,7 @@ test('widget dashboard tidak menampilkan RFC berstatus closed atau rejected', fu
         ->assertSee('Diperiksa Admin')
         ->assertSee('Review Change Manager')
         ->assertSee('Dikerjakan')
-        ->assertSee('Selesai');
+        ->assertSee('Evaluasi')
+        ->assertSee('Ditutup')
+        ->assertDontSee('Selesai');
 });

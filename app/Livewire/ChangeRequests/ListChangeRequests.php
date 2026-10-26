@@ -162,13 +162,14 @@ class ListChangeRequests extends Component
                 'my_rfc' => (clone $baseQuery)->count(),
                 'in_process' => (clone $baseQuery)->whereIn('status', RfcStatus::valuesForGroup('in_process'))->count(),
                 'needs_revision' => (clone $baseQuery)->whereIn('status', RfcStatus::valuesForGroup('needs_revision'))->count(),
-                'approved' => (clone $baseQuery)->whereIn('status', RfcStatus::valuesForGroup('approved'))->count(),
-                'rejected' => (clone $baseQuery)->whereIn('status', RfcStatus::valuesForGroup('rejected'))->count(),
+                'approved' => (clone $baseQuery)->inStatusGroup('approved')->count(),
+                'rejected' => (clone $baseQuery)->inStatusGroup('rejected')->count(),
             ];
 
             $rfcs = $this->orderFilteredRfcs($this->applyFilters((clone $baseQuery)->with([
                 'riskAssessment',
                 'application',
+                'implementation',
                 'submittedBy.opd',
             ])))->paginate(10);
 
@@ -188,16 +189,17 @@ class ListChangeRequests extends Component
                     RfcStatus::RETURNED_TO_ADMIN->value,
                 ])->count(),
                 'needs_revision' => ChangeRequest::whereIn('status', RfcStatus::valuesForGroup('needs_revision'))->count(),
-                'forwarded' => ChangeRequest::whereIn('status', [
-                    RfcStatus::TICKET_CREATED->value,
-                    ...RfcStatus::valuesForGroup('approved'),
-                ])->count(),
-                'rejected' => ChangeRequest::whereIn('status', RfcStatus::valuesForGroup('rejected'))->count(),
+                'forwarded' => ChangeRequest::where(function (Builder $q): void {
+                    $q->whereIn('status', [RfcStatus::TICKET_CREATED->value])
+                        ->orWhere(fn (Builder $approved) => $approved->inStatusGroup('approved'));
+                })->count(),
+                'rejected' => ChangeRequest::inStatusGroup('rejected')->count(),
             ];
 
             $rfcs = $this->orderFilteredRfcs($this->applyFilters(ChangeRequest::query()->with([
                 'riskAssessment',
                 'application',
+                'implementation',
                 'submittedBy.opd',
             ])))->paginate(10);
 
@@ -215,14 +217,15 @@ class ListChangeRequests extends Component
             'pending_approval' => ChangeRequest::whereIn('status', [
                 RfcStatus::TICKET_CREATED->value,
             ])->count(),
-            'approved' => ChangeRequest::whereIn('status', RfcStatus::valuesForGroup('approved'))->count(),
-            'rejected' => ChangeRequest::whereIn('status', RfcStatus::valuesForGroup('rejected'))->count(),
+            'approved' => ChangeRequest::inStatusGroup('approved')->count(),
+            'rejected' => ChangeRequest::inStatusGroup('rejected')->count(),
             'emergency' => ChangeRequest::where('change_type', 'emergency')->count(),
         ];
 
         $rfcs = $this->orderFilteredRfcs($this->applyFilters(ChangeRequest::query()->with([
             'riskAssessment',
             'application',
+            'implementation',
             'submittedBy.opd',
         ])))->paginate(10);
 

@@ -15,10 +15,13 @@ use App\Livewire\ChangeRequests\RecordDecision;
 use App\Livewire\ChangeRequests\ReviewCompleteness;
 use App\Livewire\ChangeRequests\ShowChangeRequest;
 use App\Livewire\ChangeRequests\ShowDeletedChangeRequest;
+use App\Livewire\Dashboard\AdminDashboard;
+use App\Livewire\Dashboard\ChangeManagerDashboard;
 use App\Livewire\Notifications;
 use App\Livewire\Profile;
 use App\Livewire\Requester\Dashboard;
 use App\Models\User;
+use App\Services\DashboardRedirector;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -32,18 +35,14 @@ if (app()->environment('local')) {
 }
 
 Route::get('/', function () {
-    if (Auth::check()) {
-        /** @var User $user */
-        $user = Auth::user();
-
-        // Staf (Admin, Change Manager, Super Admin) diarahkan ke daftar RFC,
-        // selain itu (Pemohon) diarahkan ke dashboard pemohon.
-        if (! $user->isStaff()) {
-            return redirect()->route('requester.dashboard');
-        }
+    if (! Auth::check()) {
+        return redirect()->route('login');
     }
 
-    return redirect()->route('change-requests.index');
+    /** @var User $user */
+    $user = Auth::user();
+
+    return redirect()->route(app(DashboardRedirector::class)->routeNameFor($user));
 });
 
 Route::middleware('guest')->group(function () {
@@ -58,6 +57,15 @@ Route::middleware('auth')->group(function () {
 
         return redirect()->route('login');
     })->name('logout');
+
+    // Dashboard staf
+    Route::get('/admin/dashboard', AdminDashboard::class)
+        ->middleware('can:viewAdminDashboard')
+        ->name('admin.dashboard');
+
+    Route::get('/change-manager/dashboard', ChangeManagerDashboard::class)
+        ->middleware('can:viewChangeManagerDashboard')
+        ->name('change-manager.dashboard');
 
     // Rute Dasbor Pemohon (Dikeluarkan dari prefix agar URL lebih bersih)
     Route::get('/requester/dashboard', Dashboard::class)->name('requester.dashboard');

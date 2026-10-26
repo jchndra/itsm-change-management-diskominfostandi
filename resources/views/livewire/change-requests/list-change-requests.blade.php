@@ -298,7 +298,7 @@
                                 </span>
                             </td>
                             <td data-label="Status" class="px-5 py-3.5">
-                                <x-status-badge :status="$statusVal ?? $rfc->status" />
+                                <x-status-badge :status="$rfc->status" :tone="$rfc->displayStatusTone()" :label="$rfc->displayStatusLabel()" />
                             </td>
                             <td data-label="Aksi" class="px-5 py-3.5 text-right space-x-2">
                                 <a href="{{ route('change-requests.show', $rfc) }}"
