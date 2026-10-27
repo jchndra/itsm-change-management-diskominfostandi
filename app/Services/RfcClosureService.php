@@ -19,8 +19,8 @@ class RfcClosureService
     /**
      * Tutup RFC setelah evaluasi implementasi tercatat.
      *
-     * Penjagaan status dan prasyarat evaluasi berada di service ini karena
-     * Super Admin dapat melewati policy melalui Gate::before.
+     * Penjagaan status dan prasyarat evaluasi berada di service ini agar aturan
+     * bisnis tetap berlaku terlepas dari policy route.
      */
     public function close(ChangeRequest $rfc, User $actor, string $notes): ChangeRequest
     {

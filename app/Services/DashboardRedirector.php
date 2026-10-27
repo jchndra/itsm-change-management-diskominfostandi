@@ -23,6 +23,10 @@ class DashboardRedirector
             return 'change-requests.index';
         }
 
+        if ($user->isReleaseTeam() && $user->can('rfc.view_assigned')) {
+            return 'change-requests.index';
+        }
+
         return 'requester.dashboard';
     }
 }

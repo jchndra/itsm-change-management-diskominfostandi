@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -27,6 +28,16 @@ class ReleaseTeamMember extends Model
         ];
     }
 
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopeLinked(Builder $query): Builder
+    {
+        return $query->whereNotNull('user_id');
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -35,5 +46,22 @@ class ReleaseTeamMember extends Model
     public function releaseTasks(): HasMany
     {
         return $this->hasMany(ReleaseTask::class);
+    }
+
+    /**
+     * Anggota hanya layak ditugaskan jika aktif, sudah tertaut ke akun aktif,
+     * dan akun tersebut benar-benar memiliki role Tim Rilis.
+     */
+    public function isEligibleForAssignment(): bool
+    {
+        if (! $this->is_active || $this->user_id === null) {
+            return false;
+        }
+
+        $user = $this->user;
+
+        return $user !== null
+            && $user->is_active
+            && $user->hasRole('Tim Rilis');
     }
 }

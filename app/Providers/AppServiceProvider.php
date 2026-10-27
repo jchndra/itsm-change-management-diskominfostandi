@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\User;
+use App\Policies\ChangeRequestPolicy;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -21,10 +22,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Grant all permissions to Super Admin
-        Gate::before(function ($user, $ability) {
-            return $user->hasRole('Super Admin') ? true : null;
-        });
+        // Tidak ada lagi bypass global untuk Super Admin. Setiap ability harus
+        // memiliki permission eksplisit, dan aturan bisnis tetap ditegakkan di
+        // policy, service, serta state machine.
 
         Gate::define('viewAdminDashboard', function (User $user): bool {
             return $user->can('rfc.review_completeness');
@@ -33,6 +33,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('viewChangeManagerDashboard', function (User $user): bool {
             return $user->canAny(['rfc.assess_risk', 'rfc.record_decision']);
         });
+
+        Gate::define('viewDisposition', [ChangeRequestPolicy::class, 'viewDisposition']);
 
         // Dokumen RFC statis hanya untuk pengguna yang berhak mengakses RFC.
         Gate::define('downloadRfcDocument', function (User $user): bool {

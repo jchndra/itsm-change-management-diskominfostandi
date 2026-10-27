@@ -19,7 +19,7 @@ class RfcEvaluationService
      * Catat evaluasi implementasi tanpa mengubah status RFC.
      *
      * Penjagaan status, keberadaan implementasi, dan evaluasi ganda berada di
-     * service ini karena Super Admin dapat melewati policy melalui Gate::before.
+     * service ini agar aturan bisnis tetap berlaku terlepas dari policy route.
      */
     public function record(ChangeRequest $rfc, User $actor, string $notes): ChangeRequestImplementation
     {

@@ -37,8 +37,8 @@ class RfcImplementationService
     /**
      * Catat implementasi RFC beserta bukti pendukungnya.
      *
-     * Seluruh penjagaan status dan duplikasi berada di service ini karena
-     * Super Admin dapat melewati policy melalui Gate::before.
+     * Seluruh penjagaan status dan duplikasi berada di service ini agar aturan
+     * bisnis tetap berlaku terlepas dari policy route.
      *
      * @param  array<string, mixed>  $data
      * @param  array<int, UploadedFile>  $files

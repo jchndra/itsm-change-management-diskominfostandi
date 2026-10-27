@@ -3,15 +3,16 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasRoles;
+    use HasFactory, HasRoles, Notifiable;
 
     protected $fillable = [
         'opd_id',
@@ -46,9 +47,22 @@ class User extends Authenticatable
         return $this->can('rfc.view_all');
     }
 
+    /**
+     * Akun Tim Rilis hanya memperoleh akses ke RFC yang ditugaskan kepadanya.
+     */
+    public function isReleaseTeam(): bool
+    {
+        return $this->hasRole('Tim Rilis');
+    }
+
     public function opd(): BelongsTo
     {
         return $this->belongsTo(Opd::class);
+    }
+
+    public function releaseTeamMember(): HasOne
+    {
+        return $this->hasOne(ReleaseTeamMember::class);
     }
 
     public function submittedChangeRequests(): HasMany

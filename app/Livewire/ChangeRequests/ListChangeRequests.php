@@ -216,7 +216,36 @@ class ListChangeRequests extends Component
             ] + $filterOptions);
         }
 
-        // 2. Tampilan Pemohon: hanya RFC milik pengguna dengan izin view_own.
+        // 2. Tampilan Tim Rilis: hanya RFC yang ditugaskan ke akunnya.
+        if ($user->can('rfc.view_assigned') && $user->isReleaseTeam()) {
+            $baseQuery = ChangeRequest::query()->assignedToReleaseTeamMember($user);
+
+            $stats = [
+                'assigned' => (clone $baseQuery)->count(),
+                'in_progress' => (clone $baseQuery)->where('status', RfcStatus::IN_PROGRESS->value)->count(),
+                'waiting_evaluation' => (clone $baseQuery)->whereIn('status', [
+                    RfcStatus::IMPLEMENTED->value,
+                    RfcStatus::FAILED->value,
+                ])->count(),
+                'closed' => (clone $baseQuery)->where('status', RfcStatus::CLOSED->value)->count(),
+            ];
+
+            $rfcs = $this->orderFilteredRfcs($this->applyFilters((clone $baseQuery)->with([
+                'application',
+                'submittedBy.opd',
+                'implementation',
+                'releaseTasks',
+            ])))->paginate(10);
+
+            return view('livewire.change-requests.list-change-requests', [
+                'roleView' => 'release_team',
+                'stats' => $stats,
+                'rfcs' => $rfcs,
+                'notifications' => $user->unreadNotifications()->take(5)->get(),
+            ] + $filterOptions);
+        }
+
+        // 3. Tampilan Pemohon: hanya RFC milik pengguna dengan izin view_own.
         $baseQuery = ChangeRequest::query()->where('submitted_by_id', $user->id);
 
         $stats = [

@@ -6,7 +6,7 @@ use App\Enums\RfcStatus;
 use App\Exceptions\InvalidRfcStatusTransitionException;
 use App\Models\ChangeRequest;
 use App\Models\User;
-use App\Notifications\RfcStatusChangedNotification;
+use App\Services\RfcNotifier;
 use App\Services\RfcNumberGenerator;
 use Illuminate\Support\Facades\DB;
 
@@ -44,46 +44,39 @@ class RfcStatusTransition
         $oldStatus = $rfc->status;
         $attributes = ['status' => $newStatus->value];
 
-        // Nomor resmi hanya terbit pada transisi menuju Submitted. Generator
-        // dipanggil di dalam transaksi yang sama agar lock nomor bertahan sampai
-        // update selesai, termasuk saat method ini dipanggil tanpa transaksi luar.
-        DB::transaction(function () use ($rfc, $newStatus, &$attributes): void {
+        DB::transaction(function () use ($rfc, $newStatus, $currentStatus, $oldStatus, $actor, $note, $properties, &$attributes): void {
+            // Nomor resmi hanya terbit pada transisi menuju Submitted. Generator
+            // dipanggil di dalam transaksi yang sama agar lock nomor bertahan sampai
+            // update selesai, termasuk saat method ini dipanggil tanpa transaksi luar.
             if ($newStatus === RfcStatus::SUBMITTED && blank($rfc->rfc_number)) {
                 $attributes['rfc_number'] = RfcNumberGenerator::generate();
             }
 
             $rfc->update($attributes);
+
+            if (function_exists('activity')) {
+                activity()
+                    ->performedOn($rfc)
+                    ->causedBy($actor)
+                    ->withProperties(array_merge([
+                        'old_status' => $oldStatus,
+                        'new_status' => $newStatus->value,
+                        'note' => $note,
+                    ], $properties))
+                    ->log("Status RFC diubah dari {$currentStatus->label()} menjadi {$newStatus->label()}.");
+            }
         });
 
-        if ($newStatus->shouldNotifyPemohon()
-            && $rfc->submittedBy
-            && $rfc->submittedBy->id !== $actor->id) {
-            $rfc->submittedBy->notify(
-                new RfcStatusChangedNotification($rfc, $newStatus, $note)
-            );
-        }
-
-        if (function_exists('activity')) {
-            activity()
-                ->performedOn($rfc)
-                ->causedBy($actor)
-                ->withProperties(array_merge([
-                    'old_status' => $oldStatus,
-                    'new_status' => $newStatus->value,
-                    'note' => $note,
-                ], $properties))
-                ->log("Status RFC diubah dari {$currentStatus->label()} menjadi {$newStatus->label()}.");
-        }
+        // Notifikasi tidak boleh membatalkan perubahan status maupun activity
+        // log. Pengiriman ditunda sampai transaksi luar selesai (di production)
+        // dan kegagalannya dilaporkan tanpa melempar ulang.
+        app(RfcNotifier::class)->statusChanged($rfc, $newStatus, $note, $actor);
     }
 
     private static function actorCan(User $actor, ?string $requiredActor, ChangeRequest $rfc): bool
     {
         if ($requiredActor === null) {
             return false;
-        }
-
-        if ($actor->hasRole('Super Admin')) {
-            return true;
         }
 
         return match ($requiredActor) {

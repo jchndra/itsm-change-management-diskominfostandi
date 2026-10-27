@@ -10,7 +10,7 @@ class ChangeRequestPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->hasAnyPermission(['rfc.view_own', 'rfc.view_all']);
+        return $user->hasAnyPermission(['rfc.view_own', 'rfc.view_all', 'rfc.view_assigned']);
     }
 
     public function view(User $user, ChangeRequest $rfc): bool
@@ -19,7 +19,14 @@ class ChangeRequestPolicy
             return true;
         }
 
-        return $user->hasPermissionTo('rfc.view_own') && $rfc->submitted_by_id === $user->id;
+        if ($user->hasPermissionTo('rfc.view_own') && $rfc->submitted_by_id === $user->id) {
+            return true;
+        }
+
+        return ! $rfc->trashed()
+            && $user->hasPermissionTo('rfc.view_assigned')
+            && $user->isReleaseTeam()
+            && $rfc->hasReleaseTaskFor($user);
     }
 
     public function create(User $user): bool
@@ -72,8 +79,8 @@ class ChangeRequestPolicy
 
     public function assessRisk(User $user, ChangeRequest $rfc): bool
     {
-        // Aturan Segregation of Duties (SoD): Penilai risiko tidak boleh yang mengajukan RFC
-        if ($rfc->submitted_by_id === $user->id && ! $user->hasRole('Super Admin')) {
+        // Aturan Segregation of Duties (SoD): Penilai risiko tidak boleh yang mengajukan RFC.
+        if ($rfc->submitted_by_id === $user->id) {
             return false;
         }
 
@@ -83,6 +90,51 @@ class ChangeRequestPolicy
     public function recordDecision(User $user): bool
     {
         return $user->hasPermissionTo('rfc.record_decision');
+    }
+
+    public function assignRelease(User $user, ChangeRequest $rfc): bool
+    {
+        if ($rfc->trashed() || ! $user->hasPermissionTo('rfc.assign_release')) {
+            return false;
+        }
+
+        if (! $user->hasRole('Change Manager') || RfcStatus::fromValue($rfc->status) !== RfcStatus::APPROVED) {
+            return false;
+        }
+
+        return ! $rfc->releaseTasks()->exists();
+    }
+
+    /**
+     * Akses halaman daftar disposisi mengikuti kewenangan yang sama dengan
+     * pemberian disposisi, sehingga tidak ada menu tanpa tindakan lanjutan.
+     */
+    public function viewDisposition(User $user): bool
+    {
+        return $user->hasRole('Change Manager') && $user->hasPermissionTo('rfc.assign_release');
+    }
+
+    public function recordExecution(User $user, ChangeRequest $rfc): bool
+    {
+        if ($rfc->trashed()
+            || ! $user->hasPermissionTo('rfc.record_execution')
+            || ! $user->isReleaseTeam()
+            || $rfc->submitted_by_id === $user->id) {
+            return false;
+        }
+
+        if (! in_array(RfcStatus::fromValue($rfc->status), [RfcStatus::APPROVED, RfcStatus::IN_PROGRESS], true)) {
+            return false;
+        }
+
+        if ($rfc->implementation()->exists()) {
+            return false;
+        }
+
+        $task = $rfc->releaseTaskFor($user);
+
+        return $task !== null
+            && in_array($task->execution_status, ['pending', 'in_progress'], true);
     }
 
     public function implement(User $user, ChangeRequest $rfc): bool
@@ -122,6 +174,16 @@ class ChangeRequestPolicy
 
     public function viewEvidence(User $user, ChangeRequest $rfc): bool
     {
-        return ! $rfc->trashed() && $user->hasPermissionTo('rfc.view_all');
+        if ($rfc->trashed()) {
+            return false;
+        }
+
+        if ($user->hasPermissionTo('rfc.view_all')) {
+            return true;
+        }
+
+        return $user->hasPermissionTo('rfc.view_assigned')
+            && $user->isReleaseTeam()
+            && $rfc->hasReleaseTaskFor($user);
     }
 }

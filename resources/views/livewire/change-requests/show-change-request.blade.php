@@ -2,6 +2,8 @@
 
     @php
         $isStaff = auth()->user()?->can('rfc.view_all') ?? false;
+        $isReleaseTeam = auth()->user()?->isReleaseTeam() ?? false;
+        $returnsToRfcList = $isStaff || $isReleaseTeam;
         $submittedChangeType = match ((string) $rfc->change_type) {
             'standard' => 'Standar',
             'normal' => 'Normal',
@@ -47,7 +49,7 @@
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
             <div class="flex items-center gap-3">
-                <a href="{{ auth()->user()?->isStaff() ? route('change-requests.index') : route('requester.dashboard') }}"
+                <a href="{{ $returnsToRfcList ? route('change-requests.index') : route('requester.dashboard') }}"
                     class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full transition">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -63,6 +65,13 @@
 
         @if (! $rfc->trashed())
             <div class="flex flex-wrap items-center gap-2">
+                @if (auth()->user()?->can('assignRelease', $rfc))
+                    <a href="{{ route('disposition.assign', $rfc) }}" wire:navigate
+                        class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
+                        Disposisi
+                    </a>
+                @endif
+
                 @if (auth()->user()?->can('implement', $rfc))
                     <a href="{{ route('change-requests.implement', $rfc) }}" wire:navigate
                         class="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700">
@@ -266,9 +275,39 @@
                 </div>
             @endif
 
+            @if ($isStaff && $rfc->releaseTasks->isNotEmpty())
+                <div class="bg-white rounded-xl shadow-sm border border-blue-100 p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Disposisi</h3>
+
+                    <div class="space-y-4">
+                        @foreach ($rfc->releaseTasks as $task)
+                            <div class="rounded-lg border border-blue-100 bg-blue-50/50 p-4"
+                                wire:key="show-disposition-task-{{ $task->id }}">
+                                <div class="flex flex-wrap items-start justify-between gap-2">
+                                    <div>
+                                        <p class="text-sm font-semibold text-slate-800">
+                                            {{ $task->releaseTeamMember?->name ?? 'Anggota Tim Rilis' }}
+                                        </p>
+                                        <p class="text-xs text-slate-500">
+                                            Diberikan oleh {{ $task->assignedBy?->name ?? '-' }}
+                                        </p>
+                                    </div>
+                                    <span class="text-[11px] text-slate-500">
+                                        {{ $task->created_at?->copy()->locale('id')->translatedFormat('d M Y, H:i') }}
+                                    </span>
+                                </div>
+                                <div class="mt-3">
+                                    <span class="block text-[11px] font-semibold uppercase tracking-wider text-slate-500">Instruksi</span>
+                                    <p class="mt-1 whitespace-pre-wrap text-sm text-slate-700">{{ $task->instruction }}</p>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
             {{-- Lampiran Pendukung --}}
-            @if ($supportingAttachments->isNotEmpty())
-                <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+            @if ($supportingAttachments->isNotEmpty())                <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
                     <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Lampiran Pendukung</h3>
                     <ul class="divide-y divide-slate-100">
                         @foreach ($supportingAttachments as $attachment)

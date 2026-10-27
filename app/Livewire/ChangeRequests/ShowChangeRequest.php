@@ -15,7 +15,7 @@ class ShowChangeRequest extends Component
         $this->authorize('view', $rfc);
 
         // Muat relasi yang dibutuhkan untuk halaman detail
-        $this->rfc = $rfc->load([
+        $relations = [
             'submittedBy.opd',
             'application.opd',
             'attachments',
@@ -24,7 +24,16 @@ class ShowChangeRequest extends Component
             'implementation.evaluatedBy',
             'evidences',
             'closedBy',
-        ]);
+        ];
+
+        // Disposisi adalah catatan internal staf. Untuk Pemohon relasinya tidak
+        // dimuat agar nama penerima dan instruksi tidak ikut ke tampilan.
+        if (auth()->user()?->can('rfc.view_all')) {
+            $relations[] = 'releaseTasks.releaseTeamMember';
+            $relations[] = 'releaseTasks.assignedBy';
+        }
+
+        $this->rfc = $rfc->load($relations);
     }
 
     /**

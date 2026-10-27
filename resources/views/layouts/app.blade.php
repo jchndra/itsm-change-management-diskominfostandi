@@ -18,11 +18,14 @@
     @php
         $currentUser = auth()->user();
         $roleName = $currentUser?->getRoleNames()->first() ?? 'Pengguna';
-        $isStaff = $currentUser?->isStaff() ?? false;
+        $isReleaseTeam = $currentUser?->isReleaseTeam() ?? false;
+        $isStaff = ($currentUser?->isStaff() ?? false) || $isReleaseTeam;
+        $canManageReleaseTeam = $currentUser?->can('release_team.manage') ?? false;
         $unreadCount = $currentUser ? $currentUser->unreadNotifications()->count() : 0;
         $headerNotifications = $currentUser ? $currentUser->unreadNotifications()->take(5)->get() : collect();
         $canCreateRfc = $currentUser?->can('rfc.create') ?? false;
         $canReviewCompleteness = $currentUser?->can('rfc.review_completeness') ?? false;
+        $canViewDisposition = $currentUser?->can('viewDisposition') ?? false;
         $canViewAdminDashboard = $currentUser?->can('viewAdminDashboard') ?? false;
         $canViewChangeManagerDashboard = $currentUser?->can('viewChangeManagerDashboard') ?? false;
         $isTicketQueueActive = request()->routeIs('change-requests.index')
@@ -86,6 +89,18 @@
                         </x-sidebar-link>
                     @endif
 
+                    @if ($canManageReleaseTeam)
+                        <x-sidebar-link :href="route('admin.release-team-accounts.index')" :active="request()->routeIs('admin.release-team-accounts.*')">
+                            <x-slot:icon>
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                        d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+                                </svg>
+                            </x-slot:icon>
+                            Akun Tim Rilis
+                        </x-sidebar-link>
+                    @endif
+
                     @if ($canViewChangeManagerDashboard)
                         <x-sidebar-link :href="route('change-manager.dashboard')" :active="request()->routeIs('change-manager.dashboard')">
                             <x-slot:icon>
@@ -107,6 +122,18 @@
                         </x-slot:icon>
                         Daftar RFC
                     </x-sidebar-link>
+
+                    @if ($canViewDisposition)
+                        <x-sidebar-link :href="route('disposition.index')" :active="request()->routeIs('disposition.*')">
+                            <x-slot:icon>
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                        d="M6 12 3.27 3.125a59.769 59.769 0 0 1 21.485 9.375 59.769 59.769 0 0 1-21.485 9.375L6 12Zm0 0h8.25" />
+                                </svg>
+                            </x-slot:icon>
+                            Disposisi RFC
+                        </x-sidebar-link>
+                    @endif
                 @else
                     <x-sidebar-link :href="route('requester.dashboard')" :active="$isDashboardActive">
                         <x-slot:icon>

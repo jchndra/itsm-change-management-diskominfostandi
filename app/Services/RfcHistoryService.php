@@ -179,6 +179,40 @@ class RfcHistoryService
                 continue;
             }
 
+            if ($eventType === 'release_disposition') {
+                $recipientNames = data_get($activity->properties, 'recipient_names', []);
+                $recipientNames = is_array($recipientNames)
+                    ? array_values(array_filter(array_map(
+                        fn (mixed $name): string => trim((string) $name),
+                        $recipientNames,
+                    )))
+                    : [];
+                $instruction = trim((string) data_get($activity->properties, 'instruction', ''));
+
+                // Nama penerima dan instruksi adalah catatan internal. Versi
+                // Pemohon hanya diberi tahu bahwa RFC sudah diteruskan.
+                $dispositionNote = $forStaff
+                    ? implode("\n", array_filter([
+                        'Penerima: '.($recipientNames !== [] ? implode(', ', $recipientNames) : '-'),
+                        filled($instruction) ? 'Instruksi: '.$instruction : null,
+                    ]))
+                    : null;
+
+                $events[] = [
+                    'key' => 'release_disposition',
+                    'label' => $forStaff ? 'Disposisi ke Tim Rilis' : 'Diteruskan ke Tim Rilis',
+                    'note' => $dispositionNote,
+                    'time' => $activity->created_at,
+                    'tone' => 'info',
+                    'actor_name' => $forStaff ? $activity->causer?->name : null,
+                    'actor_role' => 'Change Manager',
+                    'legacy' => false,
+                    'order' => $sequence,
+                ];
+
+                continue;
+            }
+
             if (blank($newStatusRaw)) {
                 if ($this->isCreationActivity($activity)) {
                     $isSubmitted = str_contains(strtolower((string) $activity->description), 'diajukan');

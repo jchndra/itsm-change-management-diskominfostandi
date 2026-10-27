@@ -3,6 +3,7 @@
 use App\Http\Controllers\ChangeRequestAttachmentController;
 use App\Http\Controllers\ImplementationEvidenceController;
 use App\Http\Controllers\RfcDocumentController;
+use App\Livewire\Admin\ReleaseTeamAccounts;
 use App\Livewire\Auth\Login;
 use App\Livewire\Auth\Register;
 use App\Livewire\ChangeRequests\AssessRisk;
@@ -19,6 +20,8 @@ use App\Livewire\ChangeRequests\ShowChangeRequest;
 use App\Livewire\ChangeRequests\ShowDeletedChangeRequest;
 use App\Livewire\Dashboard\AdminDashboard;
 use App\Livewire\Dashboard\ChangeManagerDashboard;
+use App\Livewire\Disposition\Assign as AssignDisposition;
+use App\Livewire\Disposition\Index as DispositionIndex;
 use App\Livewire\Notifications;
 use App\Livewire\Profile;
 use App\Livewire\Requester\Dashboard;
@@ -70,12 +73,25 @@ Route::middleware('auth')->group(function () {
         ->middleware('can:viewChangeManagerDashboard')
         ->name('change-manager.dashboard');
 
+    Route::get('/admin/release-team-accounts', ReleaseTeamAccounts::class)
+        ->middleware('can:viewAny,App\Models\ReleaseTeamMember')
+        ->name('admin.release-team-accounts.index');
+
     // Rute Dasbor Pemohon (Dikeluarkan dari prefix agar URL lebih bersih)
     Route::get('/requester/dashboard', Dashboard::class)->name('requester.dashboard');
 
     // Notifikasi & profil pengguna
     Route::get('/notifications', Notifications::class)->name('notifications.index');
     Route::get('/profile', Profile::class)->name('profile.show');
+
+    // Disposisi RFC (di luar prefix change-requests agar menu Daftar RFC tidak
+    // ikut aktif karena pola routeIs('change-requests.*')).
+    Route::get('/disposition', DispositionIndex::class)
+        ->middleware('can:viewDisposition')
+        ->name('disposition.index');
+    Route::get('/disposition/{rfc}', AssignDisposition::class)
+        ->middleware('can:assignRelease,rfc')
+        ->name('disposition.assign');
 
     // Dokumen statis RFC (template surat persetujuan & pedoman)
     Route::get('/rfc-documents/{document}', RfcDocumentController::class)

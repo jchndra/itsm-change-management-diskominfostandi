@@ -47,4 +47,18 @@ return [
         'mimes' => ['pdf'],
         'max_kb' => 5120,
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Defer RFC Notifications Until Commit
+    |--------------------------------------------------------------------------
+    |
+    | Ketika aktif, notifikasi RFC dikirim setelah transaksi database terluar
+    | berhasil di-commit. Kegagalan pengiriman dilaporkan tanpa membatalkan
+    | perubahan status maupun activity log. Pada pengujian, nilai ini dibuat
+    | nonaktif agar notifikasi dapat diperiksa langsung di dalam transaksi uji.
+    |
+    */
+
+    'notify_after_commit' => env('RFC_NOTIFY_AFTER_COMMIT', true),
 ];

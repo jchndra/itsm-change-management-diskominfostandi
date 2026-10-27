@@ -15,6 +15,8 @@
                         "Jadikan setiap perubahan sebagai langkah menuju layanan publik yang lebih baik."
                     @elseif($roleView === 'admin')
                         "Kelola penerimaan dan verifikasi administrasi dokumen perubahan secara teliti dan cepat."
+                    @elseif($roleView === 'release_team')
+                        "Kerjakan RFC yang ditugaskan dengan bukti pelaksanaan yang lengkap dan dapat diaudit."
                     @else
                         "Kelola perubahan layanan TI secara aman, terukur, transparan, dan terdokumentasi."
                     @endif
@@ -97,6 +99,25 @@
             <div class="bg-white p-5 rounded-2xl border border-rose-100 shadow-sm">
                 <p class="text-xs font-medium text-rose-600">{{ \App\Enums\RfcStatus::groupLabel('rejected') }}</p>
                 <p class="text-2xl font-bold text-rose-600 mt-1">{{ $stats['rejected'] }}</p>
+            </div>
+        </div>
+    @elseif($roleView === 'release_team')
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-white p-5 rounded-2xl border border-blue-100 shadow-sm">
+                <p class="text-xs font-medium text-blue-600">RFC Ditugaskan</p>
+                <p class="text-2xl font-bold text-blue-900 mt-1">{{ $stats['assigned'] }}</p>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-indigo-100 shadow-sm">
+                <p class="text-xs font-medium text-indigo-600">Sedang Dikerjakan</p>
+                <p class="text-2xl font-bold text-indigo-600 mt-1">{{ $stats['in_progress'] }}</p>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-amber-100 shadow-sm">
+                <p class="text-xs font-medium text-amber-600">Menunggu Evaluasi</p>
+                <p class="text-2xl font-bold text-amber-600 mt-1">{{ $stats['waiting_evaluation'] }}</p>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-emerald-100 shadow-sm">
+                <p class="text-xs font-medium text-emerald-600">Ditutup</p>
+                <p class="text-2xl font-bold text-emerald-600 mt-1">{{ $stats['closed'] }}</p>
             </div>
         </div>
     @else

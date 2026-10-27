@@ -26,7 +26,7 @@ class RfcDeletionService
                 throw new RuntimeException('Hanya RFC berstatus Draft yang dapat dihapus.');
             }
 
-            if ($rfc->submitted_by_id !== $actor->id && ! $actor->hasRole('Super Admin')) {
+            if ($rfc->submitted_by_id !== $actor->id) {
                 throw new RuntimeException('Anda tidak berhak menghapus RFC ini.');
             }
 
