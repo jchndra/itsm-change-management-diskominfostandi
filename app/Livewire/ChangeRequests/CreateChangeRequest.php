@@ -9,7 +9,7 @@ use App\Models\ChangeRequest;
 use App\Models\ChangeRequestAttachment;
 use App\Models\User;
 use App\Services\RfcAttachmentService;
-use App\Services\RfcNumberGenerator;
+use App\StateMachines\RfcStatusTransition;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\UploadedFile;
@@ -68,11 +68,12 @@ class CreateChangeRequest extends Component
         $this->authorize('create', ChangeRequest::class);
         $this->validateChangeRequest();
 
-        $status = $targetStatus === RfcStatus::SUBMITTED->value
-            ? RfcStatus::SUBMITTED
-            : RfcStatus::DRAFT;
+        $isSubmission = in_array($targetStatus, [
+            RfcStatus::SUBMITTED->value,
+            RfcStatus::TICKET_CREATED->value,
+        ], true);
 
-        if ($status === RfcStatus::SUBMITTED) {
+        if ($isSubmission) {
             $this->validatePhysicalLetterAttachment();
             $this->validateApprovalLetterForSubmission(
                 hasExisting: false,
@@ -91,7 +92,7 @@ class CreateChangeRequest extends Component
             $newAttachments = [];
 
             try {
-                $rfc = DB::transaction(function () use ($user, $status, &$newAttachments): ChangeRequest {
+                $rfc = DB::transaction(function () use ($user, $isSubmission, &$newAttachments): ChangeRequest {
                     $attributes = [
                         'title' => $this->title,
                         'application_id' => $this->application_id,
@@ -105,25 +106,25 @@ class CreateChangeRequest extends Component
                         'is_physical_letter' => $this->is_physical_letter,
                         'physical_letter_number' => $this->is_physical_letter ? $this->physical_letter_number : null,
                         'emergency_unconfirmed' => $this->change_type === 'emergency',
-                        'status' => $status->value,
+                        'status' => RfcStatus::DRAFT->value,
                         'submission_token' => $this->submissionToken,
                     ];
 
-                    if ($status === RfcStatus::SUBMITTED) {
-                        $attributes['rfc_number'] = RfcNumberGenerator::generate();
-                    }
-
                     $rfc = ChangeRequest::create($attributes);
 
-                    activity('rfc')
-                        ->performedOn($rfc)
-                        ->causedBy($user)
-                        ->withProperties([
-                            'old_status' => null,
-                            'new_status' => $status->value,
-                            'note' => null,
-                        ])
-                        ->log($status === RfcStatus::SUBMITTED ? 'RFC resmi diajukan' : 'Draft RFC disimpan');
+                    if ($isSubmission) {
+                        RfcStatusTransition::transitionTo($rfc, RfcStatus::TICKET_CREATED, $user);
+                    } else {
+                        activity('rfc')
+                            ->performedOn($rfc)
+                            ->causedBy($user)
+                            ->withProperties([
+                                'old_status' => null,
+                                'new_status' => RfcStatus::DRAFT->value,
+                                'note' => null,
+                            ])
+                            ->log('Draft RFC disimpan');
+                    }
 
                     $newAttachments = app(RfcAttachmentService::class)->storeMany($rfc, $this->attachments, $user);
 
@@ -171,7 +172,9 @@ class CreateChangeRequest extends Component
         $this->attachments = [];
         $this->approval_letter = null;
 
-        $statusMessage = $status === RfcStatus::SUBMITTED ? 'berhasil diajukan' : 'berhasil disimpan sebagai draft';
+        $statusMessage = $isSubmission
+            ? 'berhasil diajukan dan diteruskan ke Change Manager'
+            : 'berhasil disimpan sebagai draft';
         session()->flash('message', "{$rfc->displayIdentifier()} {$statusMessage}.");
 
         $this->redirectAfterSave($user);

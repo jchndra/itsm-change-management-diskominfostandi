@@ -1,8 +1,8 @@
 <?php
 
+use App\Enums\RfcStatus;
 use App\Livewire\Notifications;
 use App\Livewire\Profile;
-use App\Enums\RfcStatus;
 use App\Livewire\Requester\Dashboard;
 use App\Models\ChangeRequest;
 use App\Models\User;
@@ -53,5 +53,5 @@ it('renders dashboard timeline states for active rfc', function () {
         ->assertOk()
         ->assertSee('RFC-2026-9001')
         ->assertSee('Dikerjakan')
-        ->assertSee('Review Change Manager');
+        ->assertSee('Ditinjau Change Manager');
 });

@@ -19,6 +19,31 @@ class RfcStatusTransition
         ?string $note = null,
         array $properties = []
     ): void {
+        self::perform($rfc, $newStatus, $actor, $note, $properties);
+    }
+
+    /**
+     * Transisi khusus penyesuaian data lama. Hanya mengizinkan pemindahan RFC
+     * submitted/returned_to_admin menuju ticket_created tanpa akun pelaku.
+     */
+    public static function transitionBySystem(
+        ChangeRequest $rfc,
+        RfcStatus $newStatus,
+        ?string $note = null,
+        array $properties = [],
+        ?string $logMessage = null
+    ): void {
+        self::perform($rfc, $newStatus, null, $note, $properties, $logMessage);
+    }
+
+    private static function perform(
+        ChangeRequest $rfc,
+        RfcStatus $newStatus,
+        ?User $actor,
+        ?string $note,
+        array $properties,
+        ?string $logMessage = null
+    ): void {
         $currentStatus = RfcStatus::fromValue($rfc->status);
 
         if (! $currentStatus) {
@@ -33,44 +58,80 @@ class RfcStatusTransition
             );
         }
 
-        $requiredActor = $currentStatus->actorFor($newStatus);
+        if ($actor === null) {
+            if (! self::systemCan($currentStatus, $newStatus)) {
+                throw new InvalidRfcStatusTransitionException(
+                    "Transisi sistem dari {$currentStatus->label()} ke {$newStatus->label()} tidak diizinkan."
+                );
+            }
+        } else {
+            $requiredActor = $currentStatus->actorFor($newStatus);
 
-        if (! self::actorCan($actor, $requiredActor, $rfc)) {
-            throw new InvalidRfcStatusTransitionException(
-                "Anda tidak memiliki izin untuk mengubah status RFC dari {$currentStatus->label()} ke {$newStatus->label()}."
-            );
+            if (! self::actorCan($actor, $requiredActor, $rfc)) {
+                throw new InvalidRfcStatusTransitionException(
+                    "Anda tidak memiliki izin untuk mengubah status RFC dari {$currentStatus->label()} ke {$newStatus->label()}."
+                );
+            }
         }
 
         $oldStatus = $rfc->status;
         $attributes = ['status' => $newStatus->value];
 
-        DB::transaction(function () use ($rfc, $newStatus, $currentStatus, $oldStatus, $actor, $note, $properties, &$attributes): void {
-            // Nomor resmi hanya terbit pada transisi menuju Submitted. Generator
-            // dipanggil di dalam transaksi yang sama agar lock nomor bertahan sampai
-            // update selesai, termasuk saat method ini dipanggil tanpa transaksi luar.
-            if ($newStatus === RfcStatus::SUBMITTED && blank($rfc->rfc_number)) {
+        DB::transaction(function () use ($rfc, $newStatus, $currentStatus, $oldStatus, $actor, $note, $properties, $logMessage, &$attributes): void {
+            // Nomor resmi terbit saat RFC masuk ke alur pemeriksaan. Untuk alur
+            // baru ini terjadi pada transisi langsung ke ticket_created.
+            if (in_array($newStatus, [RfcStatus::SUBMITTED, RfcStatus::TICKET_CREATED], true)
+                && blank($rfc->rfc_number)) {
                 $attributes['rfc_number'] = RfcNumberGenerator::generate();
             }
 
             $rfc->update($attributes);
 
             if (function_exists('activity')) {
-                activity()
+                $activity = activity()
                     ->performedOn($rfc)
-                    ->causedBy($actor)
                     ->withProperties(array_merge([
                         'old_status' => $oldStatus,
                         'new_status' => $newStatus->value,
                         'note' => $note,
-                    ], $properties))
-                    ->log("Status RFC diubah dari {$currentStatus->label()} menjadi {$newStatus->label()}.");
+                    ], $properties));
+
+                if ($actor !== null) {
+                    $activity->causedBy($actor);
+                }
+
+                $activity->log($logMessage ?? self::logMessage($currentStatus, $newStatus));
             }
         });
 
         // Notifikasi tidak boleh membatalkan perubahan status maupun activity
         // log. Pengiriman ditunda sampai transaksi luar selesai (di production)
         // dan kegagalannya dilaporkan tanpa melempar ulang.
-        app(RfcNotifier::class)->statusChanged($rfc, $newStatus, $note, $actor);
+        if ($actor !== null) {
+            $notifier = app(RfcNotifier::class);
+            $notifier->statusChanged($rfc, $newStatus, $note, $actor);
+
+            if ($newStatus === RfcStatus::TICKET_CREATED
+                && in_array($currentStatus, [RfcStatus::DRAFT, RfcStatus::NEEDS_REVISION], true)) {
+                $notifier->submittedForReview($rfc);
+            }
+        }
+    }
+
+    private static function logMessage(RfcStatus $currentStatus, RfcStatus $newStatus): string
+    {
+        if ($newStatus === RfcStatus::TICKET_CREATED
+            && in_array($currentStatus, [RfcStatus::DRAFT, RfcStatus::NEEDS_REVISION], true)) {
+            return 'RFC diajukan dan diteruskan ke Change Manager';
+        }
+
+        return "Status RFC diubah dari {$currentStatus->label()} menjadi {$newStatus->label()}.";
+    }
+
+    private static function systemCan(RfcStatus $currentStatus, RfcStatus $newStatus): bool
+    {
+        return $newStatus === RfcStatus::TICKET_CREATED
+            && in_array($currentStatus, [RfcStatus::SUBMITTED, RfcStatus::RETURNED_TO_ADMIN], true);
     }
 
     private static function actorCan(User $actor, ?string $requiredActor, ChangeRequest $rfc): bool

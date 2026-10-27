@@ -87,9 +87,16 @@ class ChangeRequestPolicy
         return $user->hasPermissionTo('rfc.assess_risk');
     }
 
-    public function recordDecision(User $user): bool
+    public function recordDecision(User $user, ChangeRequest $rfc): bool
     {
-        return $user->hasPermissionTo('rfc.record_decision');
+        // Aturan Segregation of Duties (SoD): Change Manager tidak boleh
+        // memutuskan RFC yang ia ajukan sendiri.
+        if ($rfc->trashed() || $rfc->submitted_by_id === $user->id) {
+            return false;
+        }
+
+        return $user->hasPermissionTo('rfc.record_decision')
+            && RfcStatus::fromValue($rfc->status) === RfcStatus::TICKET_CREATED;
     }
 
     public function assignRelease(User $user, ChangeRequest $rfc): bool

@@ -113,7 +113,7 @@ test('RFC yang diajukan lewat komponen create memakai nomor berurutan dari gener
             ->set('impact_description', 'Dampak perubahan yang cukup jelas untuk pengujian.')
             ->set('target_implementation_date', now()->addDays(3)->format('Y-m-d\TH:i'))
             ->set('approval_letter', UploadedFile::fake()->create('surat-persetujuan.pdf', 100, 'application/pdf'))
-            ->call('save', RfcStatus::SUBMITTED->value)
+            ->call('save', RfcStatus::TICKET_CREATED->value)
             ->assertHasNoErrors()
             ->assertRedirect(route('requester.dashboard'));
     }

@@ -8,7 +8,7 @@
             </h1>
             <p class="text-sm text-slate-500 mt-1">
                 {{ $isRevision
-                    ? 'Perbaiki data RFC sesuai catatan Admin, lalu kirim revisi.'
+                    ? 'Perbaiki data RFC sesuai catatan Change Manager, lalu kirim revisi.'
                     : 'Perbarui data RFC sebelum mengajukannya.' }}
             </p>
         </div>
@@ -23,7 +23,7 @@
 
     @if ($isRevision && filled($revisionReason))
         <div class="rounded-xl border border-amber-200 bg-amber-50 p-5">
-            <h2 class="text-sm font-bold text-amber-900">Alasan Permintaan Revisi dari Admin</h2>
+            <h2 class="text-sm font-bold text-amber-900">Alasan Permintaan Revisi dari Change Manager</h2>
             <p class="mt-2 whitespace-pre-wrap text-sm text-amber-800">{{ $revisionReason }}</p>
         </div>
     @endif

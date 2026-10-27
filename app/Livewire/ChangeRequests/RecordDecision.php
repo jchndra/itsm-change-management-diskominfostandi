@@ -7,9 +7,11 @@ use App\Enums\RfcStatus;
 use App\Exceptions\InvalidRfcStatusTransitionException;
 use App\Models\ChangeRequest;
 use App\Models\Decision;
+use App\Models\User;
 use App\StateMachines\RfcStatusTransition;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 
 class RecordDecision extends Component
@@ -20,10 +22,12 @@ class RecordDecision extends Component
 
     public string $notes = '';
 
+    public bool $completenessConfirmed = false;
+
     public function mount(ChangeRequest $rfc): void
     {
         $this->authorize('recordDecision', $rfc);
-        $this->rfc = $rfc->load(['submittedBy', 'application.opd', 'riskAssessment']);
+        $this->rfc = $rfc->load(['submittedBy.opd', 'application.opd', 'riskAssessment', 'attachments']);
     }
 
     public function saveDecision(): void
@@ -31,8 +35,12 @@ class RecordDecision extends Component
         $this->authorize('recordDecision', $this->rfc);
 
         $this->validate([
-            'decisionStatus' => 'required|in:'.implode(',', DecisionStatus::values()),
-            'notes' => 'required|string|max:1000',
+            'decisionStatus' => ['required', Rule::in(DecisionStatus::formValues())],
+            'notes' => ['required', 'string', 'max:1000'],
+            'completenessConfirmed' => ['accepted_if:decisionStatus,'.DecisionStatus::APPROVED->value],
+        ], [
+            'notes.required' => 'Catatan keputusan wajib diisi.',
+            'completenessConfirmed.accepted_if' => 'Centang pernyataan bahwa dokumen dan lampiran telah diperiksa.',
         ]);
 
         if (! $this->rfc->riskAssessment) {
@@ -41,7 +49,7 @@ class RecordDecision extends Component
             return;
         }
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         $decisionStatus = DecisionStatus::from($this->decisionStatus);
@@ -49,8 +57,15 @@ class RecordDecision extends Component
         $targetStatus = match ($decisionStatus) {
             DecisionStatus::APPROVED => RfcStatus::APPROVED,
             DecisionStatus::REJECTED => RfcStatus::REJECTED,
-            DecisionStatus::RETURNED_TO_ADMIN => RfcStatus::RETURNED_TO_ADMIN,
+            DecisionStatus::REVISION_REQUIRED => RfcStatus::NEEDS_REVISION,
+            default => null,
         };
+
+        if ($targetStatus === null) {
+            $this->addError('decisionStatus', 'Pilihan keputusan tidak valid untuk alur baru.');
+
+            return;
+        }
 
         try {
             DB::transaction(function () use ($decisionStatus, $targetStatus, $user) {
@@ -65,6 +80,12 @@ class RecordDecision extends Component
                     'decision_date' => now(),
                     'reason' => $this->notes,
                 ]);
+
+                if ($decisionStatus === DecisionStatus::REVISION_REQUIRED) {
+                    $this->rfc->update(['rejection_note' => $this->notes]);
+                } elseif ($decisionStatus === DecisionStatus::APPROVED) {
+                    $this->rfc->update(['rejection_note' => null]);
+                }
 
                 RfcStatusTransition::transitionTo($this->rfc, $targetStatus, $user, $this->notes);
             });
@@ -82,6 +103,7 @@ class RecordDecision extends Component
     {
         return view('livewire.change-requests.record-decision', [
             'recordedBy' => Auth::user(),
+            'decisionOptions' => DecisionStatus::formOptions(),
         ]);
     }
 }

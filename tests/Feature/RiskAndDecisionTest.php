@@ -82,6 +82,7 @@ test('keputusan baru menyimpan authority_id null dan snapshot dari change manage
     Livewire::test(RecordDecision::class, ['rfc' => $rfc])
         ->set('decisionStatus', DecisionStatus::APPROVED->value)
         ->set('notes', 'Disetujui berdasarkan hasil evaluasi teknis.')
+        ->set('completenessConfirmed', true)
         ->call('saveDecision')
         ->assertHasNoErrors();
 
@@ -112,6 +113,7 @@ test('jabatan kosong memakai fallback Change Manager dan NIP kosong disimpan nul
     Livewire::test(RecordDecision::class, ['rfc' => $rfc])
         ->set('decisionStatus', DecisionStatus::APPROVED->value)
         ->set('notes', 'Disetujui tanpa jabatan pada profil.')
+        ->set('completenessConfirmed', true)
         ->call('saveDecision')
         ->assertHasNoErrors();
 
@@ -174,6 +176,7 @@ test('keputusan ditolak jika analisis risiko belum ada', function () {
     Livewire::test(RecordDecision::class, ['rfc' => $rfc])
         ->set('decisionStatus', DecisionStatus::APPROVED->value)
         ->set('notes', 'Disetujui berdasarkan hasil evaluasi teknis.')
+        ->set('completenessConfirmed', true)
         ->call('saveDecision')
         ->assertHasErrors(['decisionStatus']);
 
@@ -245,6 +248,7 @@ test('keputusan baru tanpa authority dapat dirender untuk staf dan pemohon', fun
     Livewire::test(RecordDecision::class, ['rfc' => $rfc])
         ->set('decisionStatus', DecisionStatus::APPROVED->value)
         ->set('notes', 'Disetujui tanpa data pejabat lama.')
+        ->set('completenessConfirmed', true)
         ->call('saveDecision')
         ->assertHasNoErrors();
 
@@ -282,7 +286,7 @@ test('admin dan pemohon mendapat 403 di halaman keputusan', function () {
         ->assertForbidden();
 });
 
-test('transisi keputusan approved rejected dan returned_to_admin tetap berjalan', function (DecisionStatus $decisionStatus, RfcStatus $targetStatus) {
+test('transisi keputusan approved rejected dan revision_required tetap berjalan', function (DecisionStatus $decisionStatus, RfcStatus $targetStatus) {
     $cm = User::factory()->create([
         'name' => 'CM Transisi',
         'position' => 'Pengendali Perubahan IT',
@@ -297,6 +301,7 @@ test('transisi keputusan approved rejected dan returned_to_admin tetap berjalan'
     Livewire::test(RecordDecision::class, ['rfc' => $rfc])
         ->set('decisionStatus', $decisionStatus->value)
         ->set('notes', 'Catatan transisi '.$decisionStatus->value)
+        ->set('completenessConfirmed', true)
         ->call('saveDecision')
         ->assertHasNoErrors();
 
@@ -305,7 +310,7 @@ test('transisi keputusan approved rejected dan returned_to_admin tetap berjalan'
 })->with([
     'approved' => [DecisionStatus::APPROVED, RfcStatus::APPROVED],
     'rejected' => [DecisionStatus::REJECTED, RfcStatus::REJECTED],
-    'returned to admin' => [DecisionStatus::RETURNED_TO_ADMIN, RfcStatus::RETURNED_TO_ADMIN],
+    'revision required' => [DecisionStatus::REVISION_REQUIRED, RfcStatus::NEEDS_REVISION],
 ]);
 
 test('riwayat proses staf menyebut nama change manager dari snapshot', function () {
@@ -323,6 +328,7 @@ test('riwayat proses staf menyebut nama change manager dari snapshot', function 
     Livewire::test(RecordDecision::class, ['rfc' => $rfc])
         ->set('decisionStatus', DecisionStatus::APPROVED->value)
         ->set('notes', 'Disetujui untuk pengujian riwayat.')
+        ->set('completenessConfirmed', true)
         ->call('saveDecision')
         ->assertHasNoErrors();
 

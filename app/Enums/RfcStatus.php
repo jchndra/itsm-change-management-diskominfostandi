@@ -79,9 +79,9 @@ enum RfcStatus: string
     public function allowedTransitions(): array
     {
         return match ($this) {
-            self::DRAFT, self::NEEDS_REVISION => [self::SUBMITTED, self::CANCELLED],
+            self::DRAFT, self::NEEDS_REVISION => [self::SUBMITTED, self::TICKET_CREATED, self::CANCELLED],
             self::SUBMITTED => [self::NEEDS_REVISION, self::TICKET_CREATED, self::REJECTED, self::CANCELLED],
-            self::TICKET_CREATED => [self::APPROVED, self::REJECTED, self::RETURNED_TO_ADMIN],
+            self::TICKET_CREATED => [self::APPROVED, self::REJECTED, self::RETURNED_TO_ADMIN, self::NEEDS_REVISION],
             self::RETURNED_TO_ADMIN => [self::TICKET_CREATED, self::NEEDS_REVISION, self::REJECTED],
             self::APPROVED => [self::IN_PROGRESS],
             self::IN_PROGRESS => [self::IMPLEMENTED, self::FAILED],
@@ -104,14 +104,14 @@ enum RfcStatus: string
     {
         return match (true) {
             in_array($this, [self::DRAFT, self::NEEDS_REVISION], true)
-                && in_array($target, [self::SUBMITTED, self::CANCELLED], true) => 'owner',
+                && in_array($target, [self::SUBMITTED, self::TICKET_CREATED, self::CANCELLED], true) => 'owner',
             $this === self::SUBMITTED
                 && in_array($target, [self::NEEDS_REVISION, self::TICKET_CREATED, self::REJECTED], true) => 'admin',
             $this === self::SUBMITTED && $target === self::CANCELLED => 'admin',
             $this === self::RETURNED_TO_ADMIN
                 && in_array($target, [self::TICKET_CREATED, self::NEEDS_REVISION, self::REJECTED], true) => 'admin',
             $this === self::TICKET_CREATED
-                && in_array($target, [self::APPROVED, self::REJECTED, self::RETURNED_TO_ADMIN], true) => 'change_manager',
+                && in_array($target, [self::APPROVED, self::REJECTED, self::RETURNED_TO_ADMIN, self::NEEDS_REVISION], true) => 'change_manager',
             $this === self::APPROVED && $target === self::IN_PROGRESS => 'change_manager',
             $this === self::IN_PROGRESS
                 && in_array($target, [self::IMPLEMENTED, self::FAILED], true) => 'change_manager',

@@ -91,7 +91,7 @@ it('mewajibkan surat persetujuan pdf dan menerbitkan nomor resmi saat pengajuan'
         ->set(approvalLetterFormFields($this->application, 'Pengajuan Dengan Surat Persetujuan'));
 
     $newForm()
-        ->call('save', RfcStatus::SUBMITTED->value)
+        ->call('save', RfcStatus::TICKET_CREATED->value)
         ->assertHasErrors('approval_letter');
 
     expect(ChangeRequest::count())->toBe(0);
@@ -102,19 +102,19 @@ it('mewajibkan surat persetujuan pdf dan menerbitkan nomor resmi saat pengajuan'
             100,
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         ))
-        ->call('save', RfcStatus::SUBMITTED->value)
+        ->call('save', RfcStatus::TICKET_CREATED->value)
         ->assertHasErrors('approval_letter');
 
     expect(ChangeRequest::count())->toBe(0);
 
     $newForm()
         ->set('approval_letter', UploadedFile::fake()->create('surat-persetujuan.pdf', 100, 'application/pdf'))
-        ->call('save', RfcStatus::SUBMITTED->value)
+        ->call('save', RfcStatus::TICKET_CREATED->value)
         ->assertHasNoErrors();
 
     $rfc = ChangeRequest::latest('id')->firstOrFail();
 
-    expect($rfc->status)->toBe(RfcStatus::SUBMITTED->value)
+    expect($rfc->status)->toBe(RfcStatus::TICKET_CREATED->value)
         ->and($rfc->rfc_number)->toBe('RFC-'.date('Y').'-0001')
         ->and($rfc->displayIdentifier())->toBe($rfc->rfc_number)
         ->and($rfc->approvalLetters()->count())->toBe(1)
@@ -133,7 +133,7 @@ it('menolak surat persetujuan pdf yang lebih dari 5 mb', function () {
     Livewire::test(CreateChangeRequest::class)
         ->set(approvalLetterFormFields($this->application, 'Surat Persetujuan Terlalu Besar'))
         ->set('approval_letter', UploadedFile::fake()->create('surat-besar.pdf', 5121, 'application/pdf'))
-        ->call('save', RfcStatus::SUBMITTED->value)
+        ->call('save', RfcStatus::TICKET_CREATED->value)
         ->assertHasErrors('approval_letter');
 
     expect(ChangeRequest::count())->toBe(0);
@@ -157,7 +157,7 @@ it('menolak pengajuan draft tanpa surat persetujuan dan menerbitkan nomor saat s
 
     $fresh = $rfc->fresh();
 
-    expect($fresh->status)->toBe(RfcStatus::SUBMITTED->value)
+    expect($fresh->status)->toBe(RfcStatus::TICKET_CREATED->value)
         ->and($fresh->rfc_number)->toBe('RFC-'.date('Y').'-0001')
         ->and($fresh->approvalLetters()->count())->toBe(1);
 });

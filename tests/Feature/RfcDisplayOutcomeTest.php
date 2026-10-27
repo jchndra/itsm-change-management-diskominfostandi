@@ -247,11 +247,11 @@ test('RFC failed yang ditutup tidak pernah tampil sebagai berhasil atau selesai'
 });
 
 test('riwayat dan langkah berikutnya untuk approved, implemented, failed, dan closed', function () {
-    $implementation = ['key' => 'implementation', 'label' => 'Implementasi'];
+    $implementation = ['key' => 'implementation', 'label' => 'Dikerjakan Tim Rilis'];
     $evaluation = ['key' => 'evaluation', 'label' => 'Evaluasi'];
-    $closure = ['key' => 'closure', 'label' => 'Penutupan'];
+    $closure = ['key' => 'closure', 'label' => 'Ditutup'];
 
-    // APPROVED: Implementasi, Evaluasi, Penutupan.
+    // APPROVED: Dikerjakan Tim Rilis, Evaluasi, Ditutup.
     $approved = ($this->makeRfc)(['status' => RfcStatus::APPROVED->value]);
     expect(app(RfcHistoryService::class)->build($approved, false)['next_steps'])
         ->toBe([$implementation, $evaluation, $closure]);

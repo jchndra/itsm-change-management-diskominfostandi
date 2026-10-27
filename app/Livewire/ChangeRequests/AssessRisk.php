@@ -5,6 +5,7 @@ namespace App\Livewire\ChangeRequests;
 use App\Enums\RfcStatus;
 use App\Models\ChangeRequest;
 use App\Models\RiskAssessment;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -58,7 +59,7 @@ class AssessRisk extends Component
     {
         $this->authorize('assessRisk', $rfc);
 
-        $this->rfc = $rfc->load(['submittedBy', 'application.opd', 'riskAssessment']);
+        $this->rfc = $rfc->load(['submittedBy.opd', 'application.opd', 'riskAssessment', 'attachments']);
 
         if ($this->rfc->riskAssessment) {
             $this->risk_level = $this->normalizeValue($this->rfc->riskAssessment->risk_level, 'Rendah');
@@ -93,7 +94,7 @@ class AssessRisk extends Component
             'analysis_notes' => 'required|string|max:1000',
         ]);
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         $scoreMap = [

@@ -19,74 +19,7 @@
         <span class="text-xs text-slate-500 font-medium">Evaluasi & Penilaian Risiko (Change Manager)</span>
     </div>
 
-    {{-- Ringkasan Informasi Dokumen --}}
-    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-        <div class="flex items-center justify-between border-b border-slate-100 pb-4">
-            <div>
-                <span
-                    class="text-xs font-bold text-blue-900 bg-blue-50 px-2.5 py-1 rounded-md">{{ $rfc->displayIdentifier() }}</span>
-                <h2 class="text-lg font-bold text-slate-800 mt-2">{{ $rfc->title }}</h2>
-            </div>
-            <x-status-badge :status="$rfc->status" :tone="$rfc->displayStatusTone()" :label="$rfc->displayStatusLabel()" />
-        </div>
-
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-            <div>
-                <p class="text-slate-400">Pemohon</p>
-                <p class="font-semibold text-slate-800 mt-0.5">{{ $rfc->submittedBy?->name ?? '-' }}</p>
-            </div>
-            <div>
-                <p class="text-slate-400">Aplikasi / Layanan</p>
-                <p class="font-semibold text-slate-800 mt-0.5">{{ $rfc->application?->name ?? '-' }}</p>
-            </div>
-            <div>
-                <p class="text-slate-400">OPD / Instansi</p>
-                <p class="font-semibold text-slate-800 mt-0.5">
-                    {{ $rfc->application?->opd?->name ?? ($rfc->submittedBy?->opd?->name ?? '-') }}</p>
-            </div>
-            <div>
-                <p class="text-slate-400">Tanggal Pengajuan</p>
-                <p class="font-semibold text-slate-800 mt-0.5">{{ $rfc->created_at?->format('d M Y, H:i') }} WIB</p>
-            </div>
-        </div>
-
-        <div class="pt-2 border-t border-slate-100 text-xs">
-            <p class="text-slate-400 font-medium">Alasan / Deskripsi Perubahan</p>
-            <p class="text-slate-700 mt-1 leading-relaxed">
-                {{ $rfc->reason_for_change ?? ($rfc->description ?? 'Tidak ada deskripsi.') }}</p>
-        </div>
-    </div>
-
-    {{-- Informasi Tiket dari Admin (baca-saja) --}}
-    @if (filled($rfc->ticket_number) || filled($rfc->priority) || filled($rfc->category) || filled($rfc->admin_note))
-        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-            <h3 class="text-sm font-bold text-slate-800">Informasi Tiket dari Admin</h3>
-            <div class="grid grid-cols-1 gap-4 text-xs md:grid-cols-3">
-                <div>
-                    <p class="text-slate-400">Nomor Tiket</p>
-                    <p class="mt-0.5 font-semibold text-slate-800">{{ $rfc->ticket_number ?: '-' }}</p>
-                </div>
-                <div>
-                    <p class="text-slate-400">Prioritas</p>
-                    <p class="mt-0.5 font-semibold text-slate-800">
-                        {{ $rfc->priority instanceof \App\Enums\TicketPriority ? $rfc->priority->label() : (\App\Enums\TicketPriority::tryFrom((string) $rfc->priority)?->label() ?? '-') }}
-                    </p>
-                </div>
-                <div>
-                    <p class="text-slate-400">Kategori Layanan</p>
-                    <p class="mt-0.5 font-semibold text-slate-800">
-                        {{ $rfc->category instanceof \App\Enums\ServiceCategory ? $rfc->category->label() : (\App\Enums\ServiceCategory::tryFrom((string) $rfc->category)?->label() ?? '-') }}
-                    </p>
-                </div>
-            </div>
-            @if (filled($rfc->admin_note))
-                <div class="border-t border-slate-100 pt-3 text-xs">
-                    <p class="font-semibold text-slate-500">Catatan Admin untuk Change Manager</p>
-                    <p class="mt-1 whitespace-pre-wrap leading-relaxed text-slate-700">{{ $rfc->admin_note }}</p>
-                </div>
-            @endif
-        </div>
-    @endif
+    @include('livewire.change-requests.partials.rfc-summary', ['rfc' => $rfc])
 
     {{-- Form Evaluasi Risiko & Klasifikasi --}}
     <form wire:submit="submitAssessment" class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">

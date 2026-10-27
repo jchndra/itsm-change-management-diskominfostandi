@@ -270,7 +270,7 @@
                 Simpan Draft
             </button>
 
-            <button type="button" wire:click="save('{{ \App\Enums\RfcStatus::SUBMITTED->value }}')" wire:loading.attr="disabled"
+            <button type="button" wire:click="save('{{ \App\Enums\RfcStatus::TICKET_CREATED->value }}')" wire:loading.attr="disabled"
                 class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm shadow-sm transition disabled:opacity-60">
                 Ajukan Sekarang
             </button>

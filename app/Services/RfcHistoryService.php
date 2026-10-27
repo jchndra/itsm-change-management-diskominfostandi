@@ -123,7 +123,7 @@ class RfcHistoryService
                     'time' => $activity->created_at,
                     'tone' => 'warning',
                     'actor_name' => $forStaff ? $activity->causer?->name : null,
-                    'actor_role' => 'Admin',
+                    'actor_role' => $this->actorRole($activity->causer, null, RfcStatus::NEEDS_REVISION) ?? 'Change Manager',
                     'legacy' => false,
                     'order' => $sequence,
                 ];
@@ -418,33 +418,31 @@ class RfcHistoryService
             return [];
         }
 
-        $implementation = ['key' => 'implementation', 'label' => 'Implementasi'];
+        $submission = ['key' => 'submission', 'label' => 'Diajukan'];
+        $cmReview = ['key' => 'cm_review', 'label' => 'Ditinjau Change Manager'];
+        $implementation = ['key' => 'implementation', 'label' => 'Dikerjakan Tim Rilis'];
         $evaluation = ['key' => 'evaluation', 'label' => 'Evaluasi'];
-        $closure = ['key' => 'closure', 'label' => 'Penutupan'];
+        $closure = ['key' => 'closure', 'label' => 'Ditutup'];
 
         return match ($status) {
             RfcStatus::APPROVED, RfcStatus::IN_PROGRESS => [$implementation, $evaluation, $closure],
             RfcStatus::IMPLEMENTED, RfcStatus::FAILED => $rfc->implementation?->evaluated_at !== null
                 ? [$closure]
                 : [$evaluation, $closure],
-            RfcStatus::TICKET_CREATED => [
-                ['key' => 'cm_review', 'label' => 'Review Change Manager'],
+            RfcStatus::DRAFT => [$submission, $cmReview, $implementation, $evaluation, $closure],
+            RfcStatus::NEEDS_REVISION => [
+                ['key' => 'revision', 'label' => 'Kirim Revisi'],
+                $cmReview,
                 $implementation,
                 $evaluation,
                 $closure,
             ],
-            default => [
-                ['key' => 'admin_review', 'label' => 'Diperiksa Admin'],
-                ['key' => 'cm_review', 'label' => 'Review Change Manager'],
-                $implementation,
-                $evaluation,
-                $closure,
-            ],
+            default => [$cmReview, $implementation, $evaluation, $closure],
         };
     }
 
     /**
-     * Timeline ringkas enam langkah untuk widget dashboard Pemohon.
+     * Timeline ringkas lima langkah untuk widget dashboard Pemohon.
      *
      * @return array<int, array{key: string, label: string, description: string, state: string, time: ?Carbon}>
      */
@@ -467,17 +465,14 @@ class RfcHistoryService
             ->filter(fn (array $event): bool => in_array($event['key'], $keys, true))
             ->last();
 
-        $submittedEvent = $lastEvent([RfcStatus::SUBMITTED->value, 'draft_created']);
-        $adminEvent = $lastEvent([
+        $submittedEvent = $lastEvent([RfcStatus::SUBMITTED->value, 'draft_created'])
+            ?? $lastEvent([RfcStatus::TICKET_CREATED->value]);
+        $cmEvent = $lastEvent([
+            'risk_assessment',
             RfcStatus::TICKET_CREATED->value,
             RfcStatus::NEEDS_REVISION->value,
             RfcStatus::RETURNED_TO_ADMIN->value,
-            RfcStatus::REJECTED->value,
-        ]);
-        $cmEvent = $lastEvent([
-            'risk_assessment',
             RfcStatus::APPROVED->value,
-            RfcStatus::RETURNED_TO_ADMIN->value,
             RfcStatus::REJECTED->value,
         ]);
         $workEvent = $lastEvent([
@@ -497,22 +492,15 @@ class RfcHistoryService
                 'state' => $status === RfcStatus::DRAFT ? 'current' : 'done',
             ],
             [
-                'key' => 'admin',
-                'label' => 'Diperiksa Admin',
-                'description' => 'Menunggu pemeriksaan Admin',
-                'time' => $adminEvent['time'] ?? null,
-                'state' => 'pending',
-            ],
-            [
                 'key' => 'cm',
-                'label' => 'Review Change Manager',
+                'label' => 'Ditinjau Change Manager',
                 'description' => 'Menunggu review Change Manager',
                 'time' => $cmEvent['time'] ?? null,
                 'state' => 'pending',
             ],
             [
                 'key' => 'work',
-                'label' => 'Dikerjakan',
+                'label' => 'Dikerjakan Tim Rilis',
                 'description' => 'Menunggu pelaksanaan',
                 'time' => $workEvent['time'] ?? null,
                 'state' => 'pending',
@@ -603,10 +591,20 @@ class RfcHistoryService
             $safeNote = $this->implementationEventNote($activity, $forStaff);
         }
 
+        if ($eventType === 'legacy_forwarded') {
+            $actorRole = 'Sistem';
+        }
+
+        $ticketCreatedLabel = match (true) {
+            $eventType === 'legacy_forwarded' => 'Diteruskan ke Change Manager (penyesuaian alur)',
+            in_array($oldStatus, [RfcStatus::DRAFT, RfcStatus::NEEDS_REVISION], true) => 'RFC diajukan dan diteruskan ke Change Manager',
+            default => 'Diverifikasi Admin dan diteruskan ke Change Manager',
+        };
+
         [$label, $tone, $key] = match ($status) {
             RfcStatus::DRAFT => ['Disimpan sebagai draft', 'neutral', 'draft_created'],
             RfcStatus::SUBMITTED => ['RFC diajukan', 'info', RfcStatus::SUBMITTED->value],
-            RfcStatus::TICKET_CREATED => ['Diverifikasi Admin dan diteruskan ke Change Manager', 'success', RfcStatus::TICKET_CREATED->value],
+            RfcStatus::TICKET_CREATED => [$ticketCreatedLabel, 'success', RfcStatus::TICKET_CREATED->value],
             RfcStatus::RETURNED_TO_ADMIN => [
                 $forStaff ? 'Dikembalikan ke Admin' : 'Sedang ditinjau',
                 'warning',
@@ -626,7 +624,7 @@ class RfcHistoryService
             RfcStatus::CANCELLED => ['Dibatalkan', 'danger', RfcStatus::CANCELLED->value],
         };
 
-        if (! $forStaff && $status === RfcStatus::RETURNED_TO_ADMIN) {
+        if (! $forStaff && in_array($status, [RfcStatus::RETURNED_TO_ADMIN, RfcStatus::APPROVED], true)) {
             $safeNote = null;
         }
 
@@ -827,10 +825,13 @@ class RfcHistoryService
             ? trim((string) $decision->snapshot_authority_name)
             : $decision->recordedBy?->name;
 
-        $key = $status?->value;
+        $key = $status === DecisionStatus::REVISION_REQUIRED
+            ? RfcStatus::NEEDS_REVISION->value
+            : $status?->value;
         $baseLabel = match ($status) {
             DecisionStatus::APPROVED => 'Disetujui oleh Change Manager',
             DecisionStatus::REJECTED => 'Ditolak oleh Change Manager',
+            DecisionStatus::REVISION_REQUIRED => $forStaff ? 'Perlu revisi oleh Change Manager' : 'Perlu revisi',
             DecisionStatus::RETURNED_TO_ADMIN => $forStaff ? 'Dikembalikan ke Admin' : 'Sedang ditinjau',
             default => 'Keputusan Change Manager (legacy)',
         };
@@ -840,9 +841,14 @@ class RfcHistoryService
         $tone = match ($status) {
             DecisionStatus::APPROVED => 'success',
             DecisionStatus::REJECTED => 'danger',
-            DecisionStatus::RETURNED_TO_ADMIN => 'warning',
+            DecisionStatus::REVISION_REQUIRED, DecisionStatus::RETURNED_TO_ADMIN => 'warning',
             default => 'neutral',
         };
+
+        $noteVisibleToRequester = in_array($status, [
+            DecisionStatus::REJECTED,
+            DecisionStatus::REVISION_REQUIRED,
+        ], true);
 
         if ($key) {
             foreach ($events as $index => $event) {
@@ -855,7 +861,7 @@ class RfcHistoryService
                     $events[$index]['actor_name'] = $forStaff ? $actorName : null;
                     $events[$index]['actor_role'] = 'Change Manager';
 
-                    if ($reason && ($forStaff || $status === DecisionStatus::REJECTED)) {
+                    if ($reason && ($forStaff || $noteVisibleToRequester)) {
                         $events[$index]['note'] = $events[$index]['note'] ?: $reason;
                     }
 
@@ -867,7 +873,7 @@ class RfcHistoryService
         $events[] = [
             'key' => $key ?? 'legacy_decision',
             'label' => $label,
-            'note' => $reason && ($forStaff || $status === DecisionStatus::REJECTED) ? $reason : null,
+            'note' => $reason && ($forStaff || $noteVisibleToRequester) ? $reason : null,
             'time' => $decisionTime,
             'tone' => $tone,
             'actor_name' => $forStaff ? $actorName : null,
@@ -881,6 +887,13 @@ class RfcHistoryService
     {
         foreach ($events as $event) {
             if (in_array($event['key'], [RfcStatus::SUBMITTED->value, 'draft_created'], true)) {
+                return;
+            }
+
+            // Pengajuan langsung ke Change Manager sudah menjadi kejadian
+            // pengajuan; jangan tambahkan kejadian sintetis kedua.
+            if ($event['key'] === RfcStatus::TICKET_CREATED->value
+                && ($event['actor_role'] ?? null) === 'Pemohon') {
                 return;
             }
         }
@@ -985,7 +998,8 @@ class RfcHistoryService
         $needsRevisionIndex = $lastIndex(RfcStatus::NEEDS_REVISION->value);
         if ($needsRevisionIndex !== null && blank($events[$needsRevisionIndex]['note'])
             && RfcStatus::fromValue($rfc->status) === RfcStatus::NEEDS_REVISION) {
-            $note = $rfc->rejection_note;
+            $note = $rfc->rejection_note
+                ?: $this->decisionReason($rfc, DecisionStatus::REVISION_REQUIRED->value);
 
             if (filled($note)) {
                 $events[$needsRevisionIndex]['note'] = trim((string) $note);
@@ -1042,7 +1056,14 @@ class RfcHistoryService
         }
 
         return match ($newStatus) {
-            RfcStatus::TICKET_CREATED, RfcStatus::NEEDS_REVISION => 'Admin',
+            RfcStatus::SUBMITTED => 'Pemohon',
+            RfcStatus::TICKET_CREATED => in_array($oldStatus, [
+                RfcStatus::DRAFT,
+                RfcStatus::NEEDS_REVISION,
+            ], true) ? 'Pemohon' : 'Admin',
+            RfcStatus::NEEDS_REVISION => $oldStatus === RfcStatus::TICKET_CREATED
+                ? 'Change Manager'
+                : 'Admin',
             RfcStatus::RETURNED_TO_ADMIN,
             RfcStatus::APPROVED,
             RfcStatus::IN_PROGRESS,
@@ -1081,29 +1102,6 @@ class RfcHistoryService
             fn (array $event): bool => in_array($event['key'], $keys, true)
         );
 
-        $lastEvent = fn (array $keys): ?array => collect($events)
-            ->filter(fn (array $event): bool => in_array($event['key'], $keys, true))
-            ->last();
-
-        $adminEvent = $lastEvent([
-            RfcStatus::TICKET_CREATED->value,
-            RfcStatus::NEEDS_REVISION->value,
-            RfcStatus::RETURNED_TO_ADMIN->value,
-            RfcStatus::REJECTED->value,
-        ]);
-        if ($adminEvent || in_array($status, [
-            RfcStatus::TICKET_CREATED,
-            RfcStatus::RETURNED_TO_ADMIN,
-            RfcStatus::APPROVED,
-            RfcStatus::IN_PROGRESS,
-            RfcStatus::IMPLEMENTED,
-            RfcStatus::FAILED,
-            RfcStatus::CLOSED,
-        ], true)) {
-            $steps[1]['state'] = 'done';
-            $steps[1]['description'] = 'Kelengkapan dokumen diperiksa';
-        }
-
         if ($status === RfcStatus::DRAFT) {
             $steps[0]['state'] = 'current';
             $steps[0]['description'] = 'Menunggu pengajuan';
@@ -1111,9 +1109,9 @@ class RfcHistoryService
             $steps[0]['state'] = 'done';
         }
 
-        if ($status === RfcStatus::SUBMITTED) {
+        if (in_array($status, [RfcStatus::SUBMITTED, RfcStatus::TICKET_CREATED], true)) {
             $steps[1]['state'] = 'current';
-            $steps[1]['description'] = 'Menunggu pemeriksaan Admin';
+            $steps[1]['description'] = 'Menunggu review Change Manager';
         }
 
         if ($status === RfcStatus::NEEDS_REVISION) {
@@ -1122,8 +1120,8 @@ class RfcHistoryService
         }
 
         if ($status === RfcStatus::RETURNED_TO_ADMIN) {
-            $steps[1]['state'] = 'current';
-            $steps[1]['description'] = 'Menunggu tindak lanjut Admin';
+            $steps[1]['state'] = 'warning';
+            $steps[1]['description'] = 'Menunggu tindak lanjut';
         }
 
         if ($hasEvent(['risk_assessment'])
@@ -1133,70 +1131,62 @@ class RfcHistoryService
                 RfcStatus::IMPLEMENTED,
                 RfcStatus::FAILED,
                 RfcStatus::CLOSED,
-                RfcStatus::RETURNED_TO_ADMIN,
             ], true)) {
-            $steps[2]['state'] = 'done';
-            $steps[2]['description'] = 'Review selesai';
+            $steps[1]['state'] = 'done';
+            $steps[1]['description'] = 'Review selesai';
         }
 
         if ($status === RfcStatus::TICKET_CREATED) {
-            $steps[2]['state'] = 'current';
-            $steps[2]['description'] = 'Menunggu review Change Manager';
+            $steps[1]['state'] = 'current';
+            $steps[1]['description'] = 'Menunggu keputusan Change Manager';
         }
 
         if ($status === RfcStatus::APPROVED) {
-            $steps[3]['state'] = 'current';
-            $steps[3]['description'] = 'Menunggu pelaksanaan';
+            $steps[2]['state'] = 'current';
+            $steps[2]['description'] = 'Menunggu pelaksanaan';
         }
 
         if ($status === RfcStatus::IN_PROGRESS) {
-            $steps[3]['state'] = 'current';
-            $steps[3]['description'] = 'Sedang diimplementasikan';
+            $steps[2]['state'] = 'current';
+            $steps[2]['description'] = 'Sedang diimplementasikan';
         }
 
         if (in_array($status, [RfcStatus::IMPLEMENTED, RfcStatus::FAILED], true)) {
             // Dikerjakan selesai: hijau untuk berhasil, merah untuk gagal atau
             // rollback; langkah berikutnya adalah evaluasi sebelum penutupan.
-            $steps[3]['state'] = $status === RfcStatus::FAILED ? 'danger' : 'done';
-            $steps[3]['description'] = $status === RfcStatus::FAILED
+            $steps[2]['state'] = $status === RfcStatus::FAILED ? 'danger' : 'done';
+            $steps[2]['description'] = $status === RfcStatus::FAILED
                 ? 'Implementasi gagal'
                 : 'Implementasi selesai';
 
             if ($rfc->implementation?->evaluated_at !== null) {
                 // Evaluasi sudah tercatat: langkah berikutnya hanya penutupan.
-                $steps[4]['state'] = 'done';
-                $steps[4]['description'] = 'Evaluasi tercatat';
-                $steps[5]['state'] = 'current';
-                $steps[5]['description'] = 'Menunggu penutupan';
-            } else {
+                $steps[3]['state'] = 'done';
+                $steps[3]['description'] = 'Evaluasi tercatat';
                 $steps[4]['state'] = 'current';
-                $steps[4]['description'] = 'Menunggu evaluasi';
+                $steps[4]['description'] = 'Menunggu penutupan';
+            } else {
+                $steps[3]['state'] = 'current';
+                $steps[3]['description'] = 'Menunggu evaluasi';
             }
         }
 
         if ($status === RfcStatus::CLOSED) {
             $outcome = $rfc->implementationOutcome();
 
-            $steps[3]['state'] = $outcome === 'unsuccessful' ? 'danger' : 'done';
-            $steps[3]['description'] = $outcome === 'unsuccessful'
+            $steps[2]['state'] = $outcome === 'unsuccessful' ? 'danger' : 'done';
+            $steps[2]['description'] = $outcome === 'unsuccessful'
                 ? 'Implementasi gagal'
                 : 'Implementasi selesai';
-            $steps[4]['state'] = 'done';
-            $steps[4]['description'] = 'Evaluasi tercatat';
-            $steps[5]['state'] = $outcome === 'unsuccessful' ? 'danger' : 'done';
-            $steps[5]['description'] = 'RFC telah ditutup';
+            $steps[3]['state'] = 'done';
+            $steps[3]['description'] = 'Evaluasi tercatat';
+            $steps[4]['state'] = $outcome === 'unsuccessful' ? 'danger' : 'done';
+            $steps[4]['description'] = 'RFC telah ditutup';
         }
 
         if ($status === RfcStatus::REJECTED) {
-            $rejectionEvent = $lastEvent([RfcStatus::REJECTED->value]);
-
-            if (($rejectionEvent['actor_role'] ?? null) === 'Admin') {
-                $steps[1]['state'] = 'danger';
-                $steps[1]['description'] = 'Ditolak oleh Admin';
-            } else {
-                $steps[2]['state'] = 'danger';
-                $steps[2]['description'] = 'Ditolak oleh Change Manager';
-            }
+            $steps[1]['state'] = 'danger';
+            $steps[1]['description'] = 'Ditolak';
         }
 
         if ($status === RfcStatus::CANCELLED) {
@@ -1220,13 +1210,7 @@ class RfcHistoryService
 
         $limit = match ($status) {
             RfcStatus::CANCELLED => 1,
-            RfcStatus::REJECTED => (function () use ($events): int {
-                $rejectionEvent = collect($events)->last(
-                    fn (array $event): bool => $event['key'] === RfcStatus::REJECTED->value
-                );
-
-                return ($rejectionEvent['actor_role'] ?? null) === 'Admin' ? 2 : 3;
-            })(),
+            RfcStatus::REJECTED => 2,
             default => count($steps),
         };
 

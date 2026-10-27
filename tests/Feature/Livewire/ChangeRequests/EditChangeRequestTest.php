@@ -73,13 +73,13 @@ it('allows the owner to open the edit page for draft and needs_revision RFCs', f
         ->get(route('change-requests.edit', $draft))
         ->assertOk()
         ->assertSee('Edit RFC')
-        ->assertDontSee('Alasan Permintaan Revisi dari Admin');
+        ->assertDontSee('Alasan Permintaan Revisi dari Change Manager');
 
     $this->actingAs($this->pemohon)
         ->get(route('change-requests.edit', $revision))
         ->assertOk()
         ->assertSee('Revisi RFC')
-        ->assertSee('Alasan Permintaan Revisi dari Admin')
+        ->assertSee('Alasan Permintaan Revisi dari Change Manager')
         ->assertSee('Lengkapi dokumen pendukung dan perjelas dampak.');
 });
 
@@ -131,7 +131,7 @@ it('saves changes without changing the status and records the changed fields', f
         ->and(data_get($activity->properties, 'changes.title.new'))->toBe('Judul Setelah Edit');
 });
 
-it('submits a revision, changes status to submitted, and clears rejection_note', function () {
+it('submits a revision directly to the change manager and clears rejection_note', function () {
     $rfc = editableRfc($this->pemohon, $this->application, RfcStatus::NEEDS_REVISION, [
         'rejection_note' => 'Perbaiki alasan perubahan.',
     ]);
@@ -145,14 +145,9 @@ it('submits a revision, changes status to submitted, and clears rejection_note',
 
     $fresh = $rfc->fresh();
 
-    expect($fresh->status)->toBe(RfcStatus::SUBMITTED->value)
-        ->and($fresh->rejection_note)->toBeNull();
-
-    // RFC yang dikirim ulang harus kembali terlihat di antrean Admin.
-    $this->actingAs($this->admin)
-        ->get(route('change-requests.index'))
-        ->assertOk()
-        ->assertSee($rfc->rfc_number);
+    expect($fresh->status)->toBe(RfcStatus::TICKET_CREATED->value)
+        ->and($fresh->rejection_note)->toBeNull()
+        ->and($fresh->rfc_number)->not->toBeNull();
 });
 
 it('keeps the previous revision reason in the process history after resubmitting', function () {
@@ -220,7 +215,7 @@ it('uses the same 100 character limit on the create form', function () {
         ->set('target_implementation_date', now()->addDays(3)->format('Y-m-d\TH:i'))
         ->set('is_physical_letter', true)
         ->set('physical_letter_number', str_repeat('B', 101))
-        ->call('save', RfcStatus::SUBMITTED->value)
+        ->call('save', RfcStatus::TICKET_CREATED->value)
         ->assertHasErrors('physical_letter_number');
 });
 
@@ -234,7 +229,7 @@ it('rolls back data changes when the status transition fails', function () {
     $failTransition = true;
 
     ChangeRequest::updating(function (ChangeRequest $model) use (&$failTransition): void {
-        if ($failTransition && $model->isDirty('status') && $model->status === RfcStatus::SUBMITTED->value) {
+        if ($failTransition && $model->isDirty('status') && $model->status === RfcStatus::TICKET_CREATED->value) {
             throw new InvalidRfcStatusTransitionException('Simulasi transisi gagal.');
         }
     });

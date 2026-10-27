@@ -103,7 +103,7 @@ it('menyimpan seluruh field baru dan lampiran dari form create lalu menampilkann
         ->set('target_implementation_date', now()->addDays(3)->format('Y-m-d\TH:i'))
         ->set('attachments', [UploadedFile::fake()->create('surat-pengajuan.pdf', 120, 'application/pdf')])
         ->set('approval_letter', UploadedFile::fake()->create('surat-persetujuan.pdf', 200, 'application/pdf'))
-        ->call('save', RfcStatus::SUBMITTED->value)
+        ->call('save', RfcStatus::TICKET_CREATED->value)
         ->assertHasNoErrors()
         ->assertRedirect(route('requester.dashboard'));
 
@@ -347,7 +347,7 @@ it('mewajibkan lampiran surat fisik saat diajukan tetapi tidak saat simpan draft
         ->set('target_implementation_date', now()->addDays(3)->format('Y-m-d\TH:i'))
         ->set('is_physical_letter', true)
         ->set('physical_letter_number', 'ND-002/2026')
-        ->call('save', RfcStatus::SUBMITTED->value)
+        ->call('save', RfcStatus::TICKET_CREATED->value)
         ->assertHasErrors('attachments');
 
     expect(ChangeRequest::count())->toBe(1);

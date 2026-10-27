@@ -155,7 +155,7 @@ class EditChangeRequest extends Component
                     $this->preserveRevisionReason();
                 }
 
-                RfcStatusTransition::transitionTo($this->rfc, RfcStatus::SUBMITTED, $user);
+                RfcStatusTransition::transitionTo($this->rfc, RfcStatus::TICKET_CREATED, $user);
 
                 if ($currentStatus === RfcStatus::NEEDS_REVISION) {
                     $this->rfc->update(['rejection_note' => null]);
@@ -179,8 +179,8 @@ class EditChangeRequest extends Component
         session()->flash(
             'message',
             $oldStatus === RfcStatus::NEEDS_REVISION
-                ? "Revisi {$this->rfc->displayIdentifier()} berhasil dikirim."
-                : "{$this->rfc->displayIdentifier()} berhasil diajukan."
+                ? "Revisi {$this->rfc->displayIdentifier()} berhasil dikirim dan diteruskan ke Change Manager."
+                : "{$this->rfc->displayIdentifier()} berhasil diajukan dan diteruskan ke Change Manager."
         );
 
         $this->redirectRoute('change-requests.show', ['rfc' => $this->rfc], navigate: true);

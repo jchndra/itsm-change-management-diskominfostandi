@@ -1,4 +1,9 @@
 <div class="space-y-6">
+    @php
+        $showTicketColumn = $roleView !== 'pemohon'
+            && $rfcs->getCollection()->contains(fn ($rfc): bool => filled($rfc->ticket_number));
+    @endphp
+
     {{-- Header Banner & Ucapan Selamat Datang --}}
     <div
         class="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
@@ -165,7 +170,8 @@
             </div>
 
             <div class="flex items-center gap-3">
-                <input wire:model.live.debounce.300ms="search" type="text" placeholder="Cari No. RFC / No. Tiket / Judul..."
+                <input wire:model.live.debounce.300ms="search" type="text"
+                    placeholder="Cari No. RFC{{ $showTicketColumn ? ' / No. Tiket' : '' }} / Judul..."
                     class="px-3.5 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none w-48 md:w-64">
                 @if ($activeFilterCount > 0)
                     <span class="hidden rounded-full bg-blue-100 px-2.5 py-1 text-[10px] font-bold text-blue-700 sm:inline">
@@ -282,7 +288,7 @@
                     class="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-100">
                     <tr>
                         <th class="px-5 py-3">No. RFC</th>
-                        @if ($roleView !== 'pemohon')
+                        @if ($showTicketColumn)
                             <th class="px-5 py-3">No. Tiket</th>
                         @endif
                         <th class="px-5 py-3">Judul Perubahan</th>
@@ -301,9 +307,9 @@
                             <td data-label="No. RFC" class="px-5 py-3.5 font-bold text-blue-900">
                                 {{ $rfc->displayIdentifier() }}
                             </td>
-                            @if ($roleView !== 'pemohon')
+                            @if ($showTicketColumn)
                                 <td data-label="No. Tiket" class="px-5 py-3.5 font-semibold text-slate-700">
-                                    {{ $rfc->ticket_number ?: '-' }}
+                                    {{ filled($rfc->ticket_number) ? $rfc->ticket_number : 'Belum dibuat' }}
                                 </td>
                             @endif
                             <td data-label="Judul Perubahan" class="px-5 py-3.5 font-medium text-slate-800">
@@ -365,7 +371,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ $roleView === 'pemohon' ? 6 : 7 }}" class="px-5 py-8 text-center text-slate-400">
+                            <td colspan="{{ $showTicketColumn ? 7 : 6 }}" class="px-5 py-8 text-center text-slate-400">
                                 Belum ada dokumen RFC yang cocok dengan filter yang dipilih.
                             </td>
                         </tr>

@@ -2,12 +2,12 @@
 
 use App\Enums\DecisionStatus;
 use App\Enums\RfcStatus;
-use App\Livewire\ChangeRequests\RecordDecision;
 use App\Livewire\ChangeRequests\ReviewCompleteness;
 use App\Livewire\ChangeRequests\ShowChangeRequest;
 use App\Livewire\Requester\Dashboard;
 use App\Models\Authority;
 use App\Models\ChangeRequest;
+use App\Models\Decision;
 use App\Models\RiskAssessment;
 use App\Models\User;
 use App\Services\RfcHistoryService;
@@ -98,12 +98,17 @@ test('keputusan returned_to_admin tidak menandai persetujuan', function () {
     RfcStatusTransition::transitionTo($rfc, RfcStatus::TICKET_CREATED, $this->admin);
     ($this->makeRisk)($rfc);
 
-    Livewire::actingAs($this->cm)
-        ->test(RecordDecision::class, ['rfc' => $rfc->fresh()])
-        ->set('decisionStatus', DecisionStatus::RETURNED_TO_ADMIN->value)
-        ->set('notes', 'Catatan internal CM untuk Admin.')
-        ->call('saveDecision')
-        ->assertHasNoErrors();
+    Decision::create([
+        'change_request_id' => $rfc->id,
+        'authority_id' => $this->authority->id,
+        'recorded_by_id' => $this->cm->id,
+        'snapshot_authority_name' => $this->authority->name,
+        'snapshot_authority_position' => $this->authority->position,
+        'decision_status' => DecisionStatus::RETURNED_TO_ADMIN->value,
+        'decision_date' => now(),
+        'reason' => 'Catatan internal CM untuk Admin.',
+    ]);
+    RfcStatusTransition::transitionTo($rfc->fresh(), RfcStatus::RETURNED_TO_ADMIN, $this->cm, 'Catatan internal CM untuk Admin.');
 
     $this->actingAs($this->pemohon);
 
@@ -128,12 +133,17 @@ test('tampilan Pemohon menyembunyikan catatan internal CM', function () {
     RfcStatusTransition::transitionTo($rfc, RfcStatus::TICKET_CREATED, $this->admin);
     ($this->makeRisk)($rfc);
 
-    Livewire::actingAs($this->cm)
-        ->test(RecordDecision::class, ['rfc' => $rfc->fresh()])
-        ->set('decisionStatus', DecisionStatus::RETURNED_TO_ADMIN->value)
-        ->set('notes', $internalNote)
-        ->call('saveDecision')
-        ->assertHasNoErrors();
+    Decision::create([
+        'change_request_id' => $rfc->id,
+        'authority_id' => $this->authority->id,
+        'recorded_by_id' => $this->cm->id,
+        'snapshot_authority_name' => $this->authority->name,
+        'snapshot_authority_position' => $this->authority->position,
+        'decision_status' => DecisionStatus::RETURNED_TO_ADMIN->value,
+        'decision_date' => now(),
+        'reason' => $internalNote,
+    ]);
+    RfcStatusTransition::transitionTo($rfc->fresh(), RfcStatus::RETURNED_TO_ADMIN, $this->cm, $internalNote);
 
     $this->actingAs($this->pemohon);
 
@@ -229,15 +239,17 @@ test('timeline dashboard pemohon ikut diperbarui otomatis setelah status berubah
     $component = Livewire::actingAs($this->pemohon)
         ->test(Dashboard::class)
         ->assertOk()
-        ->assertSee('Menunggu review Change Manager');
+        ->assertSee('Menunggu keputusan Change Manager');
 
     expect($component->html())->toContain('wire:poll.30s');
 
     RfcStatusTransition::transitionTo($rfc->fresh(), RfcStatus::APPROVED, $this->cm);
 
+    expect($rfc->fresh()->status)->toBe(RfcStatus::APPROVED->value);
+
     $component->call('$refresh')
-        ->assertSee('Menunggu pelaksanaan')
-        ->assertDontSee('Menunggu review Change Manager');
+        ->assertSee('Review selesai')
+        ->assertDontSee('Menunggu keputusan Change Manager');
 });
 
 test('widget dashboard tidak menampilkan RFC closed, rejected, atau draft', function () {
@@ -256,9 +268,8 @@ test('widget dashboard tidak menampilkan RFC closed, rejected, atau draft', func
         ->assertOk()
         ->assertViewHas('latestActiveRfc', fn (?ChangeRequest $rfc): bool => $rfc?->id === $active->id)
         ->assertSee('Diajukan')
-        ->assertSee('Diperiksa Admin')
-        ->assertSee('Review Change Manager')
-        ->assertSee('Dikerjakan')
+        ->assertSee('Ditinjau Change Manager')
+        ->assertSee('Dikerjakan Tim Rilis')
         ->assertSee('Evaluasi')
         ->assertSee('Ditutup')
         ->assertDontSee('Selesai');

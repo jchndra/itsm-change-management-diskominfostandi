@@ -15,6 +15,7 @@
             : $rfc->decisions->filter(fn ($decision) => in_array($decision->decision_status, [
                 \App\Enums\DecisionStatus::APPROVED->value,
                 \App\Enums\DecisionStatus::REJECTED->value,
+                \App\Enums\DecisionStatus::REVISION_REQUIRED->value,
             ], true));
         $status = \App\Enums\RfcStatus::fromValue($rfc->status);
         $implementation = $rfc->implementation;
@@ -672,12 +673,14 @@
                                     $decisionCard = match ($decision->decision_status) {
                                         \App\Enums\DecisionStatus::APPROVED->value => 'bg-green-50 border-green-100',
                                         \App\Enums\DecisionStatus::REJECTED->value => 'bg-rose-50 border-rose-100',
+                                        \App\Enums\DecisionStatus::REVISION_REQUIRED->value,
                                         \App\Enums\DecisionStatus::RETURNED_TO_ADMIN->value => 'bg-amber-50 border-amber-100',
                                         default => 'bg-slate-50 border-slate-200',
                                     };
                                     $decisionBadge = match ($decision->decision_status) {
                                         \App\Enums\DecisionStatus::APPROVED->value => 'bg-green-200 text-green-800',
                                         \App\Enums\DecisionStatus::REJECTED->value => 'bg-rose-200 text-rose-800',
+                                        \App\Enums\DecisionStatus::REVISION_REQUIRED->value,
                                         \App\Enums\DecisionStatus::RETURNED_TO_ADMIN->value => 'bg-amber-200 text-amber-800',
                                         default => 'bg-slate-200 text-slate-700',
                                     };

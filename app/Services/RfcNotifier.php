@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\RfcStatus;
 use App\Models\ChangeRequest;
 use App\Models\User;
+use App\Notifications\ChangeManagerReviewNotification;
 use App\Notifications\RfcDispositionNotification;
 use App\Notifications\RfcStatusChangedNotification;
 use Illuminate\Support\Facades\DB;
@@ -26,8 +27,9 @@ class RfcNotifier
         }
 
         $recipient = $rfc->submittedBy;
+        $notifyOwnerForSubmission = $newStatus === RfcStatus::TICKET_CREATED;
 
-        if (! $recipient || $recipient->is($actor)) {
+        if (! $recipient || ($recipient->is($actor) && ! $notifyOwnerForSubmission)) {
             return;
         }
 
@@ -52,6 +54,36 @@ class RfcNotifier
         }
 
         $send();
+    }
+
+    /**
+     * Beri tahu seluruh Change Manager bahwa RFC menunggu pemeriksaan.
+     * Notifikasi sengaja tidak membawa status agar ikon informasi digunakan.
+     */
+    public function submittedForReview(ChangeRequest $rfc): void
+    {
+        $recipients = User::role('Change Manager')->get();
+
+        foreach ($recipients as $recipient) {
+            $send = function () use ($rfc, $recipient): void {
+                try {
+                    $recipient->notify(new ChangeManagerReviewNotification($rfc));
+                } catch (Throwable $exception) {
+                    report($exception);
+
+                    Log::warning('Notifikasi pemeriksaan Change Manager gagal dikirim.', [
+                        'rfc_id' => $rfc->id,
+                        'recipient_id' => $recipient->id,
+                    ]);
+                }
+            };
+
+            if (config('rfc.notify_after_commit', true) && DB::transactionLevel() > 0) {
+                DB::afterCommit($send);
+            } else {
+                $send();
+            }
+        }
     }
 
     /**
