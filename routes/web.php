@@ -84,7 +84,9 @@ Route::middleware('auth')->group(function () {
         ->name('rfc-documents.download');
 
     Route::prefix('change-requests')->name('change-requests.')->group(function () {
-        Route::get('/', ListChangeRequests::class)->name('index');
+        Route::get('/', ListChangeRequests::class)
+            ->middleware('can:viewAny,App\Models\ChangeRequest')
+            ->name('index');
         Route::get('/create', CreateChangeRequest::class)
             ->middleware('can:rfc.create')
             ->name('create');

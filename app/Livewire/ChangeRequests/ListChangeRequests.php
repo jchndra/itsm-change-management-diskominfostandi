@@ -102,6 +102,8 @@ class ListChangeRequests extends Component
 
     public function mount(?ChangeRequest $rfc = null): void
     {
+        $this->authorize('viewAny', ChangeRequest::class);
+
         $this->search = (string) request()->query('q', '');
 
         if (request()->query('queue') === 'incoming'
@@ -130,6 +132,8 @@ class ListChangeRequests extends Component
 
     public function render()
     {
+        $this->authorize('viewAny', ChangeRequest::class);
+
         /** @var User $user */
         $user = Auth::user();
 
@@ -154,46 +158,47 @@ class ListChangeRequests extends Component
             ],
         ];
 
-        // 1. Tampilan Dashboard Pemohon (Hanya memiliki role Pemohon)
-        if ($user->hasRole('Pemohon') && ! $user->hasRole('Admin') && ! $user->hasRole('Change Manager') && ! $user->hasRole('Super Admin')) {
-            $baseQuery = ChangeRequest::query()->where('submitted_by_id', $user->id);
+        // 1. Tampilan staf: seluruh RFC hanya untuk pengguna dengan izin view_all.
+        if ($user->can('rfc.view_all')) {
+            // Tampilan Dashboard Admin / Frontdesk (prioritas Admin murni)
+            if ($user->hasRole('Admin') && ! $user->hasRole('Change Manager')) {
+                $stats = [
+                    'incoming' => ChangeRequest::whereIn('status', [
+                        RfcStatus::SUBMITTED->value,
+                        RfcStatus::RETURNED_TO_ADMIN->value,
+                    ])->count(),
+                    'needs_revision' => ChangeRequest::whereIn('status', RfcStatus::valuesForGroup('needs_revision'))->count(),
+                    'forwarded' => ChangeRequest::where(function (Builder $q): void {
+                        $q->whereIn('status', [RfcStatus::TICKET_CREATED->value])
+                            ->orWhere(fn (Builder $approved) => $approved->inStatusGroup('approved'));
+                    })->count(),
+                    'rejected' => ChangeRequest::inStatusGroup('rejected')->count(),
+                ];
 
+                $rfcs = $this->orderFilteredRfcs($this->applyFilters(ChangeRequest::query()->with([
+                    'riskAssessment',
+                    'application',
+                    'implementation',
+                    'submittedBy.opd',
+                ])))->paginate(10);
+
+                return view('livewire.change-requests.list-change-requests', [
+                    'roleView' => 'admin',
+                    'stats' => $stats,
+                    'rfcs' => $rfcs,
+                    'notifications' => $user->unreadNotifications()->take(5)->get(),
+                ] + $filterOptions);
+            }
+
+            // Tampilan Dashboard Change Manager / Super Admin
             $stats = [
-                'my_rfc' => (clone $baseQuery)->count(),
-                'in_process' => (clone $baseQuery)->whereIn('status', RfcStatus::valuesForGroup('in_process'))->count(),
-                'needs_revision' => (clone $baseQuery)->whereIn('status', RfcStatus::valuesForGroup('needs_revision'))->count(),
-                'approved' => (clone $baseQuery)->inStatusGroup('approved')->count(),
-                'rejected' => (clone $baseQuery)->inStatusGroup('rejected')->count(),
-            ];
-
-            $rfcs = $this->orderFilteredRfcs($this->applyFilters((clone $baseQuery)->with([
-                'riskAssessment',
-                'application',
-                'implementation',
-                'submittedBy.opd',
-            ])))->paginate(10);
-
-            return view('livewire.change-requests.list-change-requests', [
-                'roleView' => 'pemohon',
-                'stats' => $stats,
-                'rfcs' => $rfcs,
-                'notifications' => $user->unreadNotifications()->take(5)->get(),
-            ] + $filterOptions);
-        }
-
-        // 2. Tampilan Dashboard Admin / Frontdesk (Prioritas Admin murni)
-        if ($user->hasRole('Admin') && ! $user->hasRole('Change Manager')) {
-            $stats = [
-                'incoming' => ChangeRequest::whereIn('status', [
-                    RfcStatus::SUBMITTED->value,
-                    RfcStatus::RETURNED_TO_ADMIN->value,
+                'total' => ChangeRequest::count(),
+                'pending_approval' => ChangeRequest::whereIn('status', [
+                    RfcStatus::TICKET_CREATED->value,
                 ])->count(),
-                'needs_revision' => ChangeRequest::whereIn('status', RfcStatus::valuesForGroup('needs_revision'))->count(),
-                'forwarded' => ChangeRequest::where(function (Builder $q): void {
-                    $q->whereIn('status', [RfcStatus::TICKET_CREATED->value])
-                        ->orWhere(fn (Builder $approved) => $approved->inStatusGroup('approved'));
-                })->count(),
+                'approved' => ChangeRequest::inStatusGroup('approved')->count(),
                 'rejected' => ChangeRequest::inStatusGroup('rejected')->count(),
+                'emergency' => ChangeRequest::where('change_type', 'emergency')->count(),
             ];
 
             $rfcs = $this->orderFilteredRfcs($this->applyFilters(ChangeRequest::query()->with([
@@ -204,25 +209,25 @@ class ListChangeRequests extends Component
             ])))->paginate(10);
 
             return view('livewire.change-requests.list-change-requests', [
-                'roleView' => 'admin',
+                'roleView' => 'change_manager',
                 'stats' => $stats,
                 'rfcs' => $rfcs,
                 'notifications' => $user->unreadNotifications()->take(5)->get(),
             ] + $filterOptions);
         }
 
-        // 3. Tampilan Dashboard Change Manager / Super Admin
+        // 2. Tampilan Pemohon: hanya RFC milik pengguna dengan izin view_own.
+        $baseQuery = ChangeRequest::query()->where('submitted_by_id', $user->id);
+
         $stats = [
-            'total' => ChangeRequest::count(),
-            'pending_approval' => ChangeRequest::whereIn('status', [
-                RfcStatus::TICKET_CREATED->value,
-            ])->count(),
-            'approved' => ChangeRequest::inStatusGroup('approved')->count(),
-            'rejected' => ChangeRequest::inStatusGroup('rejected')->count(),
-            'emergency' => ChangeRequest::where('change_type', 'emergency')->count(),
+            'my_rfc' => (clone $baseQuery)->count(),
+            'in_process' => (clone $baseQuery)->whereIn('status', RfcStatus::valuesForGroup('in_process'))->count(),
+            'needs_revision' => (clone $baseQuery)->whereIn('status', RfcStatus::valuesForGroup('needs_revision'))->count(),
+            'approved' => (clone $baseQuery)->inStatusGroup('approved')->count(),
+            'rejected' => (clone $baseQuery)->inStatusGroup('rejected')->count(),
         ];
 
-        $rfcs = $this->orderFilteredRfcs($this->applyFilters(ChangeRequest::query()->with([
+        $rfcs = $this->orderFilteredRfcs($this->applyFilters((clone $baseQuery)->with([
             'riskAssessment',
             'application',
             'implementation',
@@ -230,7 +235,7 @@ class ListChangeRequests extends Component
         ])))->paginate(10);
 
         return view('livewire.change-requests.list-change-requests', [
-            'roleView' => 'change_manager',
+            'roleView' => 'pemohon',
             'stats' => $stats,
             'rfcs' => $rfcs,
             'notifications' => $user->unreadNotifications()->take(5)->get(),
