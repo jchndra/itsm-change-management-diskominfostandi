@@ -278,7 +278,7 @@
                         @endphp
                         <tr class="hover:bg-slate-50/80 transition">
                             <td data-label="No. RFC" class="px-5 py-3.5 font-bold text-blue-900">
-                                {{ $rfc->rfc_number }}
+                                {{ $rfc->displayIdentifier() }}
                             </td>
                             @if ($roleView !== 'pemohon')
                                 <td data-label="No. Tiket" class="px-5 py-3.5 font-semibold text-slate-700">

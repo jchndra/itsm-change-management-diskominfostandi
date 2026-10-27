@@ -33,5 +33,10 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('viewChangeManagerDashboard', function (User $user): bool {
             return $user->canAny(['rfc.assess_risk', 'rfc.record_decision']);
         });
+
+        // Dokumen RFC statis hanya untuk pengguna yang berhak mengakses RFC.
+        Gate::define('downloadRfcDocument', function (User $user): bool {
+            return $user->hasAnyPermission(['rfc.create', 'rfc.view_own', 'rfc.view_all']);
+        });
     }
 }

@@ -251,10 +251,19 @@ class ListChangeRequests extends Component
                 RfcStatus::SUBMITTED->value,
                 RfcStatus::RETURNED_TO_ADMIN->value,
             ]))
-            ->when($this->search !== '', fn (Builder $q) => $q->where(fn (Builder $sub) => $sub
-                ->where('title', 'like', "%{$this->search}%")
-                ->orWhere('rfc_number', 'like', "%{$this->search}%")
-                ->orWhere('ticket_number', 'like', "%{$this->search}%")))
+            ->when($this->search !== '', function (Builder $query): void {
+                $draftId = ChangeRequest::draftIdFromSearch($this->search);
+
+                $query->where(fn (Builder $sub) => $sub
+                    ->where('title', 'like', "%{$this->search}%")
+                    ->orWhere('rfc_number', 'like', "%{$this->search}%")
+                    ->orWhere('ticket_number', 'like', "%{$this->search}%")
+                    ->when($draftId !== null, fn (Builder $draftQuery) => $draftQuery->orWhere(
+                        fn (Builder $draft) => $draft
+                            ->whereKey($draftId)
+                            ->where('status', RfcStatus::DRAFT->value)
+                    )));
+            })
             ->when($this->statusFilter !== '', fn (Builder $q) => $q->where('status', $this->statusFilter))
             ->when($this->categoryFilter !== '', fn (Builder $q) => $q->where('change_type', $this->categoryFilter))
             ->when($this->applicationFilter !== '', fn (Builder $q) => $q->where('application_id', $this->applicationFilter))

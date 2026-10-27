@@ -457,7 +457,7 @@ class DashboardMetricsService
 
                 return [
                     'id' => $rfc->id,
-                    'rfc_number' => $rfc->rfc_number,
+                    'rfc_number' => $rfc->displayIdentifier(),
                     'title' => $rfc->title,
                     'requester' => $rfc->submittedBy?->name ?? 'Tidak tercatat',
                     'unit' => $rfc->submittedBy?->opd?->name ?? '-',
@@ -550,7 +550,7 @@ class DashboardMetricsService
 
                 return [
                     'id' => $rfc->id,
-                    'rfc_number' => $rfc->rfc_number,
+                    'rfc_number' => $rfc->displayIdentifier(),
                     'title' => $rfc->title,
                     'requester' => $rfc->submittedBy?->name ?? 'Tidak tercatat',
                     'unit' => $rfc->submittedBy?->opd?->name ?? '-',
@@ -627,12 +627,21 @@ class DashboardMetricsService
         return $query
             ->orderByDesc('activity_log.created_at')
             ->orderByDesc('activity_log.id')
-            ->select(['activity_log.*', 'change_requests.rfc_number'])
+            ->select([
+                'activity_log.*',
+                'change_requests.id as rfc_id',
+                'change_requests.rfc_number',
+                'change_requests.status as rfc_status',
+            ])
             ->with('causer:id,name')
             ->limit(5)
             ->get()
             ->map(fn (Activity $activity): array => [
-                'rfc_number' => (string) $activity->rfc_number,
+                'rfc_number' => ChangeRequest::formatIdentifier(
+                    $activity->rfc_number,
+                    $activity->rfc_id,
+                    $activity->rfc_status,
+                ),
                 'label' => $this->activityLabel($activity),
                 'actor_name' => $activity->causer?->name ?? 'Sistem',
                 'occurred_at' => $activity->created_at,

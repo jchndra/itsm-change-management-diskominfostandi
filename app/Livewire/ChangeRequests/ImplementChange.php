@@ -168,8 +168,8 @@ class ImplementChange extends Component
         }
 
         $message = $this->implementation_result === ImplementationResult::SUCCESS->value
-            ? "Implementasi RFC {$this->rfc->rfc_number} berhasil dicatat dan diselesaikan."
-            : "Implementasi RFC {$this->rfc->rfc_number} dicatat gagal / mengalami rollback.";
+            ? "Implementasi RFC {$this->rfc->displayIdentifier()} berhasil dicatat dan diselesaikan."
+            : "Implementasi RFC {$this->rfc->displayIdentifier()} dicatat gagal / mengalami rollback.";
 
         session()->flash('message', $message);
         $this->redirect(route('change-requests.show', $this->rfc->id), navigate: true);

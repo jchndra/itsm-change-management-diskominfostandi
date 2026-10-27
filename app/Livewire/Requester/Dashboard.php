@@ -5,6 +5,7 @@ namespace App\Livewire\Requester;
 use App\Enums\RfcStatus;
 use App\Models\ChangeRequest;
 use App\Models\User;
+use App\Services\RfcDocumentService;
 use App\Services\RfcHistoryService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
@@ -74,6 +75,7 @@ class Dashboard extends Component
             'latestActiveRfc' => $latestActiveRfc,
             'timeline' => $timeline,
             'notifications' => $notifications,
+            'rfcDocuments' => app(RfcDocumentService::class)->all(),
         ])->title('Dashboard Pemohon');
     }
 }

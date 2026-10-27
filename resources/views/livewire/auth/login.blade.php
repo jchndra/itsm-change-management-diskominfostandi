@@ -3,7 +3,7 @@
         Selamat datang
     </h1>
     <p class="mt-2 text-base text-slate-500 sm:text-lg">
-        Masuk dengan akun yang diberikan oleh Admin.
+        Masuk dengan akun pegawai yang sudah terdaftar.
     </p>
 
     <form wire:submit="login" class="mt-9 space-y-7 sm:mt-10">
@@ -54,6 +54,9 @@
     </form>
 
     <p class="mt-7 text-sm text-slate-500">
-        Belum punya akun? <span class="font-medium text-slate-700">Hubungi Admin Diskominfostandi.</span>
+        Belum punya akun?
+        <a href="{{ route('register') }}" wire:navigate
+            class="font-semibold text-[#1746d1] transition hover:text-[#123ab0] hover:underline">Daftar sebagai
+            Pemohon</a>
     </p>
 </div>

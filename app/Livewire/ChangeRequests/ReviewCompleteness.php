@@ -289,6 +289,6 @@ class ReviewCompleteness extends Component
 
         return view('livewire.change-requests.review-completeness', [
             'returnNote' => $returnNote,
-        ])->title('Buat Tiket Change - '.$this->rfc->rfc_number);
+        ])->title('Buat Tiket Change - '.$this->rfc->displayIdentifier());
     }
 }

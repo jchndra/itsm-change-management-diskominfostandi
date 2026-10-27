@@ -25,6 +25,7 @@ class ShowDeletedChangeRequest extends Component
         $this->rfc = $rfc->load([
             'submittedBy.opd',
             'application.opd',
+            'attachments',
             'riskAssessment',
             'decisions.authority',
         ]);
@@ -33,6 +34,6 @@ class ShowDeletedChangeRequest extends Component
     public function render(): View
     {
         return view('livewire.change-requests.show-deleted-change-request')
-            ->title('Detail RFC Terhapus - '.$this->rfc->rfc_number);
+            ->title('Detail RFC Terhapus - '.$this->rfc->displayIdentifier());
     }
 }

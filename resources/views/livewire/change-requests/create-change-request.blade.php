@@ -179,14 +179,56 @@
             @endif
         </div>
 
+        <!-- Surat Persetujuan Bertanda Tangan -->
+        <div class="space-y-3 rounded-xl border border-indigo-200 bg-indigo-50/60 p-5">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <h2 class="text-sm font-bold text-indigo-950">Surat Persetujuan Bertanda Tangan *</h2>
+                    <p class="mt-1 text-xs leading-relaxed text-indigo-800">
+                        Wajib diunggah saat mengajukan RFC untuk kategori Standar, Normal, dan Emergency. Format PDF,
+                        maksimal 5 MB. Boleh dikosongkan bila baru menyimpan draft.
+                    </p>
+                    <p class="mt-1 text-[11px] font-medium text-indigo-700">
+                        {{ config('rfc.approval_letter.note') }}
+                    </p>
+                </div>
+                @if (config('rfc.approval_letter.temporary'))
+                    <span class="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                        Aturan Sementara
+                    </span>
+                @endif
+            </div>
+
+            <input type="file" id="approval_letter" wire:model="approval_letter" accept=".pdf,application/pdf"
+                class="block w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-100 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-200">
+
+            <div wire:loading wire:target="approval_letter" class="text-xs text-slate-500">
+                Mengunggah surat persetujuan...
+            </div>
+
+            @error('approval_letter')
+                <span class="block text-xs text-red-600">{{ $message }}</span>
+            @enderror
+
+            @if ($approval_letter)
+                <div class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm">
+                    <span class="min-w-0 flex-1 truncate text-slate-700">{{ $approval_letter->getClientOriginalName() }}</span>
+                    <span class="text-xs text-slate-400">{{ number_format($approval_letter->getSize() / 1024, 0, ',', '.') }} KB</span>
+                    <button type="button" wire:click="removePendingApprovalLetter"
+                        class="text-xs font-semibold text-rose-600 hover:text-rose-700">
+                        Hapus
+                    </button>
+                </div>
+            @endif
+        </div>
+
         <!-- Lampiran -->
         <div class="space-y-3">
             <div>
-                <label for="attachments" class="block text-sm font-semibold text-slate-700 mb-1">Lampiran Surat / Dokumen
-                    Pendukung</label>
+                <label for="attachments" class="block text-sm font-semibold text-slate-700 mb-1">Lampiran Pendukung</label>
                 <p class="text-xs text-slate-500">
-                    PDF, JPG, JPEG, atau PNG. Maksimal 5 file per RFC dan 5 MB per file. Wajib diunggah saat mengajukan
-                    jika menggunakan surat/nota dinas fisik.
+                    PDF, JPG, JPEG, atau PNG. Maksimal 5 file pendukung per RFC dan 5 MB per file. Wajib diunggah saat
+                    mengajukan jika menggunakan surat/nota dinas fisik.
                 </p>
             </div>
 

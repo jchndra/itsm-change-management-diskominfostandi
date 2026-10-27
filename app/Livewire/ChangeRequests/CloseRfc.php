@@ -62,7 +62,7 @@ class CloseRfc extends Component
             return;
         }
 
-        session()->flash('message', "Tiket RFC {$this->rfc->rfc_number} resmi ditutup (Closed).");
+        session()->flash('message', "Tiket RFC {$this->rfc->displayIdentifier()} resmi ditutup (Closed).");
         $this->redirect(route('change-requests.show', $this->rfc->id), navigate: true);
     }
 

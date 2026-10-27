@@ -1,2 +1,4 @@
 *
 !.gitignore
+!rfc-documents/
+!rfc-documents/*.pdf

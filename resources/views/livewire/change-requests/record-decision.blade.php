@@ -13,7 +13,7 @@
                 <h1 class="text-2xl font-bold text-slate-900">Pencatatan Keputusan Change Manager</h1>
             </div>
             <p class="text-sm text-slate-500 mt-1 pl-9">Keputusan resmi Change Manager untuk
-                {{ $rfc->rfc_number }}</p>
+                {{ $rfc->displayIdentifier() }}</p>
         </div>
         <a href="{{ route('change-requests.show', $rfc->id) }}"
             class="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition"

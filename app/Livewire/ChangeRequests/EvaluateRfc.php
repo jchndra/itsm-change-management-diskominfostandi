@@ -57,7 +57,7 @@ class EvaluateRfc extends Component
             return;
         }
 
-        session()->flash('message', "Evaluasi RFC {$this->rfc->rfc_number} berhasil dicatat.");
+        session()->flash('message', "Evaluasi RFC {$this->rfc->displayIdentifier()} berhasil dicatat.");
         $this->redirect(route('change-requests.show', $this->rfc->id), navigate: true);
     }
 

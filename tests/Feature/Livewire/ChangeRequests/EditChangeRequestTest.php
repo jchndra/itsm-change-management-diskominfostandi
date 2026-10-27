@@ -8,6 +8,7 @@ use App\Livewire\ChangeRequests\ListChangeRequests;
 use App\Livewire\Requester\Dashboard;
 use App\Models\Application;
 use App\Models\ChangeRequest;
+use App\Models\ChangeRequestAttachment;
 use App\Models\User;
 use App\Services\RfcHistoryService;
 use Database\Seeders\PermissionSeeder;
@@ -47,6 +48,18 @@ function editableRfc(
         'application_id' => $application->id,
         'target_implementation_date' => now()->addDays(5),
         ...$attributes,
+    ]);
+}
+
+function attachApprovalLetterForTests(ChangeRequest $rfc, User $uploader): ChangeRequestAttachment
+{
+    return $rfc->attachments()->create([
+        'uploaded_by_id' => $uploader->id,
+        'document_type' => ChangeRequestAttachment::TYPE_APPROVAL_LETTER,
+        'original_name' => 'surat-persetujuan.pdf',
+        'path' => 'rfc-attachments/'.$rfc->id.'/surat-persetujuan.pdf',
+        'mime_type' => 'application/pdf',
+        'size' => 1024,
     ]);
 }
 
@@ -122,6 +135,7 @@ it('submits a revision, changes status to submitted, and clears rejection_note',
     $rfc = editableRfc($this->pemohon, $this->application, RfcStatus::NEEDS_REVISION, [
         'rejection_note' => 'Perbaiki alasan perubahan.',
     ]);
+    attachApprovalLetterForTests($rfc, $this->pemohon);
 
     Livewire::test(EditChangeRequest::class, ['rfc' => $rfc])
         ->set('reason_for_change', 'Alasan perubahan yang sudah diperbaiki dan lengkap.')
@@ -148,6 +162,7 @@ it('keeps the previous revision reason in the process history after resubmitting
     $rfc = editableRfc($this->pemohon, $this->application, RfcStatus::NEEDS_REVISION, [
         'rejection_note' => $reason,
     ]);
+    attachApprovalLetterForTests($rfc, $this->pemohon);
 
     Livewire::test(EditChangeRequest::class, ['rfc' => $rfc])
         ->call('submit')
@@ -214,6 +229,7 @@ it('rolls back data changes when the status transition fails', function () {
         'title' => 'Judul Sebelum Gagal',
         'rejection_note' => 'Alasan revisi tetap ada.',
     ]);
+    attachApprovalLetterForTests($rfc, $this->pemohon);
 
     $failTransition = true;
 

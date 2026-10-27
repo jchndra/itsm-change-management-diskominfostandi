@@ -4,7 +4,7 @@
         <div>
             <h1 class="text-2xl font-bold text-slate-900">
                 {{ $isRevision ? 'Revisi RFC' : 'Edit RFC' }}
-                <span class="text-slate-400">#{{ $rfc->rfc_number }}</span>
+                <span class="text-slate-400">{{ $rfc->displayIdentifier() }}</span>
             </h1>
             <p class="text-sm text-slate-500 mt-1">
                 {{ $isRevision
@@ -201,14 +201,138 @@
             @endif
         </div>
 
+        <!-- Surat Persetujuan Bertanda Tangan -->
+        @php
+            $approvalLetters = $rfc->attachments
+                ->where('document_type', \App\Models\ChangeRequestAttachment::TYPE_APPROVAL_LETTER)
+                ->sortByDesc('id')
+                ->values();
+        @endphp
+        <div class="space-y-3 rounded-xl border border-indigo-200 bg-indigo-50/60 p-5">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <h2 class="text-sm font-bold text-indigo-950">Surat Persetujuan Bertanda Tangan *</h2>
+                    <p class="mt-1 text-xs leading-relaxed text-indigo-800">
+                        Wajib tersedia saat mengajukan RFC untuk kategori Standar, Normal, dan Emergency. Format PDF,
+                        maksimal 5 MB. Surat lama tidak akan dihapus; unggahan terbaru menjadi surat yang berlaku.
+                    </p>
+                    <p class="mt-1 text-[11px] font-medium text-indigo-700">
+                        {{ config('rfc.approval_letter.note') }}
+                    </p>
+                </div>
+                @if (config('rfc.approval_letter.temporary'))
+                    <span class="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                        Aturan Sementara
+                    </span>
+                @endif
+            </div>
+
+            @if ($approvalLetters->isNotEmpty())
+                @php
+                    $currentApprovalLetter = $approvalLetters->first();
+                    $previousApprovalLetters = $approvalLetters->slice(1);
+                @endphp
+
+                <div class="rounded-lg border border-indigo-200 bg-white px-3 py-3">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="min-w-0 flex-1">
+                            <p class="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                                <span class="min-w-0 truncate">{{ $currentApprovalLetter->original_name }}</span>
+                                <span class="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                                    Terbaru
+                                </span>
+                            </p>
+                            <p class="mt-0.5 text-xs text-slate-400">
+                                {{ number_format($currentApprovalLetter->size / 1024, 0, ',', '.') }} KB
+                                &middot; {{ $currentApprovalLetter->created_at?->copy()->locale('id')->translatedFormat('d M Y, H:i') }}
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-3 text-xs font-semibold">
+                            <a href="{{ route('change-requests.attachments.show', ['rfc' => $rfc, 'attachment' => $currentApprovalLetter]) }}"
+                                target="_blank" rel="noopener" class="text-indigo-600 hover:text-indigo-700">
+                                Lihat
+                            </a>
+                            <a href="{{ route('change-requests.attachments.show', ['rfc' => $rfc, 'attachment' => $currentApprovalLetter, 'download' => 1]) }}"
+                                class="text-indigo-600 hover:text-indigo-700">
+                                Unduh
+                            </a>
+                        </div>
+                    </div>
+
+                    @if ($previousApprovalLetters->isNotEmpty())
+                        <div class="mt-3 border-t border-slate-100 pt-3">
+                            <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Riwayat surat persetujuan</p>
+                            <ul class="mt-2 divide-y divide-slate-100">
+                                @foreach ($previousApprovalLetters as $previousApprovalLetter)
+                                    <li class="flex flex-wrap items-center justify-between gap-2 py-2 text-xs"
+                                        wire:key="previous-approval-letter-{{ $previousApprovalLetter->id }}">
+                                        <div class="min-w-0 flex-1">
+                                            <p class="truncate font-medium text-slate-700">{{ $previousApprovalLetter->original_name }}</p>
+                                            <p class="text-[11px] text-slate-400">
+                                                {{ $previousApprovalLetter->created_at?->copy()->locale('id')->translatedFormat('d M Y, H:i') }}
+                                            </p>
+                                        </div>
+                                        <div class="flex items-center gap-3 font-semibold">
+                                            <a href="{{ route('change-requests.attachments.show', ['rfc' => $rfc, 'attachment' => $previousApprovalLetter]) }}"
+                                                target="_blank" rel="noopener" class="text-indigo-600 hover:text-indigo-700">
+                                                Lihat
+                                            </a>
+                                            <a href="{{ route('change-requests.attachments.show', ['rfc' => $rfc, 'attachment' => $previousApprovalLetter, 'download' => 1]) }}"
+                                                class="text-indigo-600 hover:text-indigo-700">
+                                                Unduh
+                                            </a>
+                                        </div>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+                </div>
+            @else
+                <p class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+                    Belum ada surat persetujuan. Unggah PDF bertanda tangan sebelum mengajukan RFC.
+                </p>
+            @endif
+
+            <div>
+                <label for="approval_letter" class="block text-sm font-semibold text-indigo-950 mb-1">
+                    {{ $approvalLetters->isNotEmpty() ? 'Unggah Surat Persetujuan Baru' : 'Unggah Surat Persetujuan' }}
+                </label>
+                <input type="file" id="approval_letter" wire:model="approval_letter" accept=".pdf,application/pdf"
+                    class="block w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-100 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-200">
+            </div>
+
+            <div wire:loading wire:target="approval_letter" class="text-xs text-slate-500">
+                Mengunggah surat persetujuan...
+            </div>
+
+            @error('approval_letter')
+                <span class="block text-xs text-red-600">{{ $message }}</span>
+            @enderror
+
+            @if ($approval_letter)
+                <div class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm">
+                    <span class="min-w-0 flex-1 truncate text-slate-700">{{ $approval_letter->getClientOriginalName() }}</span>
+                    <span class="text-xs text-slate-400">{{ number_format($approval_letter->getSize() / 1024, 0, ',', '.') }} KB</span>
+                    <button type="button" wire:click="removePendingApprovalLetter"
+                        class="text-xs font-semibold text-rose-600 hover:text-rose-700">
+                        Hapus
+                    </button>
+                </div>
+            @endif
+
+            <p class="text-[11px] text-indigo-700">
+                Surat persetujuan yang sudah tersimpan tidak dapat dihapus dan akan tetap tersimpan sebagai riwayat.
+            </p>
+        </div>
+
         <!-- Lampiran -->
         <div class="space-y-3">
             <div>
-                <label for="attachments" class="block text-sm font-semibold text-slate-700 mb-1">Lampiran Surat / Dokumen
-                    Pendukung</label>
+                <label for="attachments" class="block text-sm font-semibold text-slate-700 mb-1">Lampiran Pendukung</label>
                 <p class="text-xs text-slate-500">
-                    PDF, JPG, JPEG, atau PNG. Maksimal 5 file per RFC dan 5 MB per file. Wajib diunggah saat mengajukan
-                    jika menggunakan surat/nota dinas fisik.
+                    PDF, JPG, JPEG, atau PNG. Maksimal 5 file pendukung per RFC dan 5 MB per file. Wajib diunggah saat
+                    mengajukan jika menggunakan surat/nota dinas fisik.
                 </p>
             </div>
 

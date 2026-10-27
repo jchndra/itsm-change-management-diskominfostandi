@@ -39,6 +39,6 @@ class ShowChangeRequest extends Component
 
     public function render()
     {
-        return view('livewire.change-requests.show-change-request')->title('Detail RFC - '.$this->rfc->rfc_number);
+        return view('livewire.change-requests.show-change-request')->title('Detail RFC - '.$this->rfc->displayIdentifier());
     }
 }

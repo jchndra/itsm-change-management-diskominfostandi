@@ -25,7 +25,7 @@
     <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div class="flex flex-col gap-4 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-                <span class="rounded-md bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-900">{{ $rfc->rfc_number }}</span>
+                <span class="rounded-md bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-900">{{ $rfc->displayIdentifier() }}</span>
                 <h1 class="mt-2 text-xl font-bold text-slate-900">Buat Tiket Change</h1>
                 <p class="mt-1 text-sm text-slate-500">{{ $rfc->title }}</p>
             </div>

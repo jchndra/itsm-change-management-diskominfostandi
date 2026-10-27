@@ -24,7 +24,7 @@
         <div class="flex items-center justify-between border-b border-slate-100 pb-4">
             <div>
                 <span
-                    class="text-xs font-bold text-blue-900 bg-blue-50 px-2.5 py-1 rounded-md">{{ $rfc->rfc_number }}</span>
+                    class="text-xs font-bold text-blue-900 bg-blue-50 px-2.5 py-1 rounded-md">{{ $rfc->displayIdentifier() }}</span>
                 <h2 class="text-lg font-bold text-slate-800 mt-2">{{ $rfc->title }}</h2>
             </div>
             <x-status-badge :status="$rfc->status" :tone="$rfc->displayStatusTone()" :label="$rfc->displayStatusLabel()" />

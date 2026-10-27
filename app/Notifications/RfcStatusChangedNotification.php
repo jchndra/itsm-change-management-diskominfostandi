@@ -26,7 +26,7 @@ class RfcStatusChangedNotification extends Notification
     {
         return [
             'rfc_id' => $this->rfc->id,
-            'rfc_number' => $this->rfc->rfc_number,
+            'rfc_number' => $this->rfc->displayIdentifier(),
             'title' => $this->rfc->title,
             'status' => $this->newStatus->value,
             'outcome' => $this->outcome(),
@@ -50,7 +50,7 @@ class RfcStatusChangedNotification extends Notification
 
     private function message(): string
     {
-        $number = $this->rfc->rfc_number;
+        $number = $this->rfc->displayIdentifier();
 
         return match ($this->newStatus) {
             RfcStatus::SUBMITTED => "RFC {$number} berhasil diajukan",

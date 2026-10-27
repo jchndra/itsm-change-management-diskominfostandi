@@ -8,6 +8,8 @@ use App\Models\Application;
 use App\Models\ChangeRequest;
 use App\Models\ChangeRequestAttachment;
 use App\Models\User;
+use App\Services\RfcAttachmentService;
+use App\Services\RfcDeletionService;
 use App\Services\RfcHistoryService;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -63,6 +65,7 @@ function makeStoredAttachmentForTests(
     User $owner,
     string $name = 'surat-pengajuan.pdf',
     string $content = 'konten lampiran',
+    string $documentType = ChangeRequestAttachment::TYPE_SUPPORTING,
 ): ChangeRequestAttachment {
     $path = 'rfc-attachments/'.$rfc->id.'/'.Str::uuid()->toString().'.pdf';
     Storage::disk('local')->put($path, $content);
@@ -70,11 +73,23 @@ function makeStoredAttachmentForTests(
     return ChangeRequestAttachment::create([
         'change_request_id' => $rfc->id,
         'uploaded_by_id' => $owner->id,
+        'document_type' => $documentType,
         'original_name' => $name,
         'path' => $path,
         'mime_type' => 'application/pdf',
         'size' => strlen($content),
     ]);
+}
+
+function makeStoredApprovalLetterForTests(ChangeRequest $rfc, User $owner): ChangeRequestAttachment
+{
+    return makeStoredAttachmentForTests(
+        $rfc,
+        $owner,
+        'surat-persetujuan.pdf',
+        'konten surat persetujuan',
+        ChangeRequestAttachment::TYPE_APPROVAL_LETTER,
+    );
 }
 
 it('menyimpan seluruh field baru dan lampiran dari form create lalu menampilkannya di detail', function () {
@@ -87,24 +102,32 @@ it('menyimpan seluruh field baru dan lampiran dari form create lalu menampilkann
         ->set('impact_description', 'Layanan persuratan berhenti sementara saat pemeliharaan.')
         ->set('target_implementation_date', now()->addDays(3)->format('Y-m-d\TH:i'))
         ->set('attachments', [UploadedFile::fake()->create('surat-pengajuan.pdf', 120, 'application/pdf')])
+        ->set('approval_letter', UploadedFile::fake()->create('surat-persetujuan.pdf', 200, 'application/pdf'))
         ->call('save', RfcStatus::SUBMITTED->value)
         ->assertHasNoErrors()
         ->assertRedirect(route('requester.dashboard'));
 
     $rfc = ChangeRequest::latest('id')->firstOrFail();
-    $attachment = $rfc->attachments()->firstOrFail();
+    $attachment = $rfc->supportingAttachments()->firstOrFail();
+    $approvalLetter = $rfc->approvalLetters()->firstOrFail();
 
     expect($rfc->description)->toBe('Modul persuratan akan diperbarui agar mendukung tanda tangan digital.')
         ->and($rfc->change_type)->toBe('normal')
         ->and($rfc->impact_description)->toBe('Layanan persuratan berhenti sementara saat pemeliharaan.')
-        ->and($attachment->original_name)->toBe('surat-pengajuan.pdf');
+        ->and($rfc->rfc_number)->not->toBeNull()
+        ->and($attachment->original_name)->toBe('surat-pengajuan.pdf')
+        ->and($approvalLetter->original_name)->toBe('surat-persetujuan.pdf')
+        ->and($approvalLetter->isApprovalLetter())->toBeTrue();
 
     Livewire::test(ShowChangeRequest::class, ['rfc' => $rfc->fresh()])
         ->assertOk()
         ->assertSee('Deskripsi Perubahan')
         ->assertSee('Modul persuratan akan diperbarui agar mendukung tanda tangan digital.')
         ->assertSee('Normal')
-        ->assertSee('surat-pengajuan.pdf');
+        ->assertSee('surat-pengajuan.pdf')
+        ->assertSee('Surat Persetujuan Bertanda Tangan')
+        ->assertSee('surat-persetujuan.pdf')
+        ->assertSee('Lampiran Pendukung');
 
     $activity = Activity::query()
         ->where('subject_type', $rfc->getMorphClass())
@@ -140,6 +163,49 @@ it('menyimpan lampiran di disk privat, bukan disk public', function () {
 
     Storage::disk('local')->assertExists($attachment->path);
     Storage::disk('public')->assertMissing($attachment->path);
+
+    expect($attachment->document_type)->toBe(ChangeRequestAttachment::TYPE_SUPPORTING)
+        ->and($attachment->changeRequest->rfc_number)->toBeNull();
+});
+
+it('mencegah double submit membuat dua RFC dan lampiran ganda', function () {
+    $component = Livewire::test(CreateChangeRequest::class)
+        ->set('title', 'Pengajuan Double Submit')
+        ->set('application_id', (string) $this->application->id)
+        ->set('change_type', 'normal')
+        ->set('description', 'Pengujian pengiriman form dua kali.')
+        ->set('reason_for_change', 'Memastikan klik ganda tidak membuat data ganda.')
+        ->set('target_implementation_date', now()->addDays(3)->format('Y-m-d\TH:i'))
+        ->set('attachments', [UploadedFile::fake()->create('lampiran.pdf', 20, 'application/pdf')]);
+
+    $component->call('save', RfcStatus::DRAFT->value)->assertHasNoErrors();
+    $component->call('save', RfcStatus::DRAFT->value)->assertHasNoErrors();
+
+    $rfc = ChangeRequest::sole();
+
+    expect(ChangeRequestAttachment::count())->toBe(1)
+        ->and(Storage::disk('local')->allFiles('rfc-attachments/'.$rfc->id))->toHaveCount(1);
+});
+
+it('mempertahankan file lampiran dan riwayat saat draft dihapus', function () {
+    $rfc = makeRfcForAttachmentTests($this->pemohon, $this->application);
+    $attachment = app(RfcAttachmentService::class)->store(
+        $rfc,
+        UploadedFile::fake()->create('bukti-audit.pdf', 20, 'application/pdf'),
+        $this->pemohon,
+    );
+    $path = $attachment->path;
+
+    RfcDeletionService::delete($rfc, $this->pemohon, 'Dihapus untuk pengujian retensi.');
+
+    Storage::disk('local')->assertExists($path);
+    expect(ChangeRequestAttachment::find($attachment->id))->not->toBeNull();
+
+    $this->assertDatabaseHas('activity_log', [
+        'subject_type' => $rfc->getMorphClass(),
+        'subject_id' => $rfc->id,
+        'description' => 'Lampiran RFC ditambahkan',
+    ]);
 });
 
 it('menandai emergency_unconfirmed untuk kategori emergency dan tidak untuk kategori lain', function () {
@@ -220,6 +286,16 @@ it('mengizinkan pemilik dan staf mengunduh lampiran serta menolak pemohon lain',
     $this->actingAs($this->pemohonLain)
         ->get(route('change-requests.attachments.show', ['rfc' => $rfc, 'attachment' => $attachment]))
         ->assertForbidden();
+});
+
+it('mengalihkan tamu ke login saat mengunduh lampiran', function () {
+    $rfc = makeRfcForAttachmentTests($this->pemohon, $this->application);
+    $attachment = makeStoredAttachmentForTests($rfc, $this->pemohon);
+
+    auth()->logout();
+
+    $this->get(route('change-requests.attachments.show', ['rfc' => $rfc, 'attachment' => $attachment]))
+        ->assertRedirect(route('login'));
 });
 
 it('mengembalikan 404 jika lampiran bukan milik RFC pada URL', function () {

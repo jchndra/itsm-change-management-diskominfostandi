@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use RuntimeException;
 
 class ChangeRequest extends Model
 {
@@ -20,6 +21,7 @@ class ChangeRequest extends Model
 
     protected $fillable = [
         'rfc_number',
+        'submission_token',
         'ticket_number',
         'title',
         'application_id',
@@ -58,6 +60,65 @@ class ChangeRequest extends Model
             'target_implementation_date' => 'datetime',
             'closed_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::updating(function (self $rfc): void {
+            if (! $rfc->isDirty('rfc_number')) {
+                return;
+            }
+
+            $originalNumber = $rfc->getOriginal('rfc_number');
+
+            if (filled($originalNumber)) {
+                throw new RuntimeException('Nomor RFC resmi bersifat permanen dan tidak dapat diubah.');
+            }
+
+            if (blank($rfc->rfc_number)) {
+                return;
+            }
+
+            $status = RfcStatus::fromValue($rfc->status);
+
+            if ($status === null || $status === RfcStatus::DRAFT) {
+                throw new RuntimeException('Nomor RFC hanya dapat diberikan saat RFC diajukan.');
+            }
+        });
+    }
+
+    /**
+     * Identitas yang ditampilkan ke pengguna. Draft tidak pernah memiliki
+     * nomor resmi, sehingga selalu ditampilkan sebagai "Draft #<id>".
+     */
+    public function displayIdentifier(): string
+    {
+        return self::formatIdentifier($this->rfc_number, $this->id, $this->status);
+    }
+
+    /**
+     * Versi statis untuk baris query yang tidak dihidrasi sebagai model.
+     */
+    public static function formatIdentifier(?string $rfcNumber, int|string|null $id, ?string $status): string
+    {
+        if (filled($rfcNumber) && RfcStatus::fromValue($status) !== RfcStatus::DRAFT) {
+            return (string) $rfcNumber;
+        }
+
+        return 'Draft #'.$id;
+    }
+
+    /**
+     * Ekstrak ID dari pencarian berbentuk "Draft #<id>" agar pengguna dapat
+     * mencari draft menggunakan identitas yang tampil di antarmuka.
+     */
+    public static function draftIdFromSearch(string $search): ?int
+    {
+        if (preg_match('/^\s*draft\s*#?\s*(\d+)\s*$/i', $search, $matches) !== 1) {
+            return null;
+        }
+
+        return (int) $matches[1];
     }
 
     public function application(): BelongsTo
@@ -230,5 +291,26 @@ class ChangeRequest extends Model
     public function attachments(): HasMany
     {
         return $this->hasMany(ChangeRequestAttachment::class);
+    }
+
+    public function approvalLetters(): HasMany
+    {
+        return $this->hasMany(ChangeRequestAttachment::class)
+            ->where('document_type', ChangeRequestAttachment::TYPE_APPROVAL_LETTER)
+            ->latest('id');
+    }
+
+    public function latestApprovalLetter(): HasOne
+    {
+        return $this->hasOne(ChangeRequestAttachment::class)
+            ->where('document_type', ChangeRequestAttachment::TYPE_APPROVAL_LETTER)
+            ->latestOfMany();
+    }
+
+    public function supportingAttachments(): HasMany
+    {
+        return $this->hasMany(ChangeRequestAttachment::class)
+            ->where('document_type', ChangeRequestAttachment::TYPE_SUPPORTING)
+            ->oldest('id');
     }
 }

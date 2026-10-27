@@ -7,6 +7,7 @@ use App\Models\ChangeRequest;
 use App\Models\User;
 use App\Services\RfcDeletionService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -107,7 +108,7 @@ class DeletionHistory extends Component
 
         $this->showRestoreModal = false;
         $this->selectedRfcId = null;
-        $this->feedback = "RFC {$rfc->rfc_number} berhasil dipulihkan ke daftar RFC aktif.";
+        $this->feedback = "RFC {$rfc->displayIdentifier()} berhasil dipulihkan ke daftar RFC aktif.";
         $this->resetPage();
     }
 
@@ -118,9 +119,18 @@ class DeletionHistory extends Component
 
         $deletedRfcs = $this->scopedQuery()
             ->with(['application', 'submittedBy.opd', 'deletedBy'])
-            ->when($this->search !== '', fn ($query) => $query->where(fn ($sub) => $sub
-                ->where('rfc_number', 'like', "%{$this->search}%")
-                ->orWhere('title', 'like', "%{$this->search}%")))
+            ->when($this->search !== '', function (Builder $query): void {
+                $draftId = ChangeRequest::draftIdFromSearch($this->search);
+
+                $query->where(fn (Builder $sub) => $sub
+                    ->where('rfc_number', 'like', "%{$this->search}%")
+                    ->orWhere('title', 'like', "%{$this->search}%")
+                    ->when($draftId !== null, fn (Builder $draftQuery) => $draftQuery->orWhere(
+                        fn (Builder $draft) => $draft
+                            ->whereKey($draftId)
+                            ->where('status', RfcStatus::DRAFT->value)
+                    )));
+            })
             ->when($this->dateFrom !== '', fn ($query) => $query->whereDate('deleted_at', '>=', $this->dateFrom))
             ->when($this->dateTo !== '', fn ($query) => $query->whereDate('deleted_at', '<=', $this->dateTo))
             ->when($this->statusFilter !== '', fn ($query) => $query->where('status', $this->statusFilter))

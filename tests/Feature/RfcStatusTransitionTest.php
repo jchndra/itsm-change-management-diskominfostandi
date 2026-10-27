@@ -22,16 +22,23 @@ function userWithRole(string $role): User
     return $user;
 }
 
-test('pemilik rfc dapat mengajukan draft', function () {
+test('pemilik rfc dapat mengajukan draft dan nomor resmi terbit saat diajukan', function () {
     $owner = userWithRole('Pemohon');
     $rfc = ChangeRequest::factory()->create([
         'submitted_by_id' => $owner->id,
         'status' => RfcStatus::DRAFT->value,
+        'rfc_number' => null,
     ]);
+
+    expect($rfc->displayIdentifier())->toBe('Draft #'.$rfc->id);
 
     RfcStatusTransition::transitionTo($rfc, RfcStatus::SUBMITTED, $owner);
 
-    expect($rfc->fresh()->status)->toBe(RfcStatus::SUBMITTED->value);
+    $fresh = $rfc->fresh();
+
+    expect($fresh->status)->toBe(RfcStatus::SUBMITTED->value)
+        ->and($fresh->rfc_number)->toBe('RFC-'.date('Y').'-0001')
+        ->and($fresh->displayIdentifier())->toBe($fresh->rfc_number);
 });
 
 test('admin dapat meneruskan submitted ke ticket_created', function () {

@@ -56,7 +56,7 @@ it('memungkinkan pemohon menghapus draft miliknya secara soft delete dengan alas
     Livewire::test(DeleteRfc::class, ['rfc' => $rfc])
         ->call('openModal')
         ->assertSet('showModal', true)
-        ->assertSee($rfc->rfc_number)
+        ->assertSee($rfc->displayIdentifier())
         ->assertSee($rfc->title)
         ->set('reason', 'Draft dibuat untuk pengujian internal.')
         ->call('delete')
@@ -90,16 +90,16 @@ it('menampilkan notifikasi keberhasilan penghapusan pada dashboard pemohon', fun
 
 it('menampilkan aksi hapus pada draft milik pemohon di dashboard dan daftar RFC', function () {
     $pemohon = pemohonBaru();
-    draftMilik($pemohon, ['rfc_number' => 'RFC-2026-8007', 'title' => 'Draft dengan aksi hapus']);
+    $rfc = draftMilik($pemohon, ['rfc_number' => 'RFC-2026-8007', 'title' => 'Draft dengan aksi hapus']);
 
     $this->actingAs($pemohon);
 
     Livewire::test(Dashboard::class)
-        ->assertSee('RFC-2026-8007')
+        ->assertSee($rfc->displayIdentifier())
         ->assertSee('Hapus RFC');
 
     Livewire::test(ListChangeRequests::class)
-        ->assertSee('RFC-2026-8007')
+        ->assertSee($rfc->displayIdentifier())
         ->assertSee('Hapus');
 });
 
@@ -159,12 +159,12 @@ it('menyembunyikan RFC terhapus dari dashboard, daftar aktif, dan statistik', fu
 
     Livewire::test(Dashboard::class)
         ->assertOk()
-        ->assertDontSee('RFC-2026-8002')
+        ->assertDontSee($rfc->displayIdentifier())
         ->assertViewHas('stats', fn (array $stats) => $stats['draft'] === 0);
 
     Livewire::test(ListChangeRequests::class)
         ->assertOk()
-        ->assertDontSee('RFC-2026-8002');
+        ->assertDontSee($rfc->displayIdentifier());
 
     $this->assertDatabaseHas('change_requests', ['id' => $rfc->id]);
 });
@@ -200,10 +200,10 @@ it('menampilkan riwayat penghapusan hanya untuk RFC milik pemohon', function () 
     Livewire::test(DeletionHistory::class)
         ->assertOk()
         ->assertSee('Riwayat Penghapusan')
-        ->assertSee('RFC-2026-8003')
+        ->assertSee($milikSendiri->displayIdentifier())
         ->assertSee('Alasan pemohon sendiri.')
         ->assertSee('Lihat Detail')
-        ->assertDontSee('RFC-2026-8004')
+        ->assertDontSee($milikOrangLain->displayIdentifier())
         ->assertDontSee('Pulihkan');
 });
 
@@ -220,7 +220,7 @@ it('memungkinkan staf melihat semua riwayat dan memulihkan RFC tanpa mengubah st
     $this->actingAs($admin);
 
     Livewire::test(DeletionHistory::class)
-        ->assertSee('RFC-2026-8005')
+        ->assertSee($rfc->displayIdentifier())
         ->assertSee('Pulihkan')
         ->call('confirmRestore', $rfc->id)
         ->assertSet('showRestoreModal', true)
@@ -273,13 +273,13 @@ it('menampilkan detail RFC terhapus kepada pemilik dan staf, tetapi tidak kepada
         ->get(route('change-requests.deletions.show', $rfc->id))
         ->assertOk()
         ->assertSee('RFC ini telah dihapus')
-        ->assertSee('RFC-2026-8006')
+        ->assertSee($rfc->displayIdentifier())
         ->assertSee('Alasan untuk halaman detail.');
 
     $this->actingAs($admin)
         ->get(route('change-requests.deletions.show', $rfc->id))
         ->assertOk()
-        ->assertSee('RFC-2026-8006');
+        ->assertSee($rfc->displayIdentifier());
 
     $this->actingAs($pemohonLain)
         ->get(route('change-requests.deletions.show', $rfc->id))
@@ -308,13 +308,16 @@ it('mendukung pencarian dan filter status pada riwayat penghapusan', function ()
 
     Livewire::test(DeletionHistory::class)
         ->set('search', 'Surel')
-        ->assertSee('RFC-2026-8101')
-        ->assertDontSee('RFC-2026-8102')
+        ->assertSee($pertama->displayIdentifier())
+        ->assertDontSee($kedua->displayIdentifier())
+        ->set('search', $pertama->displayIdentifier())
+        ->assertSee($pertama->displayIdentifier())
+        ->assertDontSee($kedua->displayIdentifier())
         ->set('search', '')
         ->set('statusFilter', RfcStatus::DRAFT->value)
-        ->assertSee('RFC-2026-8101')
-        ->assertSee('RFC-2026-8102')
+        ->assertSee($pertama->displayIdentifier())
+        ->assertSee($kedua->displayIdentifier())
         ->set('statusFilter', RfcStatus::SUBMITTED->value)
-        ->assertDontSee('RFC-2026-8101')
-        ->assertDontSee('RFC-2026-8102');
+        ->assertDontSee($pertama->displayIdentifier())
+        ->assertDontSee($kedua->displayIdentifier());
 });

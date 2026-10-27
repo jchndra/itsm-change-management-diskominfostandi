@@ -16,7 +16,7 @@
                 </a>
                 <h1 class="text-2xl font-bold text-slate-900">Penutupan Tiket RFC</h1>
             </div>
-            <p class="mt-1 pl-9 text-sm text-slate-500">Nomor RFC: {{ $rfc->rfc_number }}</p>
+            <p class="mt-1 pl-9 text-sm text-slate-500">Nomor RFC: {{ $rfc->displayIdentifier() }}</p>
         </div>
         <x-status-badge :status="$rfc->status" :tone="$rfc->displayStatusTone()" :label="$rfc->displayStatusLabel()" />
     </div>

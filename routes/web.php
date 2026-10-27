@@ -2,7 +2,9 @@
 
 use App\Http\Controllers\ChangeRequestAttachmentController;
 use App\Http\Controllers\ImplementationEvidenceController;
+use App\Http\Controllers\RfcDocumentController;
 use App\Livewire\Auth\Login;
+use App\Livewire\Auth\Register;
 use App\Livewire\ChangeRequests\AssessRisk;
 use App\Livewire\ChangeRequests\CloseRfc;
 use App\Livewire\ChangeRequests\CreateChangeRequest;
@@ -47,6 +49,7 @@ Route::get('/', function () {
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', Login::class)->name('login');
+    Route::get('/register', Register::class)->name('register');
 });
 
 Route::middleware('auth')->group(function () {
@@ -73,6 +76,12 @@ Route::middleware('auth')->group(function () {
     // Notifikasi & profil pengguna
     Route::get('/notifications', Notifications::class)->name('notifications.index');
     Route::get('/profile', Profile::class)->name('profile.show');
+
+    // Dokumen statis RFC (template surat persetujuan & pedoman)
+    Route::get('/rfc-documents/{document}', RfcDocumentController::class)
+        ->where('document', '[a-z0-9-]+')
+        ->middleware('can:downloadRfcDocument')
+        ->name('rfc-documents.download');
 
     Route::prefix('change-requests')->name('change-requests.')->group(function () {
         Route::get('/', ListChangeRequests::class)->name('index');

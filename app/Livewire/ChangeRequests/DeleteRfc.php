@@ -58,13 +58,13 @@ class DeleteRfc extends Component
             return;
         }
 
-        $rfcNumber = $this->rfc->rfc_number;
+        $rfcIdentifier = $this->rfc->displayIdentifier();
         $this->showModal = false;
         $this->reset('reason', 'errorMessage');
 
         $this->dispatch(
             'rfc-deleted',
-            message: "RFC {$rfcNumber} berhasil dihapus dan dipindahkan ke Riwayat Penghapusan."
+            message: "RFC {$rfcIdentifier} berhasil dihapus dan dipindahkan ke Riwayat Penghapusan."
         );
     }
 

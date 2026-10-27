@@ -126,6 +126,34 @@ it('memfilter daftar RFC berdasarkan pencarian, status, jenis, aplikasi, unit ke
         ->assertSee($rfcTiga->rfc_number);
 });
 
+it('mencari draft menggunakan identitas tampilan Draft #<id>', function () {
+    $admin = penggunaFilter('Admin');
+    $pemohon = penggunaFilter('Pemohon');
+
+    $draft = ChangeRequest::factory()->create([
+        'submitted_by_id' => $pemohon->id,
+        'created_by_id' => $pemohon->id,
+        'title' => 'Draft Pencarian Identitas',
+        'status' => RfcStatus::DRAFT->value,
+        'rfc_number' => null,
+    ]);
+
+    $draftLain = ChangeRequest::factory()->create([
+        'submitted_by_id' => $pemohon->id,
+        'created_by_id' => $pemohon->id,
+        'title' => 'Draft Lain yang Tidak Dicari',
+        'status' => RfcStatus::DRAFT->value,
+        'rfc_number' => null,
+    ]);
+
+    $this->actingAs($admin);
+
+    Livewire::test(ListChangeRequests::class)
+        ->set('search', $draft->displayIdentifier())
+        ->assertSee($draft->title)
+        ->assertDontSee($draftLain->title);
+});
+
 it('tetap membatasi filter pada RFC milik pemohon sendiri', function () {
     $pemohon = penggunaFilter('Pemohon');
     $pemohonLain = penggunaFilter('Pemohon');

@@ -52,7 +52,7 @@
                     <div class="min-w-0 flex-1">
                         <div class="flex flex-wrap items-center gap-2">
                             <p class="text-sm font-semibold text-slate-800">
-                                {{ data_get($notification->data, 'rfc_number', 'Notifikasi') }}
+                                {{ data_get($notification->data, 'rfc_number') ?: 'Notifikasi' }}
                             </p>
                             @if ($isUnread)
                                 <span class="h-2 w-2 rounded-full bg-blue-500"></span>

@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use RuntimeException;
 use Spatie\Activitylog\Models\Activity;
 use Throwable;
 
@@ -51,6 +52,8 @@ class EditChangeRequest extends Component
     /** @var array<int, UploadedFile> */
     public array $attachments = [];
 
+    public ?UploadedFile $approval_letter = null;
+
     public function mount(ChangeRequest $rfc): void
     {
         $this->authorize('update', $rfc);
@@ -77,7 +80,14 @@ class EditChangeRequest extends Component
         try {
             DB::transaction(function () use (&$newAttachments): void {
                 $this->persistChanges();
+
                 $newAttachments = $this->storeAttachments();
+
+                $approvalLetter = $this->storeApprovalLetter();
+
+                if ($approvalLetter !== null) {
+                    $newAttachments[] = $approvalLetter;
+                }
             });
         } catch (Throwable $exception) {
             app(RfcAttachmentService::class)->deleteStoredFiles($newAttachments);
@@ -86,6 +96,7 @@ class EditChangeRequest extends Component
         }
 
         $this->attachments = [];
+        $this->approval_letter = null;
 
         session()->flash('message', 'Perubahan RFC berhasil disimpan.');
 
@@ -97,6 +108,10 @@ class EditChangeRequest extends Component
         $this->authorize('update', $this->rfc);
         $this->validateChangeRequest($this->existingAttachmentCount());
         $this->validatePhysicalLetterAttachment($this->existingAttachmentCount());
+        $this->validateApprovalLetterForSubmission(
+            hasExisting: $this->hasExistingApprovalLetter($this->rfc),
+            hasPending: $this->approval_letter !== null,
+        );
 
         $oldStatus = RfcStatus::fromValue($this->rfc->status);
 
@@ -111,18 +126,38 @@ class EditChangeRequest extends Component
         $newAttachments = [];
 
         try {
-            DB::transaction(function () use ($oldStatus, $user, &$newAttachments): void {
+            DB::transaction(function () use ($user, &$oldStatus, &$newAttachments): void {
+                // Kunci baris agar dua klik submit tidak menerbitkan nomor ganda.
+                $this->rfc = ChangeRequest::query()
+                    ->whereKey($this->rfc->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                $currentStatus = RfcStatus::fromValue($this->rfc->status);
+
+                if ($currentStatus === null) {
+                    throw new InvalidRfcStatusTransitionException('Status RFC saat ini tidak dikenali.');
+                }
+
+                $oldStatus = $currentStatus;
+
                 $this->persistChanges();
                 $newAttachments = $this->storeAttachments();
 
-                if ($oldStatus === RfcStatus::NEEDS_REVISION) {
+                $approvalLetter = $this->storeApprovalLetter();
+
+                if ($approvalLetter !== null) {
+                    $newAttachments[] = $approvalLetter;
+                }
+
+                if ($currentStatus === RfcStatus::NEEDS_REVISION) {
                     // Pastikan alasan revisi sudah tercatat sebelum rejection_note dikosongkan.
                     $this->preserveRevisionReason();
                 }
 
                 RfcStatusTransition::transitionTo($this->rfc, RfcStatus::SUBMITTED, $user);
 
-                if ($oldStatus === RfcStatus::NEEDS_REVISION) {
+                if ($currentStatus === RfcStatus::NEEDS_REVISION) {
                     $this->rfc->update(['rejection_note' => null]);
                 }
             });
@@ -139,12 +174,13 @@ class EditChangeRequest extends Component
         }
 
         $this->attachments = [];
+        $this->approval_letter = null;
 
         session()->flash(
             'message',
             $oldStatus === RfcStatus::NEEDS_REVISION
-                ? "Revisi {$this->rfc->rfc_number} berhasil dikirim."
-                : "{$this->rfc->rfc_number} berhasil diajukan."
+                ? "Revisi {$this->rfc->displayIdentifier()} berhasil dikirim."
+                : "{$this->rfc->displayIdentifier()} berhasil diajukan."
         );
 
         $this->redirectRoute('change-requests.show', ['rfc' => $this->rfc], navigate: true);
@@ -157,7 +193,19 @@ class EditChangeRequest extends Component
         /** @var ChangeRequestAttachment $attachment */
         $attachment = $this->rfc->attachments()->findOrFail($attachmentId);
 
-        app(RfcAttachmentService::class)->delete($attachment, Auth::user());
+        if ($attachment->isApprovalLetter()) {
+            $this->addError('attachment', 'Surat persetujuan bertanda tangan tidak dapat dihapus.');
+
+            return;
+        }
+
+        try {
+            app(RfcAttachmentService::class)->delete($attachment, Auth::user());
+        } catch (RuntimeException $exception) {
+            $this->addError('attachment', $exception->getMessage());
+
+            return;
+        }
 
         $this->rfc->load('attachments');
 
@@ -166,7 +214,7 @@ class EditChangeRequest extends Component
 
     public function render(): View
     {
-        $this->rfc->loadMissing(['submittedBy.opd', 'attachments']);
+        $this->rfc->loadMissing(['submittedBy.opd', 'attachments', 'approvalLetters', 'latestApprovalLetter']);
 
         $isRevision = RfcStatus::fromValue($this->rfc->status) === RfcStatus::NEEDS_REVISION;
         $applications = Application::with('opd')->orderBy('name')->get();
@@ -177,7 +225,7 @@ class EditChangeRequest extends Component
             'revisionReason' => $isRevision ? $this->revisionReason() : null,
             'requester' => $this->rfc->submittedBy,
             'submittedAt' => $this->rfc->created_at,
-        ])->title(($isRevision ? 'Revisi RFC - ' : 'Edit RFC - ').$this->rfc->rfc_number);
+        ])->title(($isRevision ? 'Revisi RFC - ' : 'Edit RFC - ').$this->rfc->displayIdentifier());
     }
 
     /**
@@ -192,9 +240,23 @@ class EditChangeRequest extends Component
         return app(RfcAttachmentService::class)->storeMany($this->rfc, $this->attachments, Auth::user());
     }
 
+    private function storeApprovalLetter(): ?ChangeRequestAttachment
+    {
+        if ($this->approval_letter === null) {
+            return null;
+        }
+
+        return app(RfcAttachmentService::class)->store(
+            $this->rfc,
+            $this->approval_letter,
+            Auth::user(),
+            ChangeRequestAttachment::TYPE_APPROVAL_LETTER,
+        );
+    }
+
     private function existingAttachmentCount(): int
     {
-        return $this->rfc->attachments()->count();
+        return $this->rfc->supportingAttachments()->count();
     }
 
     /**

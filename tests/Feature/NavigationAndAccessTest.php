@@ -8,6 +8,8 @@ use App\Models\ChangeRequest;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
@@ -93,7 +95,9 @@ test('pemohon dengan rfc.create dapat membuka halaman create RFC', function () {
         ->assertOk();
 });
 
-test('RFC yang dibuat lewat komponen create memakai nomor berurutan dari generator', function () {
+test('RFC yang diajukan lewat komponen create memakai nomor berurutan dari generator', function () {
+    Storage::fake('local');
+
     $pemohon = makeUserWithRole('Pemohon');
     $application = Application::factory()->create();
 
@@ -108,7 +112,8 @@ test('RFC yang dibuat lewat komponen create memakai nomor berurutan dari generat
             ->set('reason_for_change', 'Alasan perubahan yang cukup panjang untuk pengujian.')
             ->set('impact_description', 'Dampak perubahan yang cukup jelas untuk pengujian.')
             ->set('target_implementation_date', now()->addDays(3)->format('Y-m-d\TH:i'))
-            ->call('save')
+            ->set('approval_letter', UploadedFile::fake()->create('surat-persetujuan.pdf', 100, 'application/pdf'))
+            ->call('save', RfcStatus::SUBMITTED->value)
             ->assertHasNoErrors()
             ->assertRedirect(route('requester.dashboard'));
     }

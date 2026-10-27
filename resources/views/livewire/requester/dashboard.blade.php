@@ -188,6 +188,108 @@
         </div>
     </section>
 
+    {{-- Dokumen pendukung RFC --}}
+    <x-dashboard.panel id="dokumen-rfc" title="Form RFC & Pedoman Manajemen Risiko"
+        description="Dokumen contoh untuk membantu penyusunan surat persetujuan dan pengisian formulir RFC. Kedua dokumen masih berstatus draf/dummy dan belum menjadi dokumen resmi.">
+        <x-slot:icon>
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                    d="M7 3h7l4 4v5M7 3H5.75A1.75 1.75 0 0 0 4 4.75v14.5C4 20.22 4.78 21 5.75 21h7.5c.97 0 1.75-.78 1.75-1.75V15M14 3v4a1 1 0 0 0 1 1h4M12 14h6m-6 3h4" />
+            </svg>
+        </x-slot:icon>
+
+        <x-slot:actions>
+            <span
+                class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-[11px] font-bold text-amber-700 shadow-sm">
+                <span class="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true"></span>
+                {{ count($rfcDocuments) }} dokumen PDF
+            </span>
+        </x-slot:actions>
+
+        <div class="p-5">
+            <div class="grid gap-4 md:grid-cols-2">
+                @foreach ($rfcDocuments as $document)
+                    @php
+                        $sizeLabel = $document['size'] !== null
+                            ? number_format($document['size'] / 1024, 0, ',', '.') . ' KB'
+                            : null;
+                    @endphp
+
+                    <article
+                        class="flex h-full flex-col rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/70 p-5 shadow-sm">
+                        <div class="flex items-start gap-3">
+                            <span
+                                class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-rose-50 to-amber-50 text-rose-600 ring-1 ring-rose-100">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                    aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7"
+                                        d="M14 3v4a1 1 0 0 0 1 1h4M6 3h8l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7"
+                                        d="M9 13h6M9 17h4" />
+                                </svg>
+                            </span>
+
+                            <div class="min-w-0">
+                                <h3 class="text-sm font-bold leading-snug text-slate-900">{{ $document['title'] }}</h3>
+                                <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                                    <span
+                                        class="inline-flex rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600">
+                                        {{ $document['format'] }}
+                                    </span>
+                                    @if ($sizeLabel)
+                                        <span class="text-[10px] font-medium text-slate-400">{{ $sizeLabel }}</span>
+                                    @endif
+                                    <span
+                                        class="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                                        {{ $document['status'] }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p class="mt-3 flex-1 text-[12px] leading-relaxed text-slate-500">{{ $document['description'] }}</p>
+
+                        <div class="mt-4">
+                            @if ($document['available'])
+                                <a href="{{ $document['download_url'] }}"
+                                    class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-700 to-blue-500 px-4 py-2.5 text-xs font-semibold text-white shadow-sm shadow-blue-600/20 transition hover:from-blue-800 hover:to-blue-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2"
+                                    aria-label="Unduh {{ $document['title'] }}">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                        aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14" />
+                                    </svg>
+                                    Unduh PDF
+                                </a>
+                            @else
+                                <button type="button" disabled
+                                    class="inline-flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-4 py-2.5 text-xs font-semibold text-slate-400"
+                                    aria-label="{{ $document['title'] }} belum tersedia">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                        aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14" />
+                                    </svg>
+                                    Dokumen belum tersedia
+                                </button>
+                            @endif
+                        </div>
+                    </article>
+                @endforeach
+            </div>
+
+            <p class="mt-4 flex items-start gap-2 rounded-xl border border-amber-100 bg-amber-50/60 px-3.5 py-3 text-[11px] leading-relaxed text-amber-800">
+                <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-600" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.9"
+                        d="M12 9v3.75m0 3h.008M10.34 3.94 2.7 17.25A2.25 2.25 0 0 0 4.65 20.5h14.7a2.25 2.25 0 0 0 1.95-3.25L13.66 3.94a2.25 2.25 0 0 0-3.32 0Z" />
+                </svg>
+                <span>Dokumen ini adalah contoh untuk prototipe dan belum menjadi dokumen resmi. Penggantian file dilakukan
+                    melalui deployment/server, bukan dari dashboard.</span>
+            </p>
+        </div>
+    </x-dashboard.panel>
+
     {{-- Kartu statistik --}}
     @php
         $cards = [
@@ -296,7 +398,7 @@
                         @forelse ($recentRfcs as $rfc)
                             <tr class="align-middle transition hover:bg-slate-50/60">
                                 <td data-label="No. RFC" class="whitespace-nowrap px-5 py-4 text-[13px] font-bold text-blue-700">
-                                    {{ $rfc->rfc_number ?? 'Draft' }}
+                                    {{ $rfc->displayIdentifier() }}
                                 </td>
                                 <td data-label="Judul Perubahan" class="max-w-[260px] px-5 py-4 text-[13px] font-medium leading-snug text-slate-700">
                                     {{ $rfc->title }}
@@ -402,7 +504,7 @@
                 @if ($latestActiveRfc)
                     <p class="mb-4 inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
                         <span class="h-1.5 w-1.5 rounded-full bg-blue-500"></span>
-                        {{ $latestActiveRfc->rfc_number }}
+                        {{ $latestActiveRfc->displayIdentifier() }}
                     </p>
 
                     <ol class="relative space-y-5 before:absolute before:bottom-3 before:left-[13px] before:top-3 before:w-px before:bg-slate-200">

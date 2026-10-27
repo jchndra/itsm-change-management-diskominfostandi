@@ -7,6 +7,8 @@ use App\Exceptions\InvalidRfcStatusTransitionException;
 use App\Models\ChangeRequest;
 use App\Models\User;
 use App\Notifications\RfcStatusChangedNotification;
+use App\Services\RfcNumberGenerator;
+use Illuminate\Support\Facades\DB;
 
 class RfcStatusTransition
 {
@@ -40,10 +42,18 @@ class RfcStatusTransition
         }
 
         $oldStatus = $rfc->status;
+        $attributes = ['status' => $newStatus->value];
 
-        $rfc->update([
-            'status' => $newStatus->value,
-        ]);
+        // Nomor resmi hanya terbit pada transisi menuju Submitted. Generator
+        // dipanggil di dalam transaksi yang sama agar lock nomor bertahan sampai
+        // update selesai, termasuk saat method ini dipanggil tanpa transaksi luar.
+        DB::transaction(function () use ($rfc, $newStatus, &$attributes): void {
+            if ($newStatus === RfcStatus::SUBMITTED && blank($rfc->rfc_number)) {
+                $attributes['rfc_number'] = RfcNumberGenerator::generate();
+            }
+
+            $rfc->update($attributes);
+        });
 
         if ($newStatus->shouldNotifyPemohon()
             && $rfc->submittedBy

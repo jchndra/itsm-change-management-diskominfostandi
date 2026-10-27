@@ -159,7 +159,7 @@
                     @forelse ($deletedRfcs as $rfc)
                         <tr wire:key="deleted-rfc-{{ $rfc->id }}" class="align-top transition hover:bg-slate-50/60">
                             <td data-label="No. RFC" class="whitespace-nowrap px-5 py-4 text-[13px] font-bold text-blue-800">
-                                {{ $rfc->rfc_number }}
+                                {{ $rfc->displayIdentifier() }}
                             </td>
                             <td data-label="Judul Perubahan" class="max-w-[260px] px-5 py-4">
                                 <p class="text-[13px] font-medium leading-snug text-slate-700">{{ $rfc->title }}</p>
@@ -258,7 +258,7 @@
                 <div class="space-y-3 px-5 py-4">
                     <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                         <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Nomor RFC</p>
-                        <p class="mt-0.5 text-sm font-bold text-blue-800">{{ $selectedRfc->rfc_number }}</p>
+                        <p class="mt-0.5 text-sm font-bold text-blue-800">{{ $selectedRfc->displayIdentifier() }}</p>
                         <p class="mt-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Judul
                             Perubahan</p>
                         <p class="mt-0.5 text-sm font-medium leading-snug text-slate-700">{{ $selectedRfc->title }}</p>

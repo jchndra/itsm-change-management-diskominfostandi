@@ -25,11 +25,11 @@ class ChangeManagerTicketNotification extends Notification
     {
         return [
             'rfc_id' => $this->rfc->id,
-            'rfc_number' => $this->rfc->rfc_number,
+            'rfc_number' => $this->rfc->displayIdentifier(),
             'ticket_number' => $this->ticketNumber,
             'title' => $this->rfc->title,
             'status' => RfcStatus::TICKET_CREATED->value,
-            'message' => "Tiket {$this->ticketNumber} ({$this->rfc->rfc_number}) menunggu review Anda",
+            'message' => "Tiket {$this->ticketNumber} ({$this->rfc->displayIdentifier()}) menunggu review Anda",
         ];
     }
 }

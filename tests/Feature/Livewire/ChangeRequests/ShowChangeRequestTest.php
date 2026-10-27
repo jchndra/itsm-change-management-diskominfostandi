@@ -162,6 +162,7 @@ it('shows submitted request details and hides the old purpose section', function
         ->set('is_physical_letter', true)
         ->set('physical_letter_number', 'ND-123/2026')
         ->set('attachments', [UploadedFile::fake()->create('nota-dinas.pdf', 100, 'application/pdf')])
+        ->set('approval_letter', UploadedFile::fake()->create('surat-persetujuan.pdf', 100, 'application/pdf'))
         ->call('save', RfcStatus::SUBMITTED->value)
         ->assertHasNoErrors();
 

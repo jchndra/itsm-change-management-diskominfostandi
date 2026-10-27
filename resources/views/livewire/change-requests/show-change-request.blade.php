@@ -32,6 +32,15 @@
             && in_array($status, [\App\Enums\RfcStatus::IMPLEMENTED, \App\Enums\RfcStatus::FAILED], true)
             && $implementation
             && $implementation->evaluated_at === null;
+        $approvalLetters = $rfc->attachments
+            ->filter(fn ($attachment) => $attachment->isApprovalLetter())
+            ->sortByDesc('id')
+            ->values();
+        $currentApprovalLetter = $approvalLetters->first();
+        $previousApprovalLetters = $approvalLetters->slice(1);
+        $supportingAttachments = $rfc->attachments
+            ->reject(fn ($attachment) => $attachment->isApprovalLetter())
+            ->values();
     @endphp
 
     <!-- Header & Tombol Kembali -->
@@ -45,7 +54,7 @@
                             d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                     </svg>
                 </a>
-                <h1 class="text-2xl font-bold text-slate-900">{{ $rfc->rfc_number ?? 'Draft RFC' }}</h1>
+                <h1 class="text-2xl font-bold text-slate-900">{{ $rfc->displayIdentifier() }}</h1>
 
                 <x-status-badge :status="$rfc->status" :tone="$rfc->displayStatusTone()" :label="$rfc->displayStatusLabel()" />
             </div>
@@ -180,12 +189,89 @@
                 </div>
             </div>
 
-            <!-- Lampiran -->
-            @if ($rfc->attachments->isNotEmpty())
+            {{-- Surat Persetujuan Bertanda Tangan --}}
+            @if ($approvalLetters->isNotEmpty() || (auth()->user()?->can('update', $rfc) ?? false))
+                <div class="bg-white rounded-xl shadow-sm border border-indigo-100 p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Surat Persetujuan Bertanda Tangan</h3>
+
+                    @if ($currentApprovalLetter)
+                        <div class="rounded-lg border border-indigo-200 bg-indigo-50/60 px-4 py-3">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <div class="min-w-0 flex-1">
+                                    <p class="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                                        <span class="min-w-0 truncate">{{ $currentApprovalLetter->original_name }}</span>
+                                        <span
+                                            class="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                                            Berlaku
+                                        </span>
+                                    </p>
+                                    <p class="mt-0.5 text-xs text-slate-500">
+                                        {{ number_format($currentApprovalLetter->size / 1024, 0, ',', '.') }} KB
+                                        &middot;
+                                        {{ $currentApprovalLetter->created_at?->copy()->locale('id')->translatedFormat('d M Y, H:i') }}
+                                    </p>
+                                </div>
+                                <div class="flex items-center gap-3 text-xs font-semibold">
+                                    <a href="{{ route('change-requests.attachments.show', ['rfc' => $rfc, 'attachment' => $currentApprovalLetter]) }}"
+                                        target="_blank" rel="noopener" class="text-indigo-600 hover:text-indigo-700">
+                                        Lihat
+                                    </a>
+                                    <a href="{{ route('change-requests.attachments.show', ['rfc' => $rfc, 'attachment' => $currentApprovalLetter, 'download' => 1]) }}"
+                                        class="text-indigo-600 hover:text-indigo-700">
+                                        Unduh
+                                    </a>
+                                </div>
+                            </div>
+
+                            @if ($previousApprovalLetters->isNotEmpty())
+                                <div class="mt-3 border-t border-indigo-100 pt-3">
+                                    <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                                        Riwayat surat persetujuan ({{ $previousApprovalLetters->count() }})
+                                    </p>
+                                    <ul class="mt-2 divide-y divide-indigo-100">
+                                        @foreach ($previousApprovalLetters as $previousApprovalLetter)
+                                            <li class="flex flex-wrap items-center justify-between gap-2 py-2 text-xs"
+                                                wire:key="approval-letter-{{ $previousApprovalLetter->id }}">
+                                                <div class="min-w-0 flex-1">
+                                                    <p class="truncate font-medium text-slate-700">
+                                                        {{ $previousApprovalLetter->original_name }}
+                                                    </p>
+                                                    <p class="text-[11px] text-slate-400">
+                                                        {{ $previousApprovalLetter->created_at?->copy()->locale('id')->translatedFormat('d M Y, H:i') }}
+                                                    </p>
+                                                </div>
+                                                <div class="flex items-center gap-3 font-semibold">
+                                                    <a href="{{ route('change-requests.attachments.show', ['rfc' => $rfc, 'attachment' => $previousApprovalLetter]) }}"
+                                                        target="_blank" rel="noopener"
+                                                        class="text-indigo-600 hover:text-indigo-700">
+                                                        Lihat
+                                                    </a>
+                                                    <a href="{{ route('change-requests.attachments.show', ['rfc' => $rfc, 'attachment' => $previousApprovalLetter, 'download' => 1]) }}"
+                                                        class="text-indigo-600 hover:text-indigo-700">
+                                                        Unduh
+                                                    </a>
+                                                </div>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endif
+                        </div>
+                    @else
+                        <p class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+                            Belum ada surat persetujuan bertanda tangan. Unggah PDF melalui halaman edit sebelum
+                            mengajukan RFC.
+                        </p>
+                    @endif
+                </div>
+            @endif
+
+            {{-- Lampiran Pendukung --}}
+            @if ($supportingAttachments->isNotEmpty())
                 <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
-                    <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Lampiran</h3>
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Lampiran Pendukung</h3>
                     <ul class="divide-y divide-slate-100">
-                        @foreach ($rfc->attachments as $attachment)
+                        @foreach ($supportingAttachments as $attachment)
                             <li class="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
                                 <div class="min-w-0 flex-1">
                                     <p class="truncate text-sm font-medium text-slate-800">{{ $attachment->original_name }}</p>

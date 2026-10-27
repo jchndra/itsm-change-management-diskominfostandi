@@ -38,7 +38,7 @@
                 <div class="space-y-4 px-5 py-4">
                     <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                         <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Nomor RFC</p>
-                        <p class="mt-0.5 text-sm font-bold text-blue-800">{{ $rfc->rfc_number }}</p>
+                        <p class="mt-0.5 text-sm font-bold text-blue-800">{{ $rfc->displayIdentifier() }}</p>
                         <p class="mt-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Judul
                             Perubahan</p>
                         <p class="mt-0.5 text-sm font-medium leading-snug text-slate-700">{{ $rfc->title }}</p>
