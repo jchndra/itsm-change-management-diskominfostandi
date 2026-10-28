@@ -7,6 +7,8 @@ use App\Livewire\ChangeRequests\ShowChangeRequest;
 use App\Livewire\Requester\Dashboard;
 use App\Models\ChangeRequest;
 use App\Models\ChangeRequestImplementation;
+use App\Models\ReleaseTask;
+use App\Models\ReleaseTeamMember;
 use App\Models\User;
 use App\Notifications\RfcStatusChangedNotification;
 use App\Services\RfcClosureService;
@@ -29,6 +31,24 @@ beforeEach(function () {
 
     $this->cm = User::factory()->create(['name' => 'CM Hasil']);
     $this->cm->assignRole('Change Manager');
+
+    $this->releaseTeam = User::factory()->create(['name' => 'Tim Rilis Hasil']);
+    $this->releaseTeam->assignRole('Tim Rilis');
+
+    $this->releaseTeamMember = ReleaseTeamMember::factory()->create([
+        'user_id' => $this->releaseTeam->id,
+        'is_active' => true,
+    ]);
+
+    $this->assignReleaseTeam = function (ChangeRequest $rfc): User {
+        ReleaseTask::factory()->create([
+            'change_request_id' => $rfc->id,
+            'release_team_member_id' => $this->releaseTeamMember->id,
+            'execution_status' => 'pending',
+        ]);
+
+        return $this->releaseTeam;
+    };
 
     $this->makeRfc = function (array $attributes = []): ChangeRequest {
         return ChangeRequest::factory()->create(array_merge([
@@ -83,12 +103,13 @@ beforeEach(function () {
     $this->recordOutcome = function (string $target, string $result): ChangeRequest {
         $rfc = ($this->makeRfc)(['status' => RfcStatus::APPROVED->value]);
         ($this->makeImplementation)($rfc, $result);
+        $releaseTeam = ($this->assignReleaseTeam)($rfc);
 
-        RfcStatusTransition::transitionTo($rfc, RfcStatus::IN_PROGRESS, $this->cm);
+        RfcStatusTransition::transitionTo($rfc, RfcStatus::IN_PROGRESS, $releaseTeam);
         RfcStatusTransition::transitionTo(
             $rfc->fresh(),
             RfcStatus::from($target),
-            $this->cm,
+            $releaseTeam,
             null,
             ['implementation_result' => $result],
         );

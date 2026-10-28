@@ -144,6 +144,8 @@ class RfcStatusTransition
             'owner' => $rfc->submitted_by_id === $actor->id,
             'admin' => $actor->hasRole('Admin'),
             'change_manager' => $actor->hasRole('Change Manager'),
+            'release_team' => $actor->hasPermissionTo('rfc.record_execution')
+                && $rfc->hasReleaseTaskFor($actor),
             default => false,
         };
     }

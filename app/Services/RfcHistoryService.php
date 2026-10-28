@@ -19,9 +19,12 @@ class RfcHistoryService
     /**
      * Susun riwayat proses dari kejadian nyata yang tersedia.
      *
+     * Mode Tim Rilis menyembunyikan nomor tiket, catatan keputusan internal,
+     * evaluasi, dan penutupan tanpa mengubah tampilan Pemohon atau staf.
+     *
      * @return array{events: array<int, array<string, mixed>>, next_steps: array<int, array<string, string>>}
      */
-    public function build(ChangeRequest $rfc, bool $forStaff = false): array
+    public function build(ChangeRequest $rfc, bool $forStaff = false, bool $forReleaseTeam = false): array
     {
         $rfc->loadMissing([
             'riskAssessment.assessedBy',
@@ -87,7 +90,7 @@ class RfcHistoryService
                         : 'Diverifikasi Admin dan diteruskan ke Change Manager',
                     'note' => $forStaff
                         ? ($staffNote !== '' ? $staffNote : null)
-                        : (filled($ticketNumber) ? "Nomor tiket: {$ticketNumber}" : null),
+                        : (! $forReleaseTeam && filled($ticketNumber) ? "Nomor tiket: {$ticketNumber}" : null),
                     'time' => $activity->created_at,
                     'tone' => 'success',
                     'actor_name' => $forStaff ? $activity->causer?->name : null,
@@ -328,7 +331,7 @@ class RfcHistoryService
         $sequence += 1000;
         foreach ($rfc->decisions->sortBy('decision_date') as $decision) {
             $sequence++;
-            $this->mergeOrAddDecision($events, $decision, $forStaff, $sequence);
+            $this->mergeOrAddDecision($events, $decision, $forStaff, $forReleaseTeam, $sequence);
         }
 
         $this->ensureCreationEvent($events, $rfc, $forStaff);
@@ -370,6 +373,14 @@ class RfcHistoryService
                 if ($event['key'] !== RfcStatus::CANCELLED->value
                     || ($event['actor_role'] ?? null) !== 'Pemohon') {
                     $event['actor_name'] = null;
+                }
+
+                // Tim Rilis hanya menerima status dan ringkasan pelaksanaan;
+                // seluruh catatan keputusan, evaluasi, dan penutupan internal
+                // tidak boleh ikut terkirim ke halaman detail.
+                if ($forReleaseTeam) {
+                    $event['actor_name'] = null;
+                    $event['note'] = null;
                 }
             }
             unset($event);
@@ -813,8 +824,13 @@ class RfcHistoryService
         ];
     }
 
-    private function mergeOrAddDecision(array &$events, Decision $decision, bool $forStaff, int $order): void
-    {
+    private function mergeOrAddDecision(
+        array &$events,
+        Decision $decision,
+        bool $forStaff,
+        bool $forReleaseTeam,
+        int $order,
+    ): void {
         $decisionTime = Carbon::parse($decision->decision_date ?? $decision->created_at ?? now());
         $status = DecisionStatus::tryFrom((string) $decision->decision_status);
         $reason = filled($decision->reason) ? trim((string) $decision->reason) : null;
@@ -849,6 +865,7 @@ class RfcHistoryService
             DecisionStatus::REJECTED,
             DecisionStatus::REVISION_REQUIRED,
         ], true);
+        $noteVisible = $forStaff || (! $forReleaseTeam && $noteVisibleToRequester);
 
         if ($key) {
             foreach ($events as $index => $event) {
@@ -861,7 +878,7 @@ class RfcHistoryService
                     $events[$index]['actor_name'] = $forStaff ? $actorName : null;
                     $events[$index]['actor_role'] = 'Change Manager';
 
-                    if ($reason && ($forStaff || $noteVisibleToRequester)) {
+                    if ($reason && $noteVisible) {
                         $events[$index]['note'] = $events[$index]['note'] ?: $reason;
                     }
 
@@ -873,7 +890,7 @@ class RfcHistoryService
         $events[] = [
             'key' => $key ?? 'legacy_decision',
             'label' => $label,
-            'note' => $reason && ($forStaff || $noteVisibleToRequester) ? $reason : null,
+            'note' => $reason && $noteVisible ? $reason : null,
             'time' => $decisionTime,
             'tone' => $tone,
             'actor_name' => $forStaff ? $actorName : null,

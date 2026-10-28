@@ -235,7 +235,7 @@ class ListChangeRequests extends Component
                 'submittedBy.opd',
                 'implementation',
                 'releaseTasks',
-            ])))->paginate(10);
+            ]), includeTicketNumber: false, includeOpdFilter: false))->paginate(10);
 
             return view('livewire.change-requests.list-change-requests', [
                 'roleView' => 'release_team',
@@ -278,30 +278,35 @@ class ListChangeRequests extends Component
             : $query->latest();
     }
 
-    private function applyFilters(Builder $query): Builder
+    private function applyFilters(Builder $query, bool $includeTicketNumber = true, bool $includeOpdFilter = true): Builder
     {
         return $query
             ->when($this->queueFilter === 'incoming', fn (Builder $q) => $q->whereIn('status', [
                 RfcStatus::SUBMITTED->value,
                 RfcStatus::RETURNED_TO_ADMIN->value,
             ]))
-            ->when($this->search !== '', function (Builder $query): void {
+            ->when($this->search !== '', function (Builder $query) use ($includeTicketNumber): void {
                 $draftId = ChangeRequest::draftIdFromSearch($this->search);
 
-                $query->where(fn (Builder $sub) => $sub
-                    ->where('title', 'like', "%{$this->search}%")
-                    ->orWhere('rfc_number', 'like', "%{$this->search}%")
-                    ->orWhere('ticket_number', 'like', "%{$this->search}%")
-                    ->when($draftId !== null, fn (Builder $draftQuery) => $draftQuery->orWhere(
-                        fn (Builder $draft) => $draft
+                $query->where(function (Builder $sub) use ($draftId, $includeTicketNumber): void {
+                    $sub->where('title', 'like', "%{$this->search}%")
+                        ->orWhere('rfc_number', 'like', "%{$this->search}%");
+
+                    if ($includeTicketNumber) {
+                        $sub->orWhere('ticket_number', 'like', "%{$this->search}%");
+                    }
+
+                    if ($draftId !== null) {
+                        $sub->orWhere(fn (Builder $draft) => $draft
                             ->whereKey($draftId)
-                            ->where('status', RfcStatus::DRAFT->value)
-                    )));
+                            ->where('status', RfcStatus::DRAFT->value));
+                    }
+                });
             })
             ->when($this->statusFilter !== '', fn (Builder $q) => $q->where('status', $this->statusFilter))
             ->when($this->categoryFilter !== '', fn (Builder $q) => $q->where('change_type', $this->categoryFilter))
             ->when($this->applicationFilter !== '', fn (Builder $q) => $q->where('application_id', $this->applicationFilter))
-            ->when($this->opdFilter !== '', fn (Builder $q) => $q->whereHas(
+            ->when($includeOpdFilter && $this->opdFilter !== '', fn (Builder $q) => $q->whereHas(
                 'submittedBy',
                 fn (Builder $sub) => $sub->where('opd_id', $this->opdFilter)
             ))

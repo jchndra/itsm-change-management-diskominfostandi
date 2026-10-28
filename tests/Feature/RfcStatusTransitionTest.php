@@ -3,6 +3,8 @@
 use App\Enums\RfcStatus;
 use App\Exceptions\InvalidRfcStatusTransitionException;
 use App\Models\ChangeRequest;
+use App\Models\ReleaseTask;
+use App\Models\ReleaseTeamMember;
 use App\Models\User;
 use App\StateMachines\RfcStatusTransition;
 use Database\Seeders\PermissionSeeder;
@@ -87,14 +89,26 @@ test('admin dapat meneruskan submitted ke ticket_created', function () {
     expect($rfc->fresh()->status)->toBe(RfcStatus::TICKET_CREATED->value);
 });
 
-test('change manager dapat menjalankan approved sampai implemented lalu closed', function () {
+test('tim rilis yang ditugaskan menjalankan approved sampai implemented lalu change manager menutup', function () {
     $cm = userWithRole('Change Manager');
+    $releaseTeam = userWithRole('Tim Rilis');
     $rfc = ChangeRequest::factory()->create([
         'status' => RfcStatus::APPROVED->value,
     ]);
 
-    RfcStatusTransition::transitionTo($rfc, RfcStatus::IN_PROGRESS, $cm);
-    RfcStatusTransition::transitionTo($rfc, RfcStatus::IMPLEMENTED, $cm);
+    $member = ReleaseTeamMember::factory()->create([
+        'user_id' => $releaseTeam->id,
+        'is_active' => true,
+    ]);
+
+    ReleaseTask::factory()->create([
+        'change_request_id' => $rfc->id,
+        'release_team_member_id' => $member->id,
+        'execution_status' => 'pending',
+    ]);
+
+    RfcStatusTransition::transitionTo($rfc, RfcStatus::IN_PROGRESS, $releaseTeam);
+    RfcStatusTransition::transitionTo($rfc, RfcStatus::IMPLEMENTED, $releaseTeam);
     RfcStatusTransition::transitionTo($rfc, RfcStatus::CLOSED, $cm);
 
     expect($rfc->fresh()->status)->toBe(RfcStatus::CLOSED->value);

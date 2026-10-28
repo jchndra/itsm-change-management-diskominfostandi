@@ -18,8 +18,12 @@
     @php
         $currentUser = auth()->user();
         $roleName = $currentUser?->getRoleNames()->first() ?? 'Pengguna';
-        $isReleaseTeam = $currentUser?->isReleaseTeam() ?? false;
-        $isStaff = ($currentUser?->isStaff() ?? false) || $isReleaseTeam;
+        $canViewAllRfc = $currentUser?->can('rfc.view_all') ?? false;
+        $canViewOwnRfc = $currentUser?->can('rfc.view_own') ?? false;
+        $isReleaseTeamOnly = ($currentUser?->can('rfc.view_assigned') ?? false)
+            && ! $canViewAllRfc
+            && ! $canViewOwnRfc;
+        $isStaff = $canViewAllRfc;
         $canManageReleaseTeam = $currentUser?->can('release_team.manage') ?? false;
         $unreadCount = $currentUser ? $currentUser->unreadNotifications()->count() : 0;
         $headerNotifications = $currentUser ? $currentUser->unreadNotifications()->take(5)->get() : collect();
@@ -33,6 +37,8 @@
         $isDashboardActive = $isStaff
             ? false
             : request()->routeIs('requester.dashboard');
+        $isReleaseTaskActive = $isReleaseTeamOnly
+            && request()->routeIs(['change-requests.index', 'change-requests.show']);
         $isRfcListActive = $isStaff
             && request()->routeIs(['change-requests.index', 'change-requests.show'])
             && ! $isTicketQueueActive;
@@ -76,6 +82,37 @@
 
             {{-- Navigasi --}}
             <nav class="mt-2 flex-1 space-y-1 overflow-y-auto px-3 pb-4">
+                @if ($isReleaseTeamOnly)
+                    <x-sidebar-link :href="route('change-requests.index')" :active="$isReleaseTaskActive">
+                        <x-slot:icon>
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                    d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                            </svg>
+                        </x-slot:icon>
+                        Tugas Saya
+                    </x-sidebar-link>
+
+                    <x-sidebar-link :href="route('notifications.index')" :active="request()->routeIs('notifications.*')" :badge="$unreadCount ?: null">
+                        <x-slot:icon>
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                    d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+                            </svg>
+                        </x-slot:icon>
+                        Notifikasi
+                    </x-sidebar-link>
+
+                    <x-sidebar-link :href="route('profile.show')" :active="request()->routeIs('profile.*')">
+                        <x-slot:icon>
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                    d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.25a8.25 8.25 0 0 1 15 0" />
+                            </svg>
+                        </x-slot:icon>
+                        Profil
+                    </x-sidebar-link>
+                @else
                 @if ($isStaff)
                     @if ($canViewAdminDashboard)
                         <x-sidebar-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.dashboard')">
@@ -217,6 +254,7 @@
                     </x-slot:icon>
                     Profil
                 </x-sidebar-link>
+                @endif
             </nav>
 
             {{-- Footer sidebar --}}

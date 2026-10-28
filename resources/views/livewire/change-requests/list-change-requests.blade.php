@@ -1,6 +1,6 @@
 <div class="space-y-6">
     @php
-        $showTicketColumn = $roleView !== 'pemohon'
+        $showTicketColumn = ! in_array($roleView, ['pemohon', 'release_team'], true)
             && $rfcs->getCollection()->contains(fn ($rfc): bool => filled($rfc->ticket_number));
     @endphp
 
@@ -165,8 +165,12 @@
 
         <div class="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-                <h3 class="text-base font-bold text-slate-800">Daftar Permintaan Perubahan (RFC)</h3>
-                <p class="text-xs text-slate-500">Pantau dan kelola seluruh usulan perubahan sistem informasi</p>
+                <h3 class="text-base font-bold text-slate-800">{{ $roleView === 'release_team' ? 'Tugas Saya' : 'Daftar Permintaan Perubahan (RFC)' }}</h3>
+                <p class="text-xs text-slate-500">
+                    {{ $roleView === 'release_team'
+                        ? 'RFC yang ditugaskan kepada Anda beserta status pelaksanaannya'
+                        : 'Pantau dan kelola seluruh usulan perubahan sistem informasi' }}
+                </p>
             </div>
 
             <div class="flex items-center gap-3">
@@ -239,7 +243,7 @@
                 </select>
             </div>
 
-            @if ($roleView !== 'pemohon')
+            @if (! in_array($roleView, ['pemohon', 'release_team'], true))
                 <div>
                     <label for="filter-opd" class="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Unit Kerja Pemohon</label>
                     <select id="filter-opd" wire:model.live="opdFilter"

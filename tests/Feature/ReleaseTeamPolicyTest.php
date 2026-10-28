@@ -1,14 +1,18 @@
 <?php
 
+use App\Enums\DecisionStatus;
 use App\Enums\RfcStatus;
 use App\Exceptions\InvalidRfcStatusTransitionException;
+use App\Livewire\ChangeRequests\DeletionHistory;
 use App\Livewire\ChangeRequests\ListChangeRequests;
 use App\Models\ChangeRequest;
 use App\Models\ChangeRequestImplementation;
+use App\Models\Decision;
 use App\Models\ReleaseTask;
 use App\Models\ReleaseTeamMember;
 use App\Models\User;
 use App\Services\RfcDeletionService;
+use App\Services\RfcHistoryService;
 use App\StateMachines\RfcStatusTransition;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -120,6 +124,86 @@ it('hanya menampilkan RFC yang ditugaskan kepada Tim Rilis', function () {
         ->and($user->can('view', $unassigned))->toBeFalse()
         ->and($user->can('viewEvidence', $assigned))->toBeTrue()
         ->and($user->can('viewEvidence', $otherRfc))->toBeFalse();
+});
+
+it('menyembunyikan nomor tiket, keputusan, disposisi, dan riwayat internal dari Tim Rilis', function () {
+    $manager = releaseTeamPolicyUser(['Change Manager'], ['name' => 'Manajer Internal Rahasia']);
+    $user = releaseTeamPolicyUser(['Tim Rilis']);
+    $member = releaseTeamPolicyMember($user);
+
+    $rfc = ChangeRequest::factory()->create([
+        'title' => 'RFC Tugas Dengan Data Internal',
+        'status' => RfcStatus::APPROVED->value,
+        'ticket_number' => 'CHG-2026-7777',
+    ]);
+
+    releaseTeamPolicyTask($rfc, $member, [
+        'instruction' => 'Instruksi disposisi rahasia.',
+    ]);
+
+    Decision::create([
+        'change_request_id' => $rfc->id,
+        'authority_id' => null,
+        'recorded_by_id' => $manager->id,
+        'snapshot_authority_name' => 'Pejabat Internal',
+        'snapshot_authority_position' => 'Kepala Bidang Internal',
+        'decision_status' => DecisionStatus::APPROVED->value,
+        'decision_date' => now(),
+        'reason' => 'Alasan keputusan internal rahasia.',
+    ]);
+
+    activity('rfc')
+        ->performedOn($rfc)
+        ->causedBy($manager)
+        ->withProperties([
+            'old_status' => RfcStatus::TICKET_CREATED->value,
+            'new_status' => RfcStatus::APPROVED->value,
+            'note' => 'Catatan transisi internal rahasia.',
+        ])
+        ->log('Status RFC disetujui.');
+
+    $this->actingAs($user);
+
+    $this->get(route('change-requests.show', $rfc))
+        ->assertOk()
+        ->assertSee($rfc->title)
+        ->assertDontSee('Nomor Tiket')
+        ->assertDontSee('CHG-2026-7777')
+        ->assertDontSee('Alasan keputusan internal rahasia.')
+        ->assertDontSee('Catatan transisi internal rahasia.')
+        ->assertDontSee('Instruksi disposisi rahasia.')
+        ->assertDontSee('Manajer Internal Rahasia');
+
+    $history = app(RfcHistoryService::class)->build($rfc->fresh(), false, true);
+    $serializedHistory = json_encode($history['events']);
+
+    expect($serializedHistory)
+        ->not->toContain('Alasan keputusan internal rahasia.')
+        ->not->toContain('Catatan transisi internal rahasia.')
+        ->not->toContain('Instruksi disposisi rahasia.')
+        ->not->toContain('Manajer Internal Rahasia')
+        ->and(collect($history['events'])->pluck('note')->filter()->every(fn ($note): bool => ! str_contains((string) $note, 'rahasia')))
+        ->toBeTrue();
+
+    $this->actingAs($manager);
+
+    $this->get(route('change-requests.show', $rfc))
+        ->assertOk()
+        ->assertSee('CHG-2026-7777')
+        ->assertSee('Alasan keputusan internal rahasia.')
+        ->assertSee('Manajer Internal Rahasia');
+});
+
+it('menolak Tim Rilis membuka arsip penghapusan RFC', function () {
+    $user = releaseTeamPolicyUser(['Tim Rilis']);
+
+    $this->actingAs($user)
+        ->get(route('change-requests.deletions.index'))
+        ->assertForbidden();
+
+    Livewire::actingAs($user)
+        ->test(DeletionHistory::class)
+        ->assertForbidden();
 });
 
 it('mengizinkan eksekusi hanya untuk anggota aktif yang ditugaskan pada status yang tepat', function () {

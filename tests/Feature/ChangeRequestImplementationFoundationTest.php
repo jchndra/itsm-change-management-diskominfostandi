@@ -5,6 +5,8 @@ use App\Enums\ImplementationResult;
 use App\Enums\RfcStatus;
 use App\Models\ChangeRequest;
 use App\Models\ChangeRequestImplementation;
+use App\Models\ReleaseTask;
+use App\Models\ReleaseTeamMember;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Database\QueryException;
@@ -45,6 +47,24 @@ function foundationImplementation(ChangeRequest $rfc, array $attributes = []): C
         'summary' => 'Perubahan diterapkan pada lingkungan produksi.',
         'test_results' => 'Seluruh pengujian fungsional dan regresi berhasil.',
     ], $attributes));
+}
+
+function foundationReleaseTeamActor(ChangeRequest $rfc, array $taskAttributes = []): User
+{
+    $user = foundationUser('Tim Rilis');
+
+    $member = ReleaseTeamMember::factory()->create([
+        'user_id' => $user->id,
+        'is_active' => true,
+    ]);
+
+    ReleaseTask::factory()->create(array_merge([
+        'change_request_id' => $rfc->id,
+        'release_team_member_id' => $member->id,
+        'execution_status' => 'pending',
+    ], $taskAttributes));
+
+    return $user;
 }
 
 it('membuat tabel implementasi dan kolom penutupan dengan unique RFC', function () {
@@ -124,17 +144,30 @@ it('menyediakan label Indonesia untuk hasil implementasi dan tindak lanjut', fun
         ->and(FollowUpAction::labelFor('escalation'))->toBe('Eskalasi atau investigasi');
 });
 
-it('mengizinkan implement hanya untuk change manager pada approved dan in_progress', function () {
+it('mengizinkan implement hanya untuk Tim Rilis yang ditugaskan pada approved dan in_progress', function () {
     $cm = foundationUser('Change Manager');
     $pemohon = foundationUser('Pemohon');
     $admin = foundationUser('Admin');
+    $superAdmin = foundationUser('Super Admin');
+    $otherTeam = foundationUser('Tim Rilis');
+    ReleaseTeamMember::factory()->create([
+        'user_id' => $otherTeam->id,
+        'is_active' => true,
+    ]);
 
     foreach ([RfcStatus::APPROVED, RfcStatus::IN_PROGRESS] as $status) {
         $rfc = foundationRfc($status);
+        $team = foundationReleaseTeamActor($rfc, [
+            'execution_status' => $status === RfcStatus::IN_PROGRESS ? 'in_progress' : 'pending',
+        ]);
 
-        expect($cm->can('implement', $rfc))->toBeTrue()
+        expect($team->can('implement', $rfc))->toBeTrue()
+            ->and($team->can('recordExecution', $rfc))->toBeTrue()
+            ->and($cm->can('implement', $rfc))->toBeFalse()
             ->and($pemohon->can('implement', $rfc))->toBeFalse()
-            ->and($admin->can('implement', $rfc))->toBeFalse();
+            ->and($admin->can('implement', $rfc))->toBeFalse()
+            ->and($superAdmin->can('implement', $rfc))->toBeFalse()
+            ->and($otherTeam->can('implement', $rfc))->toBeFalse();
     }
 
     $otherStatuses = [
@@ -151,8 +184,17 @@ it('mengizinkan implement hanya untuk change manager pada approved dan in_progre
     ];
 
     foreach ($otherStatuses as $status) {
-        expect($cm->can('implement', foundationRfc($status)))->toBeFalse();
+        $rfc = foundationRfc($status);
+        $team = foundationReleaseTeamActor($rfc);
+
+        expect($team->can('implement', $rfc))->toBeFalse();
     }
+
+    $trashed = foundationRfc(RfcStatus::APPROVED);
+    $trashedTeam = foundationReleaseTeamActor($trashed);
+    $trashed->delete();
+
+    expect($trashedTeam->can('implement', $trashed))->toBeFalse();
 });
 
 it('mengizinkan evaluasi hanya setelah implementasi ada dan belum dievaluasi', function () {

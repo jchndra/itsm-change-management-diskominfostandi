@@ -148,6 +148,14 @@ class RfcImplementationService
                     );
                 }
 
+                // Policy yang sama tetap ditegakkan di service agar pemanggilan
+                // langsung, termasuk oleh Super Admin, tidak melewati penugasan.
+                if (! $actor->can('implement', $lockedRfc)) {
+                    throw new RfcImplementationException(
+                        'Anda tidak memiliki izin untuk mencatat implementasi pada RFC ini.'
+                    );
+                }
+
                 $this->validateFiles($files);
 
                 $evidenceDrafts = [];

@@ -3,7 +3,6 @@
 use App\Enums\FollowUpAction;
 use App\Enums\ImplementationResult;
 use App\Enums\RfcStatus;
-use App\Exceptions\InvalidRfcStatusTransitionException;
 use App\Exceptions\RfcClosureException;
 use App\Exceptions\RfcEvaluationException;
 use App\Exceptions\RfcImplementationException;
@@ -14,6 +13,8 @@ use App\Livewire\ChangeRequests\ShowChangeRequest;
 use App\Models\ChangeRequest;
 use App\Models\ChangeRequestImplementation;
 use App\Models\Evidence;
+use App\Models\ReleaseTask;
+use App\Models\ReleaseTeamMember;
 use App\Models\User;
 use App\Services\RfcClosureService;
 use App\Services\RfcEvaluationService;
@@ -80,6 +81,25 @@ function implementationPdf(string $name = 'bukti-implementasi.pdf', int $kilobyt
     return UploadedFile::fake()->create($name, $kilobytes, 'application/pdf');
 }
 
+function implementationReleaseTeamActor(ChangeRequest $rfc, array $taskAttributes = []): User
+{
+    $user = User::factory()->create();
+    $user->assignRole('Tim Rilis');
+
+    $member = ReleaseTeamMember::factory()->create([
+        'user_id' => $user->id,
+        'is_active' => true,
+    ]);
+
+    ReleaseTask::factory()->create(array_merge([
+        'change_request_id' => $rfc->id,
+        'release_team_member_id' => $member->id,
+        'execution_status' => 'pending',
+    ], $taskAttributes));
+
+    return $user;
+}
+
 function recordImplementation(
     ChangeRequest $rfc,
     User $actor,
@@ -117,12 +137,12 @@ function evaluationNotes(string $suffix = 'implementasi'): string
     return 'Evaluasi menyeluruh terhadap hasil '.$suffix.' beserta bukti pendukungnya.';
 }
 
-test('CM mencatat implementasi sukses dengan bukti privat dan activity audit', function () {
-    $cm = implementationUser('Change Manager');
+test('Tim Rilis mencatat implementasi sukses dengan bukti privat dan activity audit', function () {
     $rfc = implementationRfc(RfcStatus::APPROVED);
+    $team = implementationReleaseTeamActor($rfc);
     $file = implementationPdf();
 
-    $this->actingAs($cm);
+    $this->actingAs($team);
 
     Livewire::test(ImplementChange::class, ['rfc' => $rfc])
         ->set(validImplementationFields())
@@ -137,7 +157,7 @@ test('CM mencatat implementasi sukses dengan bukti privat dan activity audit', f
 
     $implementation = ChangeRequestImplementation::where('change_request_id', $rfc->id)->sole();
 
-    expect($implementation->recorded_by_id)->toBe($cm->id)
+    expect($implementation->recorded_by_id)->toBe($team->id)
         ->and($implementation->implementation_result)->toBe(ImplementationResult::SUCCESS->value)
         ->and($implementation->executor_name)->toBe('Tim Rilis Diskominfostandi')
         ->and($implementation->summary)->toBe('Perubahan berhasil diterapkan pada server produksi.')
@@ -147,7 +167,7 @@ test('CM mencatat implementasi sukses dengan bukti privat dan activity audit', f
 
     expect($evidence->evidence_type)->toBe('implementation')
         ->and($evidence->release_task_id)->toBeNull()
-        ->and($evidence->uploaded_by_id)->toBe($cm->id)
+        ->and($evidence->uploaded_by_id)->toBe($team->id)
         ->and($evidence->original_filename)->toBe('bukti-implementasi.pdf')
         ->and($evidence->mime_type)->toBe('application/pdf')
         ->and($evidence->file_size)->toBe(102400)
@@ -165,7 +185,7 @@ test('CM mencatat implementasi sukses dengan bukti privat dan activity audit', f
         ->first(fn (Activity $activity): bool => data_get($activity->properties, 'new_status') === RfcStatus::IMPLEMENTED->value);
 
     expect($activity)->not->toBeNull()
-        ->and($activity->causer_id)->toBe($cm->id)
+        ->and($activity->causer_id)->toBe($team->id)
         ->and(data_get($activity->properties, 'implementation_result'))->toBe(ImplementationResult::SUCCESS->value)
         ->and(data_get($activity->properties, 'executor_name'))->toBe('Tim Rilis Diskominfostandi')
         ->and(data_get($activity->properties, 'started_at'))->not->toBeNull()
@@ -181,10 +201,10 @@ test('CM mencatat implementasi sukses dengan bukti privat dan activity audit', f
 });
 
 test('hasil gagal mewajibkan catatan dan tindak lanjut beserta keterangannya', function () {
-    $cm = implementationUser('Change Manager');
     $rfc = implementationRfc(RfcStatus::APPROVED);
+    $team = implementationReleaseTeamActor($rfc);
 
-    $this->actingAs($cm);
+    $this->actingAs($team);
 
     $component = Livewire::test(ImplementChange::class, ['rfc' => $rfc])
         ->set(validImplementationFields([
@@ -216,10 +236,10 @@ test('hasil gagal mewajibkan catatan dan tindak lanjut beserta keterangannya', f
 });
 
 test('hasil rollback membuat status failed dan tindak lanjut none tidak mewajibkan keterangan', function () {
-    $cm = implementationUser('Change Manager');
     $rfc = implementationRfc(RfcStatus::APPROVED);
+    $team = implementationReleaseTeamActor($rfc);
 
-    $this->actingAs($cm);
+    $this->actingAs($team);
 
     Livewire::test(ImplementChange::class, ['rfc' => $rfc])
         ->set(validImplementationFields([
@@ -241,10 +261,10 @@ test('hasil rollback membuat status failed dan tindak lanjut none tidak mewajibk
 });
 
 test('validasi menolak isian wajib kosong tanpa bukti dan tanpa konfirmasi', function () {
-    $cm = implementationUser('Change Manager');
     $rfc = implementationRfc(RfcStatus::APPROVED);
+    $team = implementationReleaseTeamActor($rfc);
 
-    $this->actingAs($cm);
+    $this->actingAs($team);
 
     Livewire::test(ImplementChange::class, ['rfc' => $rfc])
         ->set(validImplementationFields([
@@ -269,10 +289,10 @@ test('validasi menolak isian wajib kosong tanpa bukti dan tanpa konfirmasi', fun
 });
 
 test('validasi menolak waktu masa depan dan waktu selesai sebelum waktu mulai', function () {
-    $cm = implementationUser('Change Manager');
     $rfc = implementationRfc(RfcStatus::APPROVED);
+    $team = implementationReleaseTeamActor($rfc);
 
-    $this->actingAs($cm);
+    $this->actingAs($team);
 
     $component = Livewire::test(ImplementChange::class, ['rfc' => $rfc])
         ->set(validImplementationFields([
@@ -292,10 +312,10 @@ test('validasi menolak waktu masa depan dan waktu selesai sebelum waktu mulai', 
 });
 
 test('validasi menolak ZIP mime palsu dan berkas lebih dari 5 MB', function () {
-    $cm = implementationUser('Change Manager');
     $rfc = implementationRfc(RfcStatus::APPROVED);
+    $team = implementationReleaseTeamActor($rfc);
 
-    $this->actingAs($cm);
+    $this->actingAs($team);
 
     Livewire::test(ImplementChange::class, ['rfc' => $rfc])
         ->set(validImplementationFields())
@@ -319,10 +339,10 @@ test('validasi menolak ZIP mime palsu dan berkas lebih dari 5 MB', function () {
 });
 
 test('validasi menolak lebih dari lima berkas bukti', function () {
-    $cm = implementationUser('Change Manager');
     $rfc = implementationRfc(RfcStatus::APPROVED);
+    $team = implementationReleaseTeamActor($rfc);
 
-    $this->actingAs($cm);
+    $this->actingAs($team);
 
     $files = collect(range(1, 6))
         ->map(fn (int $index): UploadedFile => implementationPdf("bukti-{$index}.pdf"))
@@ -337,12 +357,13 @@ test('validasi menolak lebih dari lima berkas bukti', function () {
     expect(Evidence::count())->toBe(0);
 });
 
-test('pemohon dan admin mendapat 403 di halaman implementasi', function () {
+test('pemohon, admin, dan change manager mendapat 403 di halaman implementasi', function () {
     $requester = implementationUser('Pemohon');
     $admin = implementationUser('Admin');
+    $cm = implementationUser('Change Manager');
     $rfc = implementationRfc(RfcStatus::APPROVED, $requester);
 
-    foreach ([$requester, $admin] as $user) {
+    foreach ([$requester, $admin, $cm] as $user) {
         $this->actingAs($user)
             ->get(route('change-requests.implement', $rfc))
             ->assertForbidden();
@@ -355,11 +376,13 @@ test('pemohon dan admin mendapat 403 di halaman implementasi', function () {
     Livewire::actingAs($admin)
         ->test(ImplementChange::class, ['rfc' => $rfc])
         ->assertForbidden();
+
+    Livewire::actingAs($cm)
+        ->test(ImplementChange::class, ['rfc' => $rfc])
+        ->assertForbidden();
 });
 
 test('RFC dengan status selain approved dan in_progress ditolak di halaman implementasi', function () {
-    $cm = implementationUser('Change Manager');
-
     foreach ([
         RfcStatus::DRAFT,
         RfcStatus::SUBMITTED,
@@ -368,20 +391,21 @@ test('RFC dengan status selain approved dan in_progress ditolak di halaman imple
         RfcStatus::CLOSED,
     ] as $status) {
         $rfc = implementationRfc($status);
+        $team = implementationReleaseTeamActor($rfc);
 
-        $this->actingAs($cm)
+        $this->actingAs($team)
             ->get(route('change-requests.implement', $rfc))
             ->assertForbidden();
     }
 });
 
 test('service menolak implementasi kedua pada RFC yang sama', function () {
-    $cm = implementationUser('Change Manager');
     $rfc = implementationRfc(RfcStatus::APPROVED);
+    $team = implementationReleaseTeamActor($rfc);
 
-    recordImplementation($rfc, $cm);
+    recordImplementation($rfc, $team);
 
-    expect(fn () => recordImplementation($rfc->fresh(), $cm))
+    expect(fn () => recordImplementation($rfc->fresh(), $team))
         ->toThrow(RfcImplementationException::class);
 
     expect(ChangeRequestImplementation::where('change_request_id', $rfc->id)->count())->toBe(1)
@@ -400,12 +424,34 @@ test('service menolak Super Admin pada RFC berstatus salah', function () {
         ->and(Storage::disk('local')->allFiles('implementation-evidences'))->toBe([]);
 });
 
-test('kegagalan di tengah transaksi menghapus file dan tidak menyisakan baris', function () {
-    $actor = User::factory()->create();
+test('service menegakkan penugasan Tim Rilis termasuk untuk Super Admin dan Change Manager', function () {
     $rfc = implementationRfc(RfcStatus::APPROVED);
+    $superAdmin = implementationUser('Super Admin');
+    $cm = implementationUser('Change Manager');
 
-    expect(fn () => recordImplementation($rfc, $actor))
-        ->toThrow(InvalidRfcStatusTransitionException::class);
+    expect(fn () => recordImplementation($rfc, $superAdmin))
+        ->toThrow(RfcImplementationException::class);
+
+    expect(fn () => recordImplementation($rfc->fresh(), $cm))
+        ->toThrow(RfcImplementationException::class);
+
+    expect(ChangeRequestImplementation::count())->toBe(0)
+        ->and(Evidence::count())->toBe(0)
+        ->and(Storage::disk('local')->allFiles('implementation-evidences'))->toBe([]);
+});
+
+test('kegagalan di tengah transaksi menghapus file dan tidak menyisakan baris', function () {
+    $rfc = implementationRfc(RfcStatus::APPROVED);
+    $team = implementationReleaseTeamActor($rfc);
+
+    ChangeRequest::updated(function (ChangeRequest $updated): void {
+        if ($updated->status === RfcStatus::IN_PROGRESS->value) {
+            throw new RuntimeException('Simulasi kegagalan implementasi.');
+        }
+    });
+
+    expect(fn () => recordImplementation($rfc, $team))
+        ->toThrow(RuntimeException::class);
 
     expect(ChangeRequestImplementation::count())->toBe(0)
         ->and(Evidence::count())->toBe(0)
@@ -417,8 +463,9 @@ test('staf dapat melihat dan mengunduh bukti implementasi', function () {
     $cm = implementationUser('Change Manager');
     $requester = implementationUser('Pemohon');
     $rfc = implementationRfc(RfcStatus::APPROVED, $requester);
+    $team = implementationReleaseTeamActor($rfc);
 
-    recordImplementation($rfc, $cm, [], [implementationPdf('bukti-staf.pdf')]);
+    recordImplementation($rfc, $team, [], [implementationPdf('bukti-staf.pdf')]);
 
     $evidence = Evidence::where('change_request_id', $rfc->id)->sole();
 
@@ -443,8 +490,9 @@ test('pemohon tidak dapat membuka bukti dan evidence RFC lain menghasilkan 404',
     $cm = implementationUser('Change Manager');
     $requester = implementationUser('Pemohon');
     $rfc = implementationRfc(RfcStatus::APPROVED, $requester);
+    $team = implementationReleaseTeamActor($rfc);
 
-    recordImplementation($rfc, $cm);
+    recordImplementation($rfc, $team);
 
     $evidence = Evidence::where('change_request_id', $rfc->id)->sole();
 
@@ -453,7 +501,8 @@ test('pemohon tidak dapat membuka bukti dan evidence RFC lain menghasilkan 404',
         ->assertForbidden();
 
     $otherRfc = implementationRfc(RfcStatus::APPROVED, $requester);
-    recordImplementation($otherRfc, $cm, [], [implementationPdf('bukti-rfc-lain.pdf')]);
+    $otherTeam = implementationReleaseTeamActor($otherRfc);
+    recordImplementation($otherRfc, $otherTeam, [], [implementationPdf('bukti-rfc-lain.pdf')]);
     $otherEvidence = Evidence::where('change_request_id', $otherRfc->id)->sole();
 
     $this->actingAs($cm)
@@ -487,8 +536,9 @@ test('pemohon hanya melihat hasil ringkasan catatan tindak lanjut dan jumlah buk
     $cm = implementationUser('Change Manager');
     $requester = implementationUser('Pemohon');
     $rfc = implementationRfc(RfcStatus::APPROVED, $requester);
+    $team = implementationReleaseTeamActor($rfc);
 
-    recordImplementation($rfc, $cm, [
+    recordImplementation($rfc, $team, [
         'implementation_result' => ImplementationResult::FAILED->value,
         'executor_name' => 'Nama Pelaksana Rahasia',
         'report_source' => 'Sumber Laporan Rahasia',
@@ -538,25 +588,44 @@ test('pemohon hanya melihat hasil ringkasan catatan tindak lanjut dan jumlah buk
         ->and($staffEvent['note'])->toContain('bukti-rahasia.pdf');
 });
 
-test('route upload-evidence tidak ada dan tombol catat implementasi hanya untuk CM pada status tepat', function () {
+test('tombol catat implementasi hanya untuk Tim Rilis yang ditugaskan dan CM memantau pelaksanaan', function () {
     expect(Route::has('change-requests.upload-evidence'))->toBeFalse();
 
     $cm = implementationUser('Change Manager');
     $admin = implementationUser('Admin');
     $requester = implementationUser('Pemohon');
     $approved = implementationRfc(RfcStatus::APPROVED, $requester);
+    $team = implementationReleaseTeamActor($approved);
+    $unassignedApproved = implementationRfc(RfcStatus::APPROVED, $requester);
     $implemented = implementationRfc(RfcStatus::IMPLEMENTED, $requester);
+    $implementedTeam = implementationReleaseTeamActor($implemented);
 
-    $this->actingAs($cm);
+    $this->actingAs($team);
 
     Livewire::test(ShowChangeRequest::class, ['rfc' => $approved])
         ->assertOk()
         ->assertSee('Catat Implementasi')
         ->assertSee(route('change-requests.implement', $approved));
 
+    $this->actingAs($implementedTeam);
+
     Livewire::test(ShowChangeRequest::class, ['rfc' => $implemented])
         ->assertOk()
         ->assertDontSee('Catat Implementasi');
+
+    $this->actingAs($cm);
+
+    Livewire::test(ShowChangeRequest::class, ['rfc' => $unassignedApproved])
+        ->assertOk()
+        ->assertSee('Disposisi')
+        ->assertDontSee('Catat Implementasi')
+        ->assertDontSee(route('change-requests.implement', $unassignedApproved));
+
+    Livewire::test(ShowChangeRequest::class, ['rfc' => $approved])
+        ->assertOk()
+        ->assertSee('Pantau Pelaksanaan')
+        ->assertDontSee('Catat Implementasi')
+        ->assertDontSee(route('change-requests.implement', $approved));
 
     $this->actingAs($admin);
 

@@ -420,6 +420,7 @@ class DashboardMetricsService
                 'submittedBy:id,name,opd_id',
                 'submittedBy.opd:id,name',
                 'implementation:id,change_request_id,evaluated_at',
+                'releaseTasks:id,change_request_id',
             ])
             ->get([
                 'id',
@@ -449,7 +450,10 @@ class DashboardMetricsService
 
                 [$actionLabel, $actionRoute] = match (true) {
                     $status === RfcStatus::TICKET_CREATED => ['Tinjau Risiko', 'assess-risk'],
-                    in_array($status, [RfcStatus::APPROVED, RfcStatus::IN_PROGRESS], true) => ['Catat Implementasi', 'implement'],
+                    $status === RfcStatus::APPROVED => $rfc->releaseTasks->isEmpty()
+                        ? ['Disposisi', 'show']
+                        : ['Pantau Pelaksanaan', 'show'],
+                    $status === RfcStatus::IN_PROGRESS => ['Pantau Pelaksanaan', 'show'],
                     $needsClosing => ['Tutup RFC', 'close'],
                     in_array($status, [RfcStatus::IMPLEMENTED, RfcStatus::FAILED], true) => ['Evaluasi RFC', 'evaluate'],
                     default => ['Lihat Detail', 'show'],

@@ -117,7 +117,8 @@ it('menampilkan menu pengelolaan akun hanya bagi pengguna dengan permission', fu
     $this->actingAs($releaseTeam)
         ->get(route('notifications.index'))
         ->assertOk()
-        ->assertSee('Daftar RFC')
+        ->assertSee('Tugas Saya')
+        ->assertDontSee('Daftar RFC')
         ->assertDontSee('Akun Tim Rilis')
         ->assertDontSee('Dashboard Change Manager');
 });

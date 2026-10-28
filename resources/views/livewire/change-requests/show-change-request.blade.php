@@ -3,6 +3,7 @@
     @php
         $isStaff = auth()->user()?->can('rfc.view_all') ?? false;
         $isReleaseTeam = auth()->user()?->isReleaseTeam() ?? false;
+        $isReleaseTeamView = $isReleaseTeam && ! $isStaff;
         $returnsToRfcList = $isStaff || $isReleaseTeam;
         $status = \App\Enums\RfcStatus::fromValue($rfc->status);
         $submittedChangeType = match ((string) $rfc->change_type) {
@@ -48,7 +49,7 @@
                         'body' => 'Kategori pengajuan Pemohon berbeda dengan klasifikasi akhir Change Manager.',
                     ];
                 }
-            } elseif ($rfc->emergency_unconfirmed) {
+            } elseif ($rfc->emergency_unconfirmed && ! $isReleaseTeam) {
                 $emergencyBox = [
                     'tone' => 'danger',
                     'title' => 'Anda mengajukan kategori Emergency.',
@@ -58,11 +59,13 @@
         }
         $visibleDecisions = $isStaff
             ? $rfc->decisions
-            : $rfc->decisions->filter(fn ($decision) => in_array($decision->decision_status, [
-                \App\Enums\DecisionStatus::APPROVED->value,
-                \App\Enums\DecisionStatus::REJECTED->value,
-                \App\Enums\DecisionStatus::REVISION_REQUIRED->value,
-            ], true));
+            : ($isReleaseTeamView
+                ? collect()
+                : $rfc->decisions->filter(fn ($decision) => in_array($decision->decision_status, [
+                    \App\Enums\DecisionStatus::APPROVED->value,
+                    \App\Enums\DecisionStatus::REJECTED->value,
+                    \App\Enums\DecisionStatus::REVISION_REQUIRED->value,
+                ], true)));
         $implementation = $rfc->implementation;
         $implementationEvidences = $implementation
             ? $rfc->evidences->where('evidence_type', 'implementation')->values()
@@ -185,7 +188,16 @@
                     </a>
                 @endif
 
-                @if (auth()->user()?->can('implement', $rfc))
+                @if ($isStaff
+                    && in_array($status, [\App\Enums\RfcStatus::APPROVED, \App\Enums\RfcStatus::IN_PROGRESS], true)
+                    && ! (auth()->user()?->can('assignRelease', $rfc) ?? false))
+                    <a href="#disposisi"
+                        class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
+                        Pantau Pelaksanaan
+                    </a>
+                @endif
+
+                @if ($isReleaseTeam && auth()->user()?->can('implement', $rfc))
                     <a href="{{ route('change-requests.implement', $rfc) }}" wire:navigate
                         class="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700">
                         Catat Implementasi
@@ -267,7 +279,7 @@
                             <x-category-badge :kategori="$rfc->change_type" />
                         </div>
                     @endif
-                    @if (! $isStaff && filled($rfc->ticket_number))
+                    @if (! $isStaff && ! $isReleaseTeam && filled($rfc->ticket_number))
                         <div>
                             <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Nomor Tiket</span>
                             <p class="text-slate-800 font-medium">{{ $rfc->ticket_number }}</p>
@@ -413,7 +425,7 @@
             @endif
 
             @if ($isStaff && $rfc->releaseTasks->isNotEmpty())
-                <div class="bg-white rounded-xl shadow-sm border border-blue-100 p-6">
+                <div id="disposisi" class="bg-white rounded-xl shadow-sm border border-blue-100 p-6">
                     <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Disposisi</h3>
 
                     <div class="space-y-4">
@@ -873,7 +885,7 @@
             </div>
 
             @php
-                $history = app(\App\Services\RfcHistoryService::class)->build($rfc, $isStaff);
+                $history = app(\App\Services\RfcHistoryService::class)->build($rfc, $isStaff, $isReleaseTeamView);
                 $events = $history['events'];
                 $nextSteps = $history['next_steps'];
             @endphp

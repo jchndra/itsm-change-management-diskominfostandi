@@ -98,7 +98,8 @@ enum RfcStatus: string
     /**
      * Aktor yang diizinkan untuk transisi ini.
      *
-     * Nilai: owner, admin, change_manager, atau null jika tidak diizinkan.
+     * Nilai: owner, admin, change_manager, release_team, atau null jika tidak
+     * diizinkan.
      */
     public function actorFor(self $target): ?string
     {
@@ -112,9 +113,11 @@ enum RfcStatus: string
                 && in_array($target, [self::TICKET_CREATED, self::NEEDS_REVISION, self::REJECTED], true) => 'admin',
             $this === self::TICKET_CREATED
                 && in_array($target, [self::APPROVED, self::REJECTED, self::RETURNED_TO_ADMIN, self::NEEDS_REVISION], true) => 'change_manager',
-            $this === self::APPROVED && $target === self::IN_PROGRESS => 'change_manager',
+            // Implementasi dicatat oleh anggota Tim Rilis yang ditugaskan,
+            // bukan oleh Change Manager.
+            $this === self::APPROVED && $target === self::IN_PROGRESS => 'release_team',
             $this === self::IN_PROGRESS
-                && in_array($target, [self::IMPLEMENTED, self::FAILED], true) => 'change_manager',
+                && in_array($target, [self::IMPLEMENTED, self::FAILED], true) => 'release_team',
             in_array($this, [self::IMPLEMENTED, self::FAILED], true)
                 && $target === self::CLOSED => 'change_manager',
             default => null,

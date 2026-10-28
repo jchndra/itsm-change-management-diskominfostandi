@@ -146,11 +146,21 @@ class ChangeRequestPolicy
 
     public function implement(User $user, ChangeRequest $rfc): bool
     {
-        if ($rfc->trashed() || ! $user->hasPermissionTo('rfc.assign_release')) {
-            return false;
-        }
+        // Implementasi adalah eksekusi rilis, bukan kewenangan disposisi
+        // Change Manager. Aturan ini sama dengan pencatatan eksekusi agar
+        // pemilik RFC, staf tanpa penugasan, dan Super Admin tanpa tugas tetap
+        // ditolak.
+        return $this->recordExecution($user, $rfc);
+    }
 
-        return in_array(RfcStatus::fromValue($rfc->status), [RfcStatus::APPROVED, RfcStatus::IN_PROGRESS], true);
+    /**
+     * Riwayat penghapusan hanya untuk staf dan pemohon. Tim Rilis tidak
+     * memiliki akses ke arsip lintas RFC karena kewenangannya terbatas pada
+     * tugas yang diberikan.
+     */
+    public function viewDeletionHistory(User $user): bool
+    {
+        return $user->hasAnyPermission(['rfc.view_all', 'rfc.view_own']);
     }
 
     public function evaluate(User $user, ChangeRequest $rfc): bool

@@ -5,6 +5,7 @@ namespace App\Livewire\ChangeRequests;
 use App\Enums\FollowUpAction;
 use App\Enums\ImplementationResult;
 use App\Exceptions\InvalidRfcStatusTransitionException;
+use App\Exceptions\RfcImplementationException;
 use App\Models\ChangeRequest;
 use App\Models\User;
 use App\Services\RfcImplementationService;
@@ -161,7 +162,7 @@ class ImplementChange extends Component
 
         try {
             app(RfcImplementationService::class)->record($this->rfc, $user, $data, $this->files);
-        } catch (InvalidRfcStatusTransitionException $exception) {
+        } catch (InvalidRfcStatusTransitionException|RfcImplementationException $exception) {
             $this->addError('status', $exception->getMessage());
 
             return;

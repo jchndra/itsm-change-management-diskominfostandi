@@ -3,6 +3,8 @@
 use App\Enums\ImplementationResult;
 use App\Enums\RfcStatus;
 use App\Models\ChangeRequest;
+use App\Models\ReleaseTask;
+use App\Models\ReleaseTeamMember;
 use App\Models\User;
 use App\Services\DashboardMetricsService;
 use Database\Seeders\PermissionSeeder;
@@ -182,22 +184,54 @@ it('menampilkan antrean tindakan terlama dengan aksi yang sesuai status', functi
         ->and($queue->pluck('wait_days')->all())->toBe([8, 6, 5, 4, 3])
         ->and($queue->firstWhere('id', $oldest->id)['action_route'])->toBe('assess-risk')
         ->and($queue->firstWhere('id', $implemented->id)['action_route'])->toBe('evaluate')
-        ->and($queue->firstWhere('id', $inProgress->id)['action_route'])->toBe('implement')
-        ->and($queue->firstWhere('id', $approved->id)['action_route'])->toBe('implement')
+        ->and($queue->firstWhere('id', $inProgress->id)['action_label'])->toBe('Pantau Pelaksanaan')
+        ->and($queue->firstWhere('id', $inProgress->id)['action_route'])->toBe('show')
+        ->and($queue->firstWhere('id', $approved->id)['action_label'])->toBe('Disposisi')
+        ->and($queue->firstWhere('id', $approved->id)['action_route'])->toBe('show')
         ->and($queue->firstWhere('id', $failed->id)['action_route'])->toBe('evaluate');
 
     $this->actingAs($manager)
         ->get(route('change-manager.dashboard'))
         ->assertOk()
         ->assertSee('Tinjau Risiko')
-        ->assertSee('Catat Implementasi')
+        ->assertSee('Disposisi')
+        ->assertSee('Pantau Pelaksanaan')
         ->assertSee('Evaluasi RFC')
+        ->assertDontSee('Catat Implementasi')
         ->assertSee(route('change-requests.assess-risk', $oldest->id))
         ->assertSee(route('change-requests.evaluate', $implemented->id))
-        ->assertSee(route('change-requests.implement', $inProgress->id))
-        ->assertSee(route('change-requests.implement', $approved->id))
+        ->assertSee(route('change-requests.show', $inProgress->id))
+        ->assertSee(route('change-requests.show', $approved->id))
         ->assertSee(route('change-requests.evaluate', $failed->id))
         ->assertDontSee('RFC-CM-006');
+});
+
+it('menampilkan pantau pelaksanaan untuk RFC yang sudah didisposisikan', function () {
+    $manager = cmMetricsUser();
+    $rfc = cmMetricsRfc([
+        'rfc_number' => 'RFC-CM-ASSIGNED-001',
+        'status' => RfcStatus::APPROVED->value,
+        'updated_at' => now()->subDay(),
+    ]);
+
+    $member = ReleaseTeamMember::factory()->create(['is_active' => true]);
+    ReleaseTask::factory()->create([
+        'change_request_id' => $rfc->id,
+        'release_team_member_id' => $member->id,
+        'execution_status' => 'pending',
+    ]);
+
+    $queue = collect(app(DashboardMetricsService::class)->changeManagerOverview()['queue'])
+        ->keyBy('id');
+
+    expect($queue[$rfc->id]['action_label'])->toBe('Pantau Pelaksanaan')
+        ->and($queue[$rfc->id]['action_route'])->toBe('show');
+
+    $this->actingAs($manager)
+        ->get(route('change-manager.dashboard'))
+        ->assertOk()
+        ->assertSee('Pantau Pelaksanaan')
+        ->assertDontSee('Catat Implementasi');
 });
 
 it('memakai sumber waktu tunggu yang tepat untuk antrean', function () {

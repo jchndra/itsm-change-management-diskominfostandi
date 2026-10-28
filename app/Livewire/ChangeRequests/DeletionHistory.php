@@ -35,6 +35,13 @@ class DeletionHistory extends Component
 
     public string $errorMessage = '';
 
+    public function mount(): void
+    {
+        // Tim Rilis hanya boleh melihat RFC yang ditugaskan; arsip penghapusan
+        // adalah kewenangan staf dan pemohon.
+        $this->authorize('viewDeletionHistory', ChangeRequest::class);
+    }
+
     public function updatedSearch(): void
     {
         $this->resetPage();

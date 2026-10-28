@@ -106,7 +106,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/create', CreateChangeRequest::class)
             ->middleware('can:rfc.create')
             ->name('create');
-        Route::get('/deletion-history', DeletionHistory::class)->name('deletions.index');
+        Route::get('/deletion-history', DeletionHistory::class)
+            ->middleware('can:viewDeletionHistory,App\Models\ChangeRequest')
+            ->name('deletions.index');
         Route::get('/deletion-history/{rfc}', ShowDeletedChangeRequest::class)
             ->withTrashed()
             ->name('deletions.show');
