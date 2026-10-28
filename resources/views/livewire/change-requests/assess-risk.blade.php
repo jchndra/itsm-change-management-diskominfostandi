@@ -1,12 +1,4 @@
 <div class="max-w-4xl mx-auto space-y-6">
-    @php
-        $submittedCategory = match ((string) $rfc->change_type) {
-            'standard' => 'Standar',
-            'normal' => 'Normal',
-            'emergency' => 'Emergency',
-            default => '-',
-        };
-    @endphp
     {{-- Top Bar Navigation --}}
     <div class="flex items-center justify-between">
         <a href="{{ route('change-requests.index') }}"
@@ -34,8 +26,9 @@
                 {{ $message }}</div>
         @enderror
 
-        <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-medium text-slate-700">
-            Kategori yang diusulkan Pemohon: {{ $submittedCategory }}
+        <div class="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-medium text-slate-700">
+            <span>Kategori yang diusulkan Pemohon:</span>
+            <x-category-badge :kategori="$rfc->change_type" size="sm" />
         </div>
 
         @if ($rfc->emergency_unconfirmed)

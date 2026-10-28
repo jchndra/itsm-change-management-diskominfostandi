@@ -1,11 +1,5 @@
 <div class="mx-auto max-w-5xl space-y-6">
     @php
-        $categoryLabel = match ((string) $rfc->change_type) {
-            'standard' => 'Standar',
-            'normal' => 'Normal',
-            'emergency' => 'Darurat (Emergency)',
-            default => filled($rfc->change_type) ? ucfirst((string) $rfc->change_type) : '-',
-        };
         $risk = $rfc->riskAssessment;
         $decisionLabels = [
             \App\Enums\DecisionStatus::APPROVED->value => 'Disetujui',
@@ -62,7 +56,8 @@
             </div>
             <div>
                 <span class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Kategori Diusulkan</span>
-                <p class="font-medium text-slate-800">{{ $categoryLabel }}</p>
+                <x-category-badge :kategori="$rfc->change_type"
+                    :label="$rfc->change_type === 'emergency' ? 'Darurat (Emergency)' : null" />
             </div>
             <div>
                 <span class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Target Tanggal Pemohon</span>

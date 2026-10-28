@@ -1,11 +1,5 @@
 @php
     $status = \App\Enums\RfcStatus::fromValue($rfc->status);
-    $category = match ((string) $rfc->change_type) {
-        'standard' => 'Standar',
-        'normal' => 'Normal',
-        'emergency' => 'Emergency',
-        default => filled($rfc->change_type) ? (string) $rfc->change_type : 'Belum diisi',
-    };
     $opdName = $rfc->submittedBy?->opd?->name ?? $rfc->application?->opd?->name;
     $priority = $rfc->priority instanceof \App\Enums\TicketPriority
         ? $rfc->priority
@@ -46,7 +40,9 @@
         </div>
         <div>
             <p class="text-slate-400">Kategori Perubahan</p>
-            <p class="mt-0.5 font-semibold text-slate-800">{{ $category }}</p>
+            <div class="mt-0.5">
+                <x-category-badge :kategori="$rfc->change_type" size="sm" />
+            </div>
         </div>
         <div>
             <p class="text-slate-400">Tanggal Pengajuan</p>

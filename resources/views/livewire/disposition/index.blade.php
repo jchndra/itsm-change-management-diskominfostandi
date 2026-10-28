@@ -60,12 +60,6 @@
                     <tbody class="divide-y divide-slate-100">
                         @forelse ($waitingRfcs as $rfc)
                             @php
-                                $categoryLabel = match ((string) $rfc->change_type) {
-                                    'standard' => 'Standar',
-                                    'normal' => 'Normal',
-                                    'emergency' => 'Darurat (Emergency)',
-                                    default => filled($rfc->change_type) ? ucfirst((string) $rfc->change_type) : '-',
-                                };
                                 $approvedAt = $rfc->decisions->first()?->decision_date;
                             @endphp
                             <tr wire:key="waiting-rfc-{{ $rfc->id }}" class="align-top">
@@ -79,7 +73,10 @@
                                     <p class="font-medium text-slate-800">{{ $rfc->submittedBy?->name ?? '-' }}</p>
                                     <p class="text-xs text-slate-500">{{ $rfc->submittedBy?->opd?->name ?? 'Unit kerja belum diisi' }}</p>
                                 </td>
-                                <td class="whitespace-nowrap px-5 py-4 text-slate-600">{{ $categoryLabel }}</td>
+                                <td class="whitespace-nowrap px-5 py-4 text-slate-600">
+                                    <x-category-badge :kategori="$rfc->change_type" size="sm"
+                                        :label="$rfc->change_type === 'emergency' ? 'Darurat (Emergency)' : null" />
+                                </td>
                                 <td class="whitespace-nowrap px-5 py-4 text-slate-600">
                                     {{ filled($approvedAt) ? \Illuminate\Support\Carbon::parse($approvedAt)->locale('id')->translatedFormat('d M Y') : '-' }}
                                 </td>

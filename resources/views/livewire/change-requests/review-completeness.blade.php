@@ -1,11 +1,5 @@
 <div class="max-w-5xl mx-auto space-y-6">
     @php
-        $submittedCategory = match ((string) $rfc->change_type) {
-            'standard' => 'Standar',
-            'normal' => 'Normal',
-            'emergency' => 'Emergency',
-            default => '-',
-        };
         $isReturnedToAdmin = $rfc->status === \App\Enums\RfcStatus::RETURNED_TO_ADMIN->value;
     @endphp
 
@@ -56,7 +50,9 @@
             </div>
             <div>
                 <p class="text-slate-400">Kategori yang Diusulkan Pemohon</p>
-                <p class="mt-0.5 font-semibold text-slate-800">{{ $submittedCategory }}</p>
+                <div class="mt-0.5">
+                    <x-category-badge :kategori="$rfc->change_type" size="sm" />
+                </div>
             </div>
             <div>
                 <p class="text-slate-400">Nota Dinas</p>

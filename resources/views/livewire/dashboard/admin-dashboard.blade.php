@@ -303,12 +303,6 @@
                     <tbody class="divide-y divide-slate-100/80">
                         @foreach ($overview['queue'] as $item)
                             @php
-                                $categoryTone = match ($item['category']) {
-                                    'Emergency' => 'bg-rose-50 text-rose-700 ring-rose-100',
-                                    'Normal' => 'bg-blue-50 text-blue-700 ring-blue-100',
-                                    'Standar' => 'bg-slate-100 text-slate-600 ring-slate-200',
-                                    default => 'bg-slate-100 text-slate-500 ring-slate-200',
-                                };
                                 $requesterInitials = collect(
                                     preg_split('/\s+/', trim($item['requester'])) ?: [],
                                 )
@@ -345,12 +339,7 @@
                                     </div>
                                 </td>
                                 <td data-label="Kategori" class="whitespace-nowrap px-5 py-4">
-                                    <span
-                                        class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold ring-1 {{ $categoryTone }}">
-                                        <span class="h-1.5 w-1.5 rounded-full bg-current opacity-70"
-                                            aria-hidden="true"></span>
-                                        {{ $item['category'] }}
-                                    </span>
+                                    <x-category-badge :kategori="$item['category']" size="sm" />
                                 </td>
                                 <td data-label="Usia Tunggu" class="whitespace-nowrap px-5 py-4">
                                     <x-dashboard.wait-age :days="$item['wait_days']" :since="$item['waiting_since']" />

@@ -4,12 +4,58 @@
         $isStaff = auth()->user()?->can('rfc.view_all') ?? false;
         $isReleaseTeam = auth()->user()?->isReleaseTeam() ?? false;
         $returnsToRfcList = $isStaff || $isReleaseTeam;
+        $status = \App\Enums\RfcStatus::fromValue($rfc->status);
         $submittedChangeType = match ((string) $rfc->change_type) {
             'standard' => 'Standar',
             'normal' => 'Normal',
             'emergency' => 'Emergency',
             default => null,
         };
+        $targetDateIndicator = $rfc->targetDateIndicator();
+        $runningDays = $rfc->runningDays();
+        $currentPosition = $rfc->currentPosition();
+        $finalClassification = $rfc->riskAssessment?->classification;
+        $emergencyBox = null;
+
+        if ((string) $rfc->change_type === 'emergency') {
+            if ($status === null) {
+                $emergencyBox = null;
+            } elseif ($isStaff) {
+                if (in_array($status, [\App\Enums\RfcStatus::CLOSED, \App\Enums\RfcStatus::REJECTED, \App\Enums\RfcStatus::CANCELLED], true)) {
+                    $emergencyBox = [
+                        'tone' => 'neutral',
+                        'title' => 'RFC diajukan dengan kategori Emergency.',
+                        'body' => filled($finalClassification)
+                            ? 'Klasifikasi akhir: '.$finalClassification.'.'
+                            : 'RFC sudah berada pada status akhir.',
+                    ];
+                } elseif ($rfc->emergency_unconfirmed) {
+                    $emergencyBox = [
+                        'tone' => 'danger',
+                        'title' => 'Emergency — belum dikonfirmasi Change Manager',
+                        'body' => 'Analisis risiko dan klasifikasi akhir belum ditetapkan.',
+                    ];
+                } elseif ($finalClassification === 'Emergency Change') {
+                    $emergencyBox = [
+                        'tone' => 'danger',
+                        'title' => 'Emergency — dikonfirmasi Change Manager',
+                        'body' => 'Klasifikasi akhir sudah ditetapkan sebagai Emergency Change.',
+                    ];
+                } elseif (filled($finalClassification)) {
+                    $emergencyBox = [
+                        'tone' => 'danger',
+                        'title' => 'Diusulkan Emergency, ditetapkan '.$finalClassification,
+                        'body' => 'Kategori pengajuan Pemohon berbeda dengan klasifikasi akhir Change Manager.',
+                    ];
+                }
+            } elseif ($rfc->emergency_unconfirmed) {
+                $emergencyBox = [
+                    'tone' => 'danger',
+                    'title' => 'Anda mengajukan kategori Emergency.',
+                    'body' => 'Change Manager akan menilai apakah perubahan ini memenuhi syarat darurat.',
+                ];
+            }
+        }
         $visibleDecisions = $isStaff
             ? $rfc->decisions
             : $rfc->decisions->filter(fn ($decision) => in_array($decision->decision_status, [
@@ -17,7 +63,6 @@
                 \App\Enums\DecisionStatus::REJECTED->value,
                 \App\Enums\DecisionStatus::REVISION_REQUIRED->value,
             ], true));
-        $status = \App\Enums\RfcStatus::fromValue($rfc->status);
         $implementation = $rfc->implementation;
         $implementationEvidences = $implementation
             ? $rfc->evidences->where('evidence_type', 'implementation')->values()
@@ -47,8 +92,8 @@
     @endphp
 
     <!-- Header & Tombol Kembali -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
+    <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+        <div class="min-w-0">
             <div class="flex items-center gap-3">
                 <a href="{{ $returnsToRfcList ? route('change-requests.index') : route('requester.dashboard') }}"
                     class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full transition">
@@ -58,10 +103,77 @@
                     </svg>
                 </a>
                 <h1 class="text-2xl font-bold text-slate-900">{{ $rfc->displayIdentifier() }}</h1>
-
-                <x-status-badge :status="$rfc->status" :tone="$rfc->displayStatusTone()" :label="$rfc->displayStatusLabel()" />
             </div>
             <p class="text-sm text-slate-500 mt-1 ml-12">{{ $rfc->title }}</p>
+
+            {{-- Baris ringkasan: selalu membungkus pada layar kecil. --}}
+            <div class="mt-3 flex flex-wrap items-center gap-2 sm:ml-12">
+                <x-status-badge :status="$rfc->status" :tone="$rfc->displayStatusTone()" :label="$rfc->displayStatusLabel()" />
+                <x-category-badge :kategori="$rfc->change_type" :mode="$isStaff ? null : 'diajukan'" />
+
+                @if ($isStaff)
+                    @if ($rfc->riskAssessment)
+                        <x-risk-badge :risiko="$rfc->riskAssessment->risk_level" />
+                    @endif
+
+                    @if (filled($rfc->priority))
+                        <x-priority-badge :prioritas="$rfc->priority" />
+                    @endif
+
+                    @if ((string) $rfc->change_type === 'emergency' && $rfc->emergency_unconfirmed)
+                        <span
+                            class="inline-flex items-center gap-1.5 rounded-md border border-rose-200 bg-rose-100 px-2 py-1 text-[11px] font-semibold text-rose-800">
+                            <svg class="h-3 w-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 9v3.75m0 3h.008M10.34 3.94 2.7 17.25A2.25 2.25 0 0 0 4.65 20.5h14.7a2.25 2.25 0 0 0 1.95-3.25L13.66 3.94a2.25 2.25 0 0 0-3.32 0Z" />
+                            </svg>
+                            Emergency belum dikonfirmasi
+                        </span>
+                    @endif
+                @endif
+
+                @if ($targetDateIndicator)
+                    <span
+                        class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold {{ $targetDateIndicator['classes'] }}">
+                        <svg class="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6.75 3v2.25M17.25 3v2.25M3.75 8.25h16.5M5.25 5.25h13.5A1.5 1.5 0 0 1 20.25 6.75v12a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5v-12a1.5 1.5 0 0 1 1.5-1.5Z" />
+                        </svg>
+                        Target: {{ $targetDateIndicator['label'] }}
+                    </span>
+                @endif
+
+                @if ($runningDays !== null)
+                    <span
+                        class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+                        <svg class="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                        </svg>
+                        {{ $runningDays === 0 ? 'Baru diajukan' : 'Sudah berjalan '.$runningDays.' hari' }}
+                    </span>
+                @endif
+            </div>
+
+            @if ($currentPosition)
+                <p class="mt-2 text-xs text-slate-500 sm:ml-12">
+                    <span class="font-semibold uppercase tracking-wide text-slate-400">Posisi saat ini:</span>
+                    @if ($currentPosition['legacy'])
+                        <span class="font-semibold text-slate-700">Menunggu pemeriksaan</span>
+                    @elseif ($isStaff)
+                        <span class="font-semibold text-slate-700">{{ $currentPosition['role'] }}</span>
+                        @if (filled($currentPosition['stage']))
+                            <span class="text-slate-400">&middot;</span>
+                            <span>{{ $currentPosition['stage'] }}</span>
+                        @endif
+                    @else
+                        <span class="font-semibold text-slate-700">Menunggu: {{ $currentPosition['role'] === 'Pemohon' ? 'Anda' : $currentPosition['role'] }}</span>
+                    @endif
+                </p>
+            @endif
         </div>
 
         @if (! $rfc->trashed())
@@ -112,6 +224,28 @@
         @endif
     </div>
 
+    @if ($emergencyBox)
+        @php
+            $emergencyTone = $emergencyBox['tone'] === 'neutral'
+                ? 'border-slate-200 bg-slate-50 text-slate-700'
+                : 'border-red-200 bg-red-50 text-red-900';
+            $emergencyIconTone = $emergencyBox['tone'] === 'neutral' ? 'text-slate-500' : 'text-red-600';
+        @endphp
+        <div class="rounded-xl border p-4 {{ $emergencyTone }}" role="status">
+            <div class="flex items-start gap-3">
+                <svg class="mt-0.5 h-5 w-5 shrink-0 {{ $emergencyIconTone }}" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 9v3.75m0 3h.008M10.34 3.94 2.7 17.25A2.25 2.25 0 0 0 4.65 20.5h14.7a2.25 2.25 0 0 0 1.95-3.25L13.66 3.94a2.25 2.25 0 0 0-3.32 0Z" />
+                </svg>
+                <div class="min-w-0">
+                    <p class="text-sm font-bold">{{ $emergencyBox['title'] }}</p>
+                    <p class="mt-1 text-xs leading-relaxed">{{ $emergencyBox['body'] }}</p>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <!-- Kolom Kiri: Informasi Utama -->
         <div class="lg:col-span-2 space-y-6">
@@ -127,10 +261,10 @@
                         <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Sistem / Aplikasi Target</span>
                         <p class="text-slate-800 font-medium">{{ $rfc->application?->name }}</p>
                     </div>
-                    @if (filled($submittedChangeType))
+                    @if (filled($rfc->change_type))
                         <div>
                             <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Kategori Perubahan</span>
-                            <p class="text-slate-800 font-medium">{{ $submittedChangeType }}</p>
+                            <x-category-badge :kategori="$rfc->change_type" />
                         </div>
                     @endif
                     @if (! $isStaff && filled($rfc->ticket_number))
@@ -139,12 +273,14 @@
                             <p class="text-slate-800 font-medium">{{ $rfc->ticket_number }}</p>
                         </div>
                     @endif
-                    <div>
-                        <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Target Tanggal Pelaksanaan</span>
-                        <p class="text-slate-800 font-medium">
-                            {{ $rfc->target_implementation_date?->copy()->locale('id')->translatedFormat('d M Y') }}
-                        </p>
-                    </div>
+                    @if (filled($rfc->target_implementation_date))
+                        <div>
+                            <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Target Tanggal Pelaksanaan</span>
+                            <p class="text-slate-800 font-medium">
+                                {{ $rfc->target_implementation_date->copy()->locale('id')->translatedFormat('d M Y') }}
+                            </p>
+                        </div>
+                    @endif
                     <div>
                         <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Tanggal Diajukan</span>
                         <p class="text-slate-800 font-medium">
@@ -576,13 +712,13 @@
                             <div>
                                 <span
                                     class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Prioritas</span>
-                                <p class="text-slate-800 font-medium">{{ $officerPriority }}</p>
+                                <x-priority-badge :prioritas="$rfc->priority" />
                             </div>
                         @endif
                         @if ($showSubmittedChangeType)
                             <div>
                                 <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Kategori diusulkan Pemohon</span>
-                                <p class="text-slate-800 font-medium">{{ $officerSubmittedChangeType }}</p>
+                                <x-category-badge :kategori="$rfc->change_type" />
                             </div>
                         @endif
                         @if (filled($officerFinalClassification))
@@ -648,8 +784,7 @@
                             <div class="flex flex-wrap gap-4">
                                 <div class="p-3 bg-slate-50 rounded-lg border border-slate-100 flex-1 min-w-[120px]">
                                     <span class="block text-xs text-slate-500 mb-1">Tingkat Risiko</span>
-                                    <span
-                                        class="font-bold text-slate-800">{{ $rfc->riskAssessment->risk_level }}</span>
+                                    <x-risk-badge :risiko="$rfc->riskAssessment->risk_level" />
                                 </div>
                                 <div class="p-3 bg-slate-50 rounded-lg border border-slate-100 flex-1 min-w-[120px]">
                                     <span class="block text-xs text-slate-500 mb-1">Dampak</span>

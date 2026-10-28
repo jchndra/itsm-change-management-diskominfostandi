@@ -401,7 +401,8 @@
                                     {{ $rfc->displayIdentifier() }}
                                 </td>
                                 <td data-label="Judul Perubahan" class="max-w-[260px] px-5 py-4 text-[13px] font-medium leading-snug text-slate-700">
-                                    {{ $rfc->title }}
+                                    <p>{{ $rfc->title }}</p>
+                                    <x-category-badge :kategori="$rfc->change_type" size="sm" class="mt-1.5" />
                                 </td>
                                 <td data-label="Tanggal" class="whitespace-nowrap px-5 py-4 text-[12px] leading-tight text-slate-500">
                                     {{ $rfc->created_at?->copy()->locale('id')->translatedFormat('d M Y') }}<br>

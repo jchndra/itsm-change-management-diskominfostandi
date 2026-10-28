@@ -313,7 +313,8 @@
                                 </td>
                             @endif
                             <td data-label="Judul Perubahan" class="px-5 py-3.5 font-medium text-slate-800">
-                                {{ $rfc->title }}
+                                <p>{{ $rfc->title }}</p>
+                                <x-category-badge :kategori="$rfc->change_type" size="sm" class="mt-1" />
                             </td>
                             <td data-label="Pemohon" class="px-5 py-3.5 text-slate-600">
                                 {{ $rfc->submittedBy?->name ?? '-' }}
