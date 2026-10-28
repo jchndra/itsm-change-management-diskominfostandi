@@ -19,6 +19,16 @@ test('tamu dialihkan ke halaman login saat mengakses route terproteksi', functio
         ->assertRedirect('/login');
 });
 
+test('halaman login menampilkan elemen akses yang tersedia tanpa fitur yang tidak didukung', function () {
+    $this->get(route('login'))
+        ->assertOk()
+        ->assertSee('Selamat datang')
+        ->assertSee('Ingat saya')
+        ->assertSee('Daftar sebagai Pemohon')
+        ->assertSee(route('register'), false)
+        ->assertDontSee('Lupa kata sandi');
+});
+
 test('pengguna dapat berhasil login dengan kredensial valid', function () {
     $user = User::factory()->create([
         'email' => 'user@paraf.local',

@@ -37,14 +37,21 @@ test('halaman registrasi dapat dibuka tamu dan hanya menampilkan OPD aktif', fun
     $this->get(route('register'))
         ->assertOk()
         ->assertSee('<title>Registrasi Pemohon', false)
-        ->assertSee('Buat akun Pemohon')
+        ->assertSee('Buat Akun Pemohon')
+        ->assertSee('Akun aktif otomatis setelah data valid')
+        ->assertSee('Validasi Data')
+        ->assertSee('Akun Aktif')
+        ->assertSee('Perlindungan Data Pemohon')
+        ->assertSee('18 digit')
+        ->assertSee(route('login'), false)
         ->assertSee($activeOpd->name)
+        ->assertDontSee('Menunggu Aktivasi')
         ->assertDontSee('Dinas Nonaktif Contoh');
 
     $this->get(route('login'))
         ->assertOk()
         ->assertSee(route('register'), false)
-        ->assertSee('Daftar sebagai');
+        ->assertSee('Daftar sebagai Pemohon');
 });
 
 test('registrasi membuat akun Pemohon aktif dan langsung login', function () {
