@@ -9,17 +9,17 @@ class RfcDocumentController extends Controller
 {
     public function __construct(private RfcDocumentService $documents) {}
 
-    public function __invoke(string $document): BinaryFileResponse
+    public function __invoke(string $document, ?string $download = null): BinaryFileResponse
     {
-        $documentData = $this->documents->find($document);
+        $downloadData = $this->documents->findDownload($document, $download);
 
-        abort_unless($documentData && $documentData['available'], 404);
+        abort_unless($downloadData && $downloadData['available'], 404);
 
-        $path = $this->documents->pathFor($documentData);
+        $path = $this->documents->pathFor($downloadData);
 
         abort_unless(is_file($path), 404);
 
-        $response = response()->download($path, $documentData['download_name'], [
+        $response = response()->download($path, $downloadData['download_name'], [
             'Content-Type' => 'application/pdf',
         ]);
 

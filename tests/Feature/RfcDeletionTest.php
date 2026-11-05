@@ -6,6 +6,7 @@ use App\Livewire\ChangeRequests\DeletionHistory;
 use App\Livewire\ChangeRequests\ListChangeRequests;
 use App\Livewire\Requester\Dashboard;
 use App\Models\ChangeRequest;
+use App\Models\Opd;
 use App\Models\User;
 use App\Services\RfcDeletionService;
 use App\Services\RfcNumberGenerator;
@@ -170,13 +171,13 @@ it('menyembunyikan RFC terhapus dari dashboard, daftar aktif, dan statistik', fu
 });
 
 it('tidak memakai ulang nomor RFC yang sudah dihapus', function () {
-    $pemohon = pemohonBaru();
-    $tahun = date('Y');
-    $rfc = draftMilik($pemohon, ['rfc_number' => "RFC-{$tahun}-0001"]);
+    $opd = Opd::factory()->create(['code' => 'PD01']);
+    $pemohon = pemohonBaru(['opd_id' => $opd->id]);
+    $rfc = draftMilik($pemohon, ['rfc_number' => 'RFC-PD01-1']);
 
     RfcDeletionService::delete($rfc, $pemohon);
 
-    expect(RfcNumberGenerator::generate())->toBe("RFC-{$tahun}-0002");
+    expect(RfcNumberGenerator::generate('PD01'))->toBe('RFC-PD01-2');
 });
 
 it('menampilkan riwayat penghapusan hanya untuk RFC milik pemohon', function () {

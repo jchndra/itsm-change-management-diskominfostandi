@@ -9,14 +9,14 @@ use Illuminate\Support\Str;
 class RfcNumberGenerator
 {
     /**
-     * Nomor diambil dari nomor resmi tertinggi pada tahun berjalan. Draft
-     * tanpa nomor dan RFC terhapus tetap diperhitungkan agar nomor yang sudah
-     * pernah terbit tidak dipakai ulang.
+     * Nomor diambil dari nomor resmi tertinggi dengan kode OPD yang sama.
+     * Setiap OPD memiliki urutan sendiri, sehingga RFC-PD01-1 dan RFC-PD02-1
+     * dapat terbit berdampingan. Draft tanpa nomor dan RFC terhapus tetap
+     * diperhitungkan agar nomor yang pernah terbit tidak dipakai ulang.
      */
-    public static function generate(): string
+    public static function generate(string $opdCode): string
     {
-        $year = date('Y');
-        $prefix = "RFC-{$year}-";
+        $prefix = 'RFC-'.$opdCode.'-';
 
         return DB::transaction(function () use ($prefix): string {
             $lastNumber = ChangeRequest::withTrashed()
@@ -27,7 +27,7 @@ class RfcNumberGenerator
                 ->map(fn (string $number): int => (int) Str::afterLast($number, '-'))
                 ->max() ?? 0;
 
-            return $prefix.str_pad((string) ($lastNumber + 1), 4, '0', STR_PAD_LEFT);
+            return $prefix.($lastNumber + 1);
         });
     }
 }

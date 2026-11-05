@@ -19,26 +19,21 @@ class Assign extends Component
 {
     public ChangeRequest $rfc;
 
-    /** @var array<int, int|string> */
-    public array $selectedMemberIds = [];
+    public ?int $selectedMemberId = null;
 
     public string $instruction = '';
 
     public bool $confirmed = false;
 
     protected array $rules = [
-        'selectedMemberIds' => ['required', 'array', 'min:1'],
-        'selectedMemberIds.*' => ['integer', 'distinct'],
+        'selectedMemberId' => ['required', 'integer'],
         'instruction' => ['required', 'string', 'min:10', 'max:1000'],
         'confirmed' => ['accepted'],
     ];
 
     protected array $messages = [
-        'selectedMemberIds.required' => 'Pilih minimal satu anggota Tim Rilis sebagai penerima disposisi.',
-        'selectedMemberIds.array' => 'Pilihan penerima disposisi tidak valid.',
-        'selectedMemberIds.min' => 'Pilih minimal satu anggota Tim Rilis sebagai penerima disposisi.',
-        'selectedMemberIds.*.integer' => 'Pilihan penerima disposisi tidak valid.',
-        'selectedMemberIds.*.distinct' => 'Anggota Tim Rilis yang sama tidak boleh dipilih dua kali.',
+        'selectedMemberId.required' => 'Pilih satu anggota Tim Rilis sebagai penerima disposisi.',
+        'selectedMemberId.integer' => 'Pilihan penerima disposisi tidak valid.',
         'instruction.required' => 'Instruksi disposisi wajib diisi.',
         'instruction.string' => 'Instruksi disposisi harus berupa teks.',
         'instruction.min' => 'Instruksi disposisi minimal 10 karakter.',
@@ -73,7 +68,7 @@ class Assign extends Component
             $service->assign(
                 $this->rfc,
                 $actor,
-                $validated['selectedMemberIds'],
+                [(int) $validated['selectedMemberId']],
                 $validated['instruction'],
             );
         } catch (RfcDispositionException $exception) {

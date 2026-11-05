@@ -14,6 +14,12 @@ class ShowChangeRequest extends Component
         // Otorisasi detail RFC mengikuti ChangeRequestPolicy::view().
         $this->authorize('view', $rfc);
 
+        $user = auth()->user();
+        $canViewAll = $user?->can('rfc.view_all') ?? false;
+        $isAssignedReleaseTeam = ! $canViewAll
+            && ($user?->isReleaseTeam() ?? false)
+            && $rfc->hasReleaseTaskFor($user);
+
         // Muat relasi yang dibutuhkan untuk halaman detail
         $relations = [
             'submittedBy.opd',
@@ -26,9 +32,10 @@ class ShowChangeRequest extends Component
             'closedBy',
         ];
 
-        // Disposisi adalah catatan internal staf. Untuk Pemohon relasinya tidak
-        // dimuat agar nama penerima dan instruksi tidak ikut ke tampilan.
-        if (auth()->user()?->can('rfc.view_all')) {
+        // Disposisi hanya dimuat untuk staf dan penerima disposisi pada RFC ini.
+        // Pemohon dan Tim Rilis lain tidak boleh menerima instruksi maupun nama
+        // penerima melalui properti komponen.
+        if ($canViewAll || $isAssignedReleaseTeam) {
             $relations[] = 'releaseTasks.releaseTeamMember';
             $relations[] = 'releaseTasks.assignedBy';
         }

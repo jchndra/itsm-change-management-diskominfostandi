@@ -3,6 +3,7 @@
 namespace App\Livewire\ChangeRequests;
 
 use App\Enums\RfcStatus;
+use App\Enums\RiskEvent;
 use App\Exceptions\InvalidRfcStatusTransitionException;
 use App\Livewire\ChangeRequests\Concerns\ValidatesChangeRequest;
 use App\Models\Application;
@@ -39,20 +40,20 @@ class EditChangeRequest extends Component
 
     public string $description = '';
 
+    public string $legal_basis = '';
+
+    public string $risk_event = '';
+
     public string $reason_for_change = '';
+
+    public string $change_risk = '';
 
     public string $impact_description = '';
 
-    public string $target_implementation_date = '';
-
-    public bool $is_physical_letter = false;
-
-    public string $physical_letter_number = '';
+    public bool $head_of_department_approved = false;
 
     /** @var array<int, UploadedFile> */
     public array $attachments = [];
-
-    public ?UploadedFile $approval_letter = null;
 
     public function mount(ChangeRequest $rfc): void
     {
@@ -63,11 +64,12 @@ class EditChangeRequest extends Component
         $this->application_id = (string) $rfc->application_id;
         $this->change_type = (string) ($rfc->change_type ?? '');
         $this->description = (string) ($rfc->description ?? '');
+        $this->legal_basis = (string) ($rfc->legal_basis ?? '');
+        $this->risk_event = $rfc->risk_event instanceof RiskEvent ? $rfc->risk_event->value : '';
         $this->reason_for_change = (string) $rfc->reason_for_change;
+        $this->change_risk = (string) ($rfc->change_risk ?? '');
         $this->impact_description = (string) ($rfc->impact_description ?? '');
-        $this->target_implementation_date = $rfc->target_implementation_date?->format('Y-m-d\TH:i') ?? '';
-        $this->is_physical_letter = (bool) $rfc->is_physical_letter;
-        $this->physical_letter_number = (string) ($rfc->physical_letter_number ?? '');
+        $this->head_of_department_approved = (bool) $rfc->head_of_department_approved;
     }
 
     public function saveChanges(): void
@@ -82,12 +84,6 @@ class EditChangeRequest extends Component
                 $this->persistChanges();
 
                 $newAttachments = $this->storeAttachments();
-
-                $approvalLetter = $this->storeApprovalLetter();
-
-                if ($approvalLetter !== null) {
-                    $newAttachments[] = $approvalLetter;
-                }
             });
         } catch (Throwable $exception) {
             app(RfcAttachmentService::class)->deleteStoredFiles($newAttachments);
@@ -96,7 +92,6 @@ class EditChangeRequest extends Component
         }
 
         $this->attachments = [];
-        $this->approval_letter = null;
 
         session()->flash('message', 'Perubahan RFC berhasil disimpan.');
 
@@ -107,11 +102,7 @@ class EditChangeRequest extends Component
     {
         $this->authorize('update', $this->rfc);
         $this->validateChangeRequest($this->existingAttachmentCount());
-        $this->validatePhysicalLetterAttachment($this->existingAttachmentCount());
-        $this->validateApprovalLetterForSubmission(
-            hasExisting: $this->hasExistingApprovalLetter($this->rfc),
-            hasPending: $this->approval_letter !== null,
-        );
+        $this->validateForSubmission($this->existingAttachmentCount());
 
         $oldStatus = RfcStatus::fromValue($this->rfc->status);
 
@@ -142,13 +133,8 @@ class EditChangeRequest extends Component
                 $oldStatus = $currentStatus;
 
                 $this->persistChanges();
+
                 $newAttachments = $this->storeAttachments();
-
-                $approvalLetter = $this->storeApprovalLetter();
-
-                if ($approvalLetter !== null) {
-                    $newAttachments[] = $approvalLetter;
-                }
 
                 if ($currentStatus === RfcStatus::NEEDS_REVISION) {
                     // Pastikan alasan revisi sudah tercatat sebelum rejection_note dikosongkan.
@@ -174,7 +160,6 @@ class EditChangeRequest extends Component
         }
 
         $this->attachments = [];
-        $this->approval_letter = null;
 
         session()->flash(
             'message',
@@ -229,6 +214,8 @@ class EditChangeRequest extends Component
     }
 
     /**
+     * Semua unggahan baru disimpan sebagai lampiran pendukung.
+     *
      * @return array<int, ChangeRequestAttachment>
      */
     private function storeAttachments(): array
@@ -237,21 +224,10 @@ class EditChangeRequest extends Component
             return [];
         }
 
-        return app(RfcAttachmentService::class)->storeMany($this->rfc, $this->attachments, Auth::user());
-    }
+        /** @var User $user */
+        $user = Auth::user();
 
-    private function storeApprovalLetter(): ?ChangeRequestAttachment
-    {
-        if ($this->approval_letter === null) {
-            return null;
-        }
-
-        return app(RfcAttachmentService::class)->store(
-            $this->rfc,
-            $this->approval_letter,
-            Auth::user(),
-            ChangeRequestAttachment::TYPE_APPROVAL_LETTER,
-        );
+        return app(RfcAttachmentService::class)->storeMany($this->rfc, $this->attachments, $user);
     }
 
     private function existingAttachmentCount(): int
@@ -274,11 +250,13 @@ class EditChangeRequest extends Component
             'application_id' => $this->application_id,
             'change_type' => $this->change_type,
             'description' => $this->description,
+            'legal_basis' => $this->legal_basis,
+            'risk_event' => filled($this->risk_event) ? $this->risk_event : null,
             'reason_for_change' => $this->reason_for_change,
+            'change_risk' => $this->change_risk,
+            'head_of_department_approved' => $this->head_of_department_approved,
+            'head_of_department_approved_at' => $this->headOfDepartmentApprovedAt(),
             'impact_description' => filled($this->impact_description) ? $this->impact_description : null,
-            'target_implementation_date' => $this->target_implementation_date,
-            'is_physical_letter' => $this->is_physical_letter,
-            'physical_letter_number' => $this->is_physical_letter ? $this->physical_letter_number : null,
             'emergency_unconfirmed' => $this->change_type === 'emergency',
         ]);
 
@@ -326,6 +304,11 @@ class EditChangeRequest extends Component
                 $new = (bool) $new;
             }
 
+            if ($field === 'risk_event') {
+                $old = $old instanceof RiskEvent ? $old->value : $old;
+                $new = $new instanceof RiskEvent ? $new->value : $new;
+            }
+
             if ($field === 'application_id') {
                 if ((int) $old === (int) $new) {
                     continue;
@@ -351,6 +334,7 @@ class EditChangeRequest extends Component
     {
         return match ($field) {
             'application_id' => $applicationNames[(int) $value] ?? (filled($value) ? '#'.$value : '-'),
+            'risk_event' => RiskEvent::tryFrom((string) $value)?->optionLabel() ?? '-',
             'change_type' => match ((string) $value) {
                 'standard' => 'Standar',
                 'normal' => 'Normal',
@@ -373,11 +357,14 @@ class EditChangeRequest extends Component
     {
         return [
             'title' => 'Judul',
-            'application_id' => 'Sistem / Aplikasi',
+            'application_id' => 'Sistem / Layanan',
             'change_type' => 'Kategori Perubahan',
-            'description' => 'Deskripsi Perubahan',
-            'reason_for_change' => 'Alasan Bisnis',
-            'impact_description' => 'Estimasi Dampak',
+            'description' => 'Detail Perubahan',
+            'legal_basis' => 'Dasar Hukum',
+            'risk_event' => 'Register Risiko',
+            'reason_for_change' => 'Alasan Perubahan',
+            'change_risk' => 'Risiko Perubahan',
+            'impact_description' => 'Keterangan',
             'target_implementation_date' => 'Usulan Tanggal dan Jam',
             'is_physical_letter' => 'Surat Fisik',
             'physical_letter_number' => 'Nomor Surat',

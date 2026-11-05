@@ -36,7 +36,7 @@
                 <p class="mt-0.5 font-semibold text-slate-800">{{ $rfc->submittedBy?->opd?->name ?? '-' }}</p>
             </div>
             <div>
-                <p class="text-slate-400">Aplikasi</p>
+                <p class="text-slate-400">Sistem / Layanan</p>
                 <p class="mt-0.5 font-semibold text-slate-800">{{ $rfc->application?->name ?? '-' }}</p>
             </div>
             <div>
@@ -73,15 +73,23 @@
 
         <div class="mt-5 space-y-4 border-t border-slate-100 pt-4 text-xs">
             <div>
-                <p class="font-semibold text-slate-500">Deskripsi Perubahan</p>
+                <p class="font-semibold text-slate-500">Detail Perubahan</p>
                 <p class="mt-1 whitespace-pre-wrap leading-relaxed text-slate-700">{{ $rfc->description ?? '-' }}</p>
             </div>
             <div>
-                <p class="font-semibold text-slate-500">Alasan Bisnis / Alasan Perubahan</p>
+                <p class="font-semibold text-slate-500">Alasan Perubahan</p>
                 <p class="mt-1 whitespace-pre-wrap leading-relaxed text-slate-700">{{ $rfc->reason_for_change ?? '-' }}</p>
             </div>
             <div>
-                <p class="font-semibold text-slate-500">Estimasi Dampak</p>
+                <p class="font-semibold text-slate-500">Dasar Hukum</p>
+                <p class="mt-1 whitespace-pre-wrap leading-relaxed text-slate-700">{{ $rfc->legal_basis ?? '-' }}</p>
+            </div>
+            <div>
+                <p class="font-semibold text-slate-500">Risiko Perubahan</p>
+                <p class="mt-1 whitespace-pre-wrap leading-relaxed text-slate-700">{{ $rfc->change_risk ?? '-' }}</p>
+            </div>
+            <div>
+                <p class="font-semibold text-slate-500">Keterangan</p>
                 <p class="mt-1 whitespace-pre-wrap leading-relaxed text-slate-700">{{ $rfc->impact_description ?? '-' }}</p>
             </div>
         </div>

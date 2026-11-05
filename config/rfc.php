@@ -11,20 +11,44 @@ return [
     | dashboard. Path di bawah relatif terhadap root disk privat "local"
     | (storage/app/private), bukan direktori public aplikasi.
     |
+    | Setiap dokumen dapat memiliki beberapa berkas unduhan. Entri pertama
+    | menjadi berkas utama (dipakai untuk label format dan ukuran pada kartu).
+    | Kunci unduhan (key) bersifat opsional; kunci dipakai untuk membedakan
+    | tautan unduhan pada dokumen yang memiliki lebih dari satu berkas.
+    |
     */
 
     'documents' => [
-        'template-surat-persetujuan' => [
-            'title' => 'Template Surat Persetujuan RFC',
-            'description' => 'Template surat persetujuan perubahan sistem, dilengkapi kolom identitas, ringkasan perubahan, risiko, dan ruang tanda tangan pejabat.',
-            'file' => 'rfc-documents/template-surat-persetujuan-rfc-dummy.pdf',
-            'download_name' => 'Template Surat Persetujuan RFC - Dummy.pdf',
+        'analisis-dampak-teknis' => [
+            'title' => 'Panduan Mengisi Formulir RFC',
+            'description' => 'Formulir resmi analisis dampak teknis perubahan, dilengkapi panduan pengisian kriteria dampak, kemungkinan, besaran, dan level risiko.',
+            'status' => 'Resmi',
+            'downloads' => [
+                [
+                    'key' => 'template-diskominfostandi',
+                    'label' => 'Download Template Diskominfostandi',
+                    'file' => 'rfc-documents/Template_Form_RFC-Diskominfostandi.pdf',
+                    'download_name' => 'Template_Form_RFC-Diskominfostandi.pdf',
+                ],
+                [
+                    'key' => 'form-kosong',
+                    'label' => 'Download Template Form Kosong',
+                    'file' => 'rfc-documents/Form_RFC.pdf',
+                    'download_name' => 'Form_RFC.pdf',
+                ],
+            ],
         ],
-        'pedoman-pengisian-rfc' => [
-            'title' => 'Pedoman Pengisian RFC & Surat Persetujuan',
-            'description' => 'Panduan pengisian RFC dan surat persetujuan, termasuk contoh perubahan, panduan risiko, serta matriks risiko dummy.',
-            'file' => 'rfc-documents/pedoman-pengisian-rfc-dan-surat-persetujuan-dummy.pdf',
-            'download_name' => 'Pedoman Pengisian RFC dan Surat Persetujuan - Dummy.pdf',
+        'panduan-manajemen-risiko' => [
+            'title' => 'Panduan Manajemen Risiko',
+            'description' => 'Pedoman manajemen risiko pemerintah digital Kota Bekasi: landasan regulasi, kajian kondisi awal, profil risiko, metodologi, dan rencana kerja implementasi.',
+            'status' => 'Resmi',
+            'downloads' => [
+                [
+                    'label' => 'Unduh PDF',
+                    'file' => 'rfc-documents/Buku_Panduan_Manajemen_Risiko.pdf',
+                    'download_name' => 'Buku_Panduan_Manajemen_Risiko.pdf',
+                ],
+            ],
         ],
     ],
 

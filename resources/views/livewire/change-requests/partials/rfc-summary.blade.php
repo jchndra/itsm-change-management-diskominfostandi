@@ -68,9 +68,9 @@
         @endif
     </div>
 
-    <div class="grid grid-cols-1 gap-4 border-t border-slate-100 pt-4 text-xs lg:grid-cols-3">
+    <div class="grid grid-cols-1 gap-4 border-t border-slate-100 pt-4 text-xs sm:grid-cols-2 lg:grid-cols-3">
         <div>
-            <p class="font-semibold text-slate-500">Deskripsi Perubahan</p>
+            <p class="font-semibold text-slate-500">Detail Perubahan</p>
             <p class="mt-1 whitespace-pre-wrap leading-relaxed text-slate-700">{{ filled($rfc->description) ? $rfc->description : 'Belum diisi' }}</p>
         </div>
         <div>
@@ -78,7 +78,15 @@
             <p class="mt-1 whitespace-pre-wrap leading-relaxed text-slate-700">{{ filled($rfc->reason_for_change) ? $rfc->reason_for_change : 'Belum diisi' }}</p>
         </div>
         <div>
-            <p class="font-semibold text-slate-500">Estimasi Dampak</p>
+            <p class="font-semibold text-slate-500">Dasar Hukum</p>
+            <p class="mt-1 whitespace-pre-wrap leading-relaxed text-slate-700">{{ filled($rfc->legal_basis) ? $rfc->legal_basis : 'Belum diisi' }}</p>
+        </div>
+        <div>
+            <p class="font-semibold text-slate-500">Risiko Perubahan</p>
+            <p class="mt-1 whitespace-pre-wrap leading-relaxed text-slate-700">{{ filled($rfc->change_risk) ? $rfc->change_risk : 'Belum diisi' }}</p>
+        </div>
+        <div>
+            <p class="font-semibold text-slate-500">Keterangan</p>
             <p class="mt-1 whitespace-pre-wrap leading-relaxed text-slate-700">{{ filled($rfc->impact_description) ? $rfc->impact_description : 'Belum diisi' }}</p>
         </div>
     </div>

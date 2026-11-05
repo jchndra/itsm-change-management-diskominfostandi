@@ -21,11 +21,25 @@ class RfcHistoryService
      *
      * Mode Tim Rilis menyembunyikan nomor tiket, catatan keputusan internal,
      * evaluasi, dan penutupan tanpa mengubah tampilan Pemohon atau staf.
+     * Instruksi disposisi hanya dibuka untuk penerima disposisi pada RFC ini.
      *
      * @return array{events: array<int, array<string, mixed>>, next_steps: array<int, array<string, string>>}
      */
-    public function build(ChangeRequest $rfc, bool $forStaff = false, bool $forReleaseTeam = false): array
-    {
+    public function build(
+        ChangeRequest $rfc,
+        bool $forStaff = false,
+        bool $forReleaseTeam = false,
+        ?bool $isDispositionRecipient = null,
+    ): array {
+        if ($isDispositionRecipient === null) {
+            $viewer = auth()->user();
+
+            $isDispositionRecipient = $forReleaseTeam
+                && $viewer !== null
+                && $viewer->isReleaseTeam()
+                && $rfc->hasReleaseTaskFor($viewer);
+        }
+
         $rfc->loadMissing([
             'riskAssessment.assessedBy',
             'decisions.recordedBy',
@@ -136,6 +150,23 @@ class RfcHistoryService
 
             if (in_array($eventType, ['attachment_added', 'attachment_deleted'], true)) {
                 $fileName = data_get($activity->properties, 'file_name');
+                $attachmentId = (int) data_get($activity->properties, 'attachment_id');
+
+                // Tautan lampiran hanya diberikan kepada staf dan Tim Rilis yang
+                // melihat RFC ini. Lampiran yang sudah dihapus tidak lagi bisa
+                // dibuka, dan Pemohon tetap memakai daftar lampiran di halaman
+                // detail, bukan tautan pada riwayat.
+                $attachmentUrl = null;
+
+                if ($eventType === 'attachment_added'
+                    && $attachmentId > 0
+                    && ($forStaff || $forReleaseTeam)
+                    && $rfc->attachments()->whereKey($attachmentId)->exists()) {
+                    $attachmentUrl = route('change-requests.attachments.show', [
+                        'rfc' => $rfc,
+                        'attachment' => $attachmentId,
+                    ]);
+                }
 
                 $events[] = [
                     'key' => $eventType,
@@ -145,6 +176,7 @@ class RfcHistoryService
                     'tone' => $eventType === 'attachment_added' ? 'info' : 'warning',
                     'actor_name' => $forStaff ? $activity->causer?->name : null,
                     'actor_role' => 'Pemohon',
+                    'attachment_url' => $attachmentUrl,
                     'legacy' => false,
                     'order' => $sequence,
                 ];
@@ -192,9 +224,10 @@ class RfcHistoryService
                     : [];
                 $instruction = trim((string) data_get($activity->properties, 'instruction', ''));
 
-                // Nama penerima dan instruksi adalah catatan internal. Versi
-                // Pemohon hanya diberi tahu bahwa RFC sudah diteruskan.
-                $dispositionNote = $forStaff
+                // Instruksi dan penerima adalah perintah kerja untuk penerima
+                // disposisi. Pemohon hanya diberi tahu bahwa RFC sudah diteruskan.
+                $canSeeDispositionDetails = $forStaff || $isDispositionRecipient;
+                $dispositionNote = $canSeeDispositionDetails
                     ? implode("\n", array_filter([
                         'Penerima: '.($recipientNames !== [] ? implode(', ', $recipientNames) : '-'),
                         filled($instruction) ? 'Instruksi: '.$instruction : null,
@@ -203,11 +236,11 @@ class RfcHistoryService
 
                 $events[] = [
                     'key' => 'release_disposition',
-                    'label' => $forStaff ? 'Disposisi ke Tim Rilis' : 'Diteruskan ke Tim Rilis',
+                    'label' => $canSeeDispositionDetails ? 'Disposisi ke Tim Rilis' : 'Diteruskan ke Tim Rilis',
                     'note' => $dispositionNote,
                     'time' => $activity->created_at,
                     'tone' => 'info',
-                    'actor_name' => $forStaff ? $activity->causer?->name : null,
+                    'actor_name' => $canSeeDispositionDetails ? $activity->causer?->name : null,
                     'actor_role' => 'Change Manager',
                     'legacy' => false,
                     'order' => $sequence,
@@ -356,7 +389,10 @@ class RfcHistoryService
                     continue;
                 }
 
-                if (! in_array($event['key'], [
+                $isVisibleDispositionEvent = $isDispositionRecipient
+                    && $event['key'] === 'release_disposition';
+
+                if (! $isVisibleDispositionEvent && ! in_array($event['key'], [
                     RfcStatus::REJECTED->value,
                     RfcStatus::NEEDS_REVISION->value,
                     RfcStatus::FAILED->value,
@@ -370,15 +406,16 @@ class RfcHistoryService
 
                 // Pelaku pembatalan boleh terlihat oleh Pemohon hanya jika pelakunya
                 // sendiri, bukan staf yang membatalkan lewat jalur lain.
-                if ($event['key'] !== RfcStatus::CANCELLED->value
-                    || ($event['actor_role'] ?? null) !== 'Pemohon') {
+                if (! $isVisibleDispositionEvent
+                    && ($event['key'] !== RfcStatus::CANCELLED->value
+                        || ($event['actor_role'] ?? null) !== 'Pemohon')) {
                     $event['actor_name'] = null;
                 }
 
                 // Tim Rilis hanya menerima status dan ringkasan pelaksanaan;
                 // seluruh catatan keputusan, evaluasi, dan penutupan internal
                 // tidak boleh ikut terkirim ke halaman detail.
-                if ($forReleaseTeam) {
+                if ($forReleaseTeam && ! $isVisibleDispositionEvent) {
                     $event['actor_name'] = null;
                     $event['note'] = null;
                 }

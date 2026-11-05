@@ -1,8 +1,10 @@
 <?php
 
+use App\Livewire\ChangeRequests\ListChangeRequests;
 use App\Models\Application;
 use App\Models\ChangeRequest;
 use App\Models\User;
+use App\Services\RfcNumberGenerator;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -33,17 +35,20 @@ test('pemohon hanya dapat melihat rfc miliknya sendiri di daftar rfc', function 
 
     $this->actingAs($pemohonA);
 
-    Livewire::test(\App\Livewire\ChangeRequests\ListChangeRequests::class)
+    Livewire::test(ListChangeRequests::class)
         ->assertSee($rfcA->rfc_number)
         ->assertDontSee($rfcB->rfc_number);
 });
 
-test('nomor rfc otomatis dibuat berurutan dengan format rfc-tahun-nnnn', function () {
-    $number1 = \App\Services\RfcNumberGenerator::generate();
-    expect($number1)->toBe('RFC-' . date('Y') . '-0001');
+test('nomor rfc otomatis dibuat berurutan per kode opd', function () {
+    $number1 = RfcNumberGenerator::generate('PD01');
+    expect($number1)->toBe('RFC-PD01-1');
 
     ChangeRequest::factory()->create(['rfc_number' => $number1]);
 
-    $number2 = \App\Services\RfcNumberGenerator::generate();
-    expect($number2)->toBe('RFC-' . date('Y') . '-0002');
+    $number2 = RfcNumberGenerator::generate('PD01');
+    expect($number2)->toBe('RFC-PD01-2');
+
+    // OPD lain memiliki urutan sendiri dan tidak terpengaruh nomor OPD pertama.
+    expect(RfcNumberGenerator::generate('PD02'))->toBe('RFC-PD02-1');
 });

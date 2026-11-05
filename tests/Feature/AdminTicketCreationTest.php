@@ -389,7 +389,6 @@ test('pencarian daftar staf menemukan RFC melalui nomor tiket', function () {
 
     $this->get(route('change-requests.index', ['q' => $target->ticket_number]))
         ->assertOk()
-        ->assertSee('No. Tiket')
         ->assertSee($target->ticket_number)
         ->assertSee($target->title)
         ->assertDontSee($other->title);

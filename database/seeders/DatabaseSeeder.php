@@ -32,12 +32,12 @@ class DatabaseSeeder extends Seeder
 
         // 2. Seed Master OPD Dummy
         $opdA = Opd::create([
-            'code' => 'OPD-A',
+            'code' => 'PD02',
             'name' => 'Dinas Perencanaan Sample',
         ]);
 
         $opdB = Opd::create([
-            'code' => 'OPD-B',
+            'code' => 'PD01',
             'name' => 'Dinas Pelayanan Sample',
         ]);
 
@@ -127,7 +127,7 @@ class DatabaseSeeder extends Seeder
 
         // 7. Seed Sample RFC Dummy
         ChangeRequest::create([
-            'rfc_number' => 'RFC-2026-0001',
+            'rfc_number' => 'RFC-2026-1',
             'title' => 'Pembaruan Versi Modul Utama Aplikasi Sample A',
             'application_id' => $app1->id,
             'submitted_by_id' => $pemohon->id,
@@ -140,7 +140,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         ChangeRequest::create([
-            'rfc_number' => 'RFC-2026-0002',
+            'rfc_number' => 'RFC-2026-2',
             'title' => 'Penambahan Fitur Laporan Eksternal pada Aplikasi Sample B',
             'application_id' => $app2->id,
             'submitted_by_id' => $pemohon->id,

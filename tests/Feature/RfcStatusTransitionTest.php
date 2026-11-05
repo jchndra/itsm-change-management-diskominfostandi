@@ -3,6 +3,7 @@
 use App\Enums\RfcStatus;
 use App\Exceptions\InvalidRfcStatusTransitionException;
 use App\Models\ChangeRequest;
+use App\Models\Opd;
 use App\Models\ReleaseTask;
 use App\Models\ReleaseTeamMember;
 use App\Models\User;
@@ -16,16 +17,17 @@ beforeEach(function () {
     $this->seed(PermissionSeeder::class);
 });
 
-function userWithRole(string $role): User
+function userWithRole(string $role, array $attributes = []): User
 {
-    $user = User::factory()->create();
+    $user = User::factory()->create($attributes);
     $user->assignRole($role);
 
     return $user;
 }
 
 test('pemilik rfc dapat mengajukan draft dan nomor resmi terbit saat diajukan', function () {
-    $owner = userWithRole('Pemohon');
+    $opd = Opd::factory()->create(['code' => 'PD01']);
+    $owner = userWithRole('Pemohon', ['opd_id' => $opd->id]);
     $rfc = ChangeRequest::factory()->create([
         'submitted_by_id' => $owner->id,
         'status' => RfcStatus::DRAFT->value,
@@ -39,12 +41,13 @@ test('pemilik rfc dapat mengajukan draft dan nomor resmi terbit saat diajukan', 
     $fresh = $rfc->fresh();
 
     expect($fresh->status)->toBe(RfcStatus::SUBMITTED->value)
-        ->and($fresh->rfc_number)->toBe('RFC-'.date('Y').'-0001')
+        ->and($fresh->rfc_number)->toBe('RFC-PD01-1')
         ->and($fresh->displayIdentifier())->toBe($fresh->rfc_number);
 });
 
 test('pemilik dapat mengajukan langsung ke ticket_created dengan nomor resmi', function () {
-    $owner = userWithRole('Pemohon');
+    $opd = Opd::factory()->create(['code' => 'PD01']);
+    $owner = userWithRole('Pemohon', ['opd_id' => $opd->id]);
     $rfc = ChangeRequest::factory()->create([
         'submitted_by_id' => $owner->id,
         'status' => RfcStatus::DRAFT->value,
@@ -56,7 +59,7 @@ test('pemilik dapat mengajukan langsung ke ticket_created dengan nomor resmi', f
     $fresh = $rfc->fresh();
 
     expect($fresh->status)->toBe(RfcStatus::TICKET_CREATED->value)
-        ->and($fresh->rfc_number)->toBe('RFC-'.date('Y').'-0001');
+        ->and($fresh->rfc_number)->toBe('RFC-PD01-1');
 });
 
 test('change manager dapat meminta revisi dari ticket_created tetapi admin dan super admin tidak', function () {

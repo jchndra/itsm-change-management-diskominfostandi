@@ -2,6 +2,7 @@
 
 use App\Enums\DecisionStatus;
 use App\Enums\RfcStatus;
+use App\Enums\RiskEvent;
 use App\Livewire\ChangeRequests\AssessRisk;
 use App\Livewire\ChangeRequests\CreateChangeRequest;
 use App\Livewire\ChangeRequests\EditChangeRequest;
@@ -11,6 +12,7 @@ use App\Livewire\ChangeRequests\ShowChangeRequest;
 use App\Models\Application;
 use App\Models\ChangeRequest;
 use App\Models\ChangeRequestAttachment;
+use App\Models\Opd;
 use App\Models\RiskAssessment;
 use App\Models\User;
 use App\Notifications\ChangeManagerReviewNotification;
@@ -30,7 +32,10 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
 
-    $this->owner = User::factory()->create(['name' => 'Pemohon Alur Baru']);
+    $this->owner = User::factory()->create([
+        'name' => 'Pemohon Alur Baru',
+        'opd_id' => Opd::factory()->create(['code' => 'PD01'])->id,
+    ]);
     $this->owner->assignRole('Pemohon');
 
     $this->cm = User::factory()->create(['name' => 'Change Manager Alur Baru']);
@@ -54,7 +59,10 @@ function newFlowFormFields(Application $application, string $title = 'Pengajuan 
         'application_id' => (string) $application->id,
         'change_type' => 'normal',
         'description' => 'Deskripsi perubahan untuk pengujian alur baru.',
+        'legal_basis' => 'Dasar hukum perubahan untuk pengujian alur baru.',
+        'risk_event' => RiskEvent::CYBER_INCIDENT->value,
         'reason_for_change' => 'Alasan perubahan untuk pengujian alur baru.',
+        'change_risk' => 'Risiko perubahan untuk pengujian alur baru.',
         'impact_description' => 'Dampak perubahan untuk pengujian alur baru.',
         'target_implementation_date' => now()->addDays(3)->format('Y-m-d\TH:i'),
     ];
@@ -66,6 +74,7 @@ function newFlowRfc(User $owner, RfcStatus $status, array $attributes = []): Cha
         'submitted_by_id' => $owner->id,
         'created_by_id' => $owner->id,
         'status' => $status->value,
+        'risk_event' => RiskEvent::CYBER_INCIDENT,
         ...$attributes,
     ]);
 }
@@ -95,14 +104,14 @@ test('pengajuan baru langsung masuk ke Change Manager, memakai satu nomor RFC, d
     Livewire::actingAs($this->owner)
         ->test(CreateChangeRequest::class)
         ->set(newFlowFormFields($this->application, 'Pengajuan Langsung Alur Baru'))
-        ->set('approval_letter', UploadedFile::fake()->create('surat-persetujuan.pdf', 100, 'application/pdf'))
+        ->set('attachments', [UploadedFile::fake()->create('surat-persetujuan.pdf', 100, 'application/pdf')])
         ->call('save', RfcStatus::TICKET_CREATED->value)
         ->assertHasNoErrors();
 
     $rfc = ChangeRequest::latest('id')->firstOrFail();
 
     expect($rfc->status)->toBe(RfcStatus::TICKET_CREATED->value)
-        ->and($rfc->rfc_number)->toMatch('/^RFC-'.date('Y').'-\d{4}$/')
+        ->and($rfc->rfc_number)->toBe('RFC-PD01-1')
         ->and($rfc->ticket_number)->toBeNull()
         ->and($rfc->priority)->toBeNull()
         ->and($rfc->category)->toBeNull();
@@ -372,8 +381,9 @@ test('tiket kosong tidak dirender sebagai strip pada daftar dan halaman review',
     Livewire::actingAs($this->admin)
         ->test(ListChangeRequests::class)
         ->assertOk()
-        ->assertSee('No. Tiket')
-        ->assertSee('CHG-'.date('Y').'-0099');
+        ->assertSee($legacy->title)
+        ->assertDontSee('No. Tiket')
+        ->assertDontSee('CHG-'.date('Y').'-0099');
 
     Livewire::actingAs($this->cm)
         ->test(AssessRisk::class, ['rfc' => $legacy])

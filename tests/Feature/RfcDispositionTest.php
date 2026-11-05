@@ -216,7 +216,7 @@ it('hanya menampilkan RFC approved tanpa tugas pada tab Menunggu Disposisi', fun
         ->assertDontSee($waiting->title);
 });
 
-it('menyimpan disposisi satu baris per penerima tanpa mengubah status RFC', function () {
+it('menyimpan disposisi untuk penerima yang dipilih tanpa mengubah status RFC', function () {
     $manager = dispositionUser(['Change Manager']);
     $requester = dispositionUser(['Pemohon']);
     $otherRequester = dispositionUser(['Pemohon']);
@@ -232,7 +232,7 @@ it('menyimpan disposisi satu baris per penerima tanpa mengubah status RFC', func
     $this->actingAs($manager);
 
     Livewire::test(Assign::class, ['rfc' => $rfc])
-        ->set('selectedMemberIds', [$firstMember->id, $secondMember->id])
+        ->set('selectedMemberId', $firstMember->id)
         ->set('instruction', $instruction)
         ->set('confirmed', true)
         ->call('assign')
@@ -241,21 +241,24 @@ it('menyimpan disposisi satu baris per penerima tanpa mengubah status RFC', func
         ->assertSessionHas('success');
 
     expect($rfc->fresh()->status)->toBe(RfcStatus::APPROVED->value)
-        ->and(ReleaseTask::query()->where('change_request_id', $rfc->id)->count())->toBe(2);
+        ->and(ReleaseTask::query()->where('change_request_id', $rfc->id)->count())->toBe(1);
 
-    foreach ([$firstMember, $secondMember] as $member) {
-        $this->assertDatabaseHas('release_tasks', [
-            'change_request_id' => $rfc->id,
-            'release_team_member_id' => $member->id,
-            'assigned_by_id' => $manager->id,
-            'instruction' => $instruction,
-            'scheduled_start' => null,
-            'scheduled_end' => null,
-            'execution_status' => 'pending',
-            'executed_at' => null,
-            'execution_notes' => null,
-        ]);
-    }
+    $this->assertDatabaseHas('release_tasks', [
+        'change_request_id' => $rfc->id,
+        'release_team_member_id' => $firstMember->id,
+        'assigned_by_id' => $manager->id,
+        'instruction' => $instruction,
+        'scheduled_start' => null,
+        'scheduled_end' => null,
+        'execution_status' => 'pending',
+        'executed_at' => null,
+        'execution_notes' => null,
+    ]);
+
+    $this->assertDatabaseMissing('release_tasks', [
+        'change_request_id' => $rfc->id,
+        'release_team_member_id' => $secondMember->id,
+    ]);
 
     $activity = Activity::query()
         ->where('subject_type', ChangeRequest::class)
@@ -263,8 +266,8 @@ it('menyimpan disposisi satu baris per penerima tanpa mengubah status RFC', func
         ->where('description', 'Disposisi ke Tim Rilis')
         ->firstOrFail();
 
-    expect(data_get($activity->properties, 'recipient_names'))->toBe(['Penerima Pertama', 'Penerima Kedua'])
-        ->and(data_get($activity->properties, 'recipient_count'))->toBe(2)
+    expect(data_get($activity->properties, 'recipient_names'))->toBe(['Penerima Pertama'])
+        ->and(data_get($activity->properties, 'recipient_count'))->toBe(1)
         ->and(data_get($activity->properties, 'instruction'))->toBe($instruction);
 
     $notification = $requester->notifications()->firstOrFail();
@@ -296,24 +299,24 @@ it('memvalidasi penerima, instruksi, dan kotak konfirmasi', function () {
         ->set('instruction', $validInstruction)
         ->set('confirmed', true)
         ->call('assign')
-        ->assertHasErrors(['selectedMemberIds' => 'required']);
+        ->assertHasErrors(['selectedMemberId' => 'required']);
 
     Livewire::test(Assign::class, ['rfc' => $rfc])
-        ->set('selectedMemberIds', [$member->id])
+        ->set('selectedMemberId', $member->id)
         ->set('instruction', '')
         ->set('confirmed', true)
         ->call('assign')
         ->assertHasErrors(['instruction' => 'required']);
 
     Livewire::test(Assign::class, ['rfc' => $rfc])
-        ->set('selectedMemberIds', [$member->id])
+        ->set('selectedMemberId', $member->id)
         ->set('instruction', 'pendek')
         ->set('confirmed', true)
         ->call('assign')
         ->assertHasErrors(['instruction' => 'min']);
 
     Livewire::test(Assign::class, ['rfc' => $rfc])
-        ->set('selectedMemberIds', [$member->id])
+        ->set('selectedMemberId', $member->id)
         ->set('instruction', $validInstruction)
         ->set('confirmed', false)
         ->call('assign')
@@ -362,12 +365,7 @@ it('hanya menampilkan anggota Tim Rilis yang memenuhi syarat dan menolak penerim
         ->assertDontSee('Bukan Tim Rilis Unik');
 
     Livewire::test(Assign::class, ['rfc' => $rfc])
-        ->set('selectedMemberIds', [
-            $inactiveMembership->id,
-            $withoutAccount->id,
-            $inactiveAccount->id,
-            $wrongRoleMember->id,
-        ])
+        ->set('selectedMemberId', $inactiveMembership->id)
         ->set('instruction', $instruction)
         ->set('confirmed', true)
         ->call('assign')
@@ -376,7 +374,12 @@ it('hanya menampilkan anggota Tim Rilis yang memenuhi syarat dan menolak penerim
     expect(fn () => app(RfcDispositionService::class)->assign(
         $rfc,
         $manager,
-        [$inactiveMembership->id],
+        [
+            $inactiveMembership->id,
+            $withoutAccount->id,
+            $inactiveAccount->id,
+            $wrongRoleMember->id,
+        ],
         $instruction,
     ))->toThrow(RfcDispositionException::class);
 

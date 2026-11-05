@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\RfcStatus;
+use App\Enums\RiskEvent;
 use App\Exceptions\InvalidRfcStatusTransitionException;
 use App\Livewire\ChangeRequests\CreateChangeRequest;
 use App\Livewire\ChangeRequests\EditChangeRequest;
@@ -46,6 +47,7 @@ function editableRfc(
         'created_by_id' => $owner->id,
         'status' => $status->value,
         'application_id' => $application->id,
+        'risk_event' => RiskEvent::CYBER_INCIDENT,
         'target_implementation_date' => now()->addDays(5),
         ...$attributes,
     ]);
@@ -211,6 +213,8 @@ it('uses the same 100 character limit on the create form', function () {
         ->set('change_type', 'normal')
         ->set('description', 'Deskripsi perubahan yang cukup jelas.')
         ->set('reason_for_change', 'Alasan perubahan yang cukup panjang.')
+        ->set('legal_basis', 'Dasar hukum perubahan yang cukup jelas.')
+        ->set('change_risk', 'Risiko perubahan yang sudah diidentifikasi.')
         ->set('impact_description', 'Dampak perubahan yang cukup jelas.')
         ->set('target_implementation_date', now()->addDays(3)->format('Y-m-d\TH:i'))
         ->set('is_physical_letter', true)

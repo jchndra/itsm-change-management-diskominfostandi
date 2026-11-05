@@ -1,10 +1,12 @@
 <?php
 
 use App\Enums\RfcStatus;
+use App\Enums\RiskEvent;
 use App\Livewire\ChangeRequests\CreateChangeRequest;
 use App\Livewire\ChangeRequests\ShowChangeRequest;
 use App\Models\Application;
 use App\Models\ChangeRequest;
+use App\Models\Opd;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -99,7 +101,9 @@ test('RFC yang diajukan lewat komponen create memakai nomor berurutan dari gener
     Storage::fake('local');
 
     $pemohon = makeUserWithRole('Pemohon');
-    $application = Application::factory()->create();
+    $application = Application::factory()->create([
+        'opd_id' => Opd::factory()->create(['code' => 'PD01'])->id,
+    ]);
 
     $this->actingAs($pemohon);
 
@@ -109,21 +113,22 @@ test('RFC yang diajukan lewat komponen create memakai nomor berurutan dari gener
             ->set('application_id', (string) $application->id)
             ->set('change_type', 'normal')
             ->set('description', 'Deskripsi perubahan yang cukup jelas untuk pengujian.')
+            ->set('risk_event', RiskEvent::NATIONAL_SERVICE_INTEGRATION->value)
             ->set('reason_for_change', 'Alasan perubahan yang cukup panjang untuk pengujian.')
+            ->set('legal_basis', 'Dasar hukum perubahan yang cukup jelas untuk pengujian.')
+            ->set('change_risk', 'Risiko perubahan yang sudah diidentifikasi untuk pengujian.')
             ->set('impact_description', 'Dampak perubahan yang cukup jelas untuk pengujian.')
             ->set('target_implementation_date', now()->addDays(3)->format('Y-m-d\TH:i'))
-            ->set('approval_letter', UploadedFile::fake()->create('surat-persetujuan.pdf', 100, 'application/pdf'))
+            ->set('attachments', [UploadedFile::fake()->create('surat-persetujuan.pdf', 100, 'application/pdf')])
             ->call('save', RfcStatus::TICKET_CREATED->value)
             ->assertHasNoErrors()
             ->assertRedirect(route('requester.dashboard'));
     }
 
-    $year = date('Y');
-
     expect(ChangeRequest::orderBy('id')->pluck('rfc_number')->all())
         ->toBe([
-            "RFC-{$year}-0001",
-            "RFC-{$year}-0002",
+            'RFC-PD01-1',
+            'RFC-PD01-2',
         ]);
 });
 

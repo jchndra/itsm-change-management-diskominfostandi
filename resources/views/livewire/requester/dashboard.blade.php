@@ -190,7 +190,7 @@
 
     {{-- Dokumen pendukung RFC --}}
     <x-dashboard.panel id="dokumen-rfc" title="Form RFC & Pedoman Manajemen Risiko"
-        description="Dokumen contoh untuk membantu penyusunan surat persetujuan dan pengisian formulir RFC. Kedua dokumen masih berstatus draf/dummy dan belum menjadi dokumen resmi.">
+        description="Dokumen resmi untuk membantu pengisian formulir RFC serta analisis dampak dan risiko perubahan.">
         <x-slot:icon>
             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
@@ -210,9 +210,12 @@
             <div class="grid gap-4 md:grid-cols-2">
                 @foreach ($rfcDocuments as $document)
                     @php
-                        $sizeLabel = $document['size'] !== null
-                            ? number_format($document['size'] / 1024, 0, ',', '.') . ' KB'
-                            : null;
+                        $sizeInKb = $document['size'] !== null ? $document['size'] / 1024 : null;
+                        $sizeLabel = match (true) {
+                            $sizeInKb === null => null,
+                            $sizeInKb >= 1024 => number_format($sizeInKb / 1024, 1, ',', '.') . ' MB',
+                            default => number_format($sizeInKb, 0, ',', '.') . ' KB',
+                        };
                     @endphp
 
                     <article
@@ -239,54 +242,48 @@
                                     @if ($sizeLabel)
                                         <span class="text-[10px] font-medium text-slate-400">{{ $sizeLabel }}</span>
                                     @endif
+                                    @if ($document['status'])
                                     <span
-                                        class="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                                        class="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
                                         {{ $document['status'] }}
                                     </span>
+                                @endif
                                 </div>
                             </div>
                         </div>
 
                         <p class="mt-3 flex-1 text-[12px] leading-relaxed text-slate-500">{{ $document['description'] }}</p>
 
-                        <div class="mt-4">
-                            @if ($document['available'])
-                                <a href="{{ $document['download_url'] }}"
-                                    class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-700 to-blue-500 px-4 py-2.5 text-xs font-semibold text-white shadow-sm shadow-blue-600/20 transition hover:from-blue-800 hover:to-blue-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2"
-                                    aria-label="Unduh {{ $document['title'] }}">
-                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                                        aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14" />
-                                    </svg>
-                                    Unduh PDF
-                                </a>
-                            @else
-                                <button type="button" disabled
-                                    class="inline-flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-4 py-2.5 text-xs font-semibold text-slate-400"
-                                    aria-label="{{ $document['title'] }} belum tersedia">
-                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                                        aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14" />
-                                    </svg>
-                                    Dokumen belum tersedia
-                                </button>
-                            @endif
+                        <div class="mt-4 space-y-2">
+                            @foreach ($document['downloads'] as $download)
+                                @if ($download['available'])
+                                    <a href="{{ $download['download_url'] }}"
+                                        class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-700 to-blue-500 px-4 py-2.5 text-xs font-semibold text-white shadow-sm shadow-blue-600/20 transition hover:from-blue-800 hover:to-blue-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2"
+                                        aria-label="{{ $download['label'] }} - {{ $document['title'] }}">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                            aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14" />
+                                        </svg>
+                                        {{ $download['label'] }}
+                                    </a>
+                                @else
+                                    <button type="button" disabled
+                                        class="inline-flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-4 py-2.5 text-xs font-semibold text-slate-400"
+                                        aria-label="{{ $download['label'] }} belum tersedia">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                            aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14" />
+                                        </svg>
+                                        Dokumen belum tersedia
+                                    </button>
+                                @endif
+                            @endforeach
                         </div>
                     </article>
                 @endforeach
             </div>
-
-            <p class="mt-4 flex items-start gap-2 rounded-xl border border-amber-100 bg-amber-50/60 px-3.5 py-3 text-[11px] leading-relaxed text-amber-800">
-                <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-600" fill="none" stroke="currentColor"
-                    viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.9"
-                        d="M12 9v3.75m0 3h.008M10.34 3.94 2.7 17.25A2.25 2.25 0 0 0 4.65 20.5h14.7a2.25 2.25 0 0 0 1.95-3.25L13.66 3.94a2.25 2.25 0 0 0-3.32 0Z" />
-                </svg>
-                <span>Dokumen ini adalah contoh untuk prototipe dan belum menjadi dokumen resmi. Penggantian file dilakukan
-                    melalui deployment/server, bukan dari dashboard.</span>
-            </p>
         </div>
     </x-dashboard.panel>
 

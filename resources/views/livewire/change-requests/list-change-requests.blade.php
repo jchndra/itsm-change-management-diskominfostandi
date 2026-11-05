@@ -1,9 +1,4 @@
 <div class="space-y-6">
-    @php
-        $showTicketColumn = ! in_array($roleView, ['pemohon', 'release_team'], true)
-            && $rfcs->getCollection()->contains(fn ($rfc): bool => filled($rfc->ticket_number));
-    @endphp
-
     {{-- Header Banner & Ucapan Selamat Datang --}}
     <div
         class="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
@@ -175,7 +170,7 @@
 
             <div class="flex items-center gap-3">
                 <input wire:model.live.debounce.300ms="search" type="text"
-                    placeholder="Cari No. RFC{{ $showTicketColumn ? ' / No. Tiket' : '' }} / Judul..."
+                    placeholder="Cari No. RFC / Judul..."
                     class="px-3.5 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none w-48 md:w-64">
                 @if ($activeFilterCount > 0)
                     <span class="hidden rounded-full bg-blue-100 px-2.5 py-1 text-[10px] font-bold text-blue-700 sm:inline">
@@ -287,14 +282,11 @@
         </div>
 
         <div class="overflow-x-auto">
-            <table class="rfc-responsive-table w-full text-left text-xs text-slate-600">
+            <table class="rfc-responsive-table w-full min-w-[1080px] text-left text-xs text-slate-600">
                 <thead
                     class="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-100">
                     <tr>
                         <th class="px-5 py-3">No. RFC</th>
-                        @if ($showTicketColumn)
-                            <th class="px-5 py-3">No. Tiket</th>
-                        @endif
                         <th class="px-5 py-3">Judul Perubahan</th>
                         <th class="px-5 py-3">Pemohon</th>
                         <th class="px-5 py-3">Tanggal</th>
@@ -311,11 +303,6 @@
                             <td data-label="No. RFC" class="px-5 py-3.5 font-bold text-blue-900">
                                 {{ $rfc->displayIdentifier() }}
                             </td>
-                            @if ($showTicketColumn)
-                                <td data-label="No. Tiket" class="px-5 py-3.5 font-semibold text-slate-700">
-                                    {{ filled($rfc->ticket_number) ? $rfc->ticket_number : 'Belum dibuat' }}
-                                </td>
-                            @endif
                             <td data-label="Judul Perubahan" class="px-5 py-3.5 font-medium text-slate-800">
                                 <p>{{ $rfc->title }}</p>
                                 <x-category-badge :kategori="$rfc->change_type" size="sm" class="mt-1" />
@@ -332,51 +319,53 @@
                             <td data-label="Status" class="px-5 py-3.5">
                                 <x-status-badge :status="$rfc->status" :tone="$rfc->displayStatusTone()" :label="$rfc->displayStatusLabel()" />
                             </td>
-                            <td data-label="Aksi" class="px-5 py-3.5 text-right space-x-2">
-                                <a href="{{ route('change-requests.show', $rfc) }}"
-                                    class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg text-xs transition">
-                                    Detail
-                                </a>
-
-                                @if ($roleView === 'pemohon' && auth()->user()?->can('update', $rfc))
-                                    <a href="{{ route('change-requests.edit', $rfc) }}"
-                                        class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg text-xs transition">
-                                        {{ $statusVal === \App\Enums\RfcStatus::NEEDS_REVISION ? 'Revisi' : 'Edit' }}
+                            <td data-label="Aksi" class="whitespace-nowrap px-5 py-3.5">
+                                <div class="flex flex-wrap items-center justify-end gap-2">
+                                    <a href="{{ route('change-requests.show', $rfc) }}"
+                                        class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg text-xs transition">
+                                        Detail
                                     </a>
-                                @endif
 
-                                @if ($roleView === 'pemohon' && $statusVal === \App\Enums\RfcStatus::DRAFT)
-                                    <livewire:change-requests.delete-rfc :rfc="$rfc" variant="button"
-                                        :key="'delete-rfc-' . $rfc->id" />
-                                @endif
-
-                                {{-- Aksi Admin / Frontdesk --}}
-                                @if ($roleView === 'admin' && in_array($statusVal, [\App\Enums\RfcStatus::SUBMITTED, \App\Enums\RfcStatus::RETURNED_TO_ADMIN], true))
-                                    <a href="{{ route('change-requests.review', $rfc) }}"
-                                        class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-xs transition">
-                                        Buat Tiket
-                                    </a>
-                                @endif
-
-                                {{-- Aksi Change Manager --}}
-                                @if ($roleView === 'change_manager' && $statusVal === \App\Enums\RfcStatus::TICKET_CREATED)
-                                    @if ($rfc->riskAssessment)
-                                        <a href="{{ route('change-requests.record-decision', $rfc) }}"
-                                            class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg text-xs transition">
-                                            Keputusan Change Manager
-                                        </a>
-                                    @else
-                                        <a href="{{ route('change-requests.assess-risk', $rfc) }}"
-                                            class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-xs transition">
-                                            Evaluasi
+                                    @if ($roleView === 'pemohon' && auth()->user()?->can('update', $rfc))
+                                        <a href="{{ route('change-requests.edit', $rfc) }}"
+                                            class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg text-xs transition">
+                                            {{ $statusVal === \App\Enums\RfcStatus::NEEDS_REVISION ? 'Revisi' : 'Edit' }}
                                         </a>
                                     @endif
-                                @endif
+
+                                    @if ($roleView === 'pemohon' && $statusVal === \App\Enums\RfcStatus::DRAFT)
+                                        <livewire:change-requests.delete-rfc :rfc="$rfc" variant="button"
+                                            :key="'delete-rfc-' . $rfc->id" />
+                                    @endif
+
+                                    {{-- Aksi Admin / Frontdesk --}}
+                                    @if ($roleView === 'admin' && in_array($statusVal, [\App\Enums\RfcStatus::SUBMITTED, \App\Enums\RfcStatus::RETURNED_TO_ADMIN], true))
+                                        <a href="{{ route('change-requests.review', $rfc) }}"
+                                            class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-xs transition">
+                                            Buat Tiket
+                                        </a>
+                                    @endif
+
+                                    {{-- Aksi Change Manager --}}
+                                    @if ($roleView === 'change_manager' && $statusVal === \App\Enums\RfcStatus::TICKET_CREATED)
+                                        @if ($rfc->riskAssessment)
+                                            <a href="{{ route('change-requests.record-decision', $rfc) }}"
+                                                class="whitespace-nowrap px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg text-xs transition">
+                                                Keputusan Change Manager
+                                            </a>
+                                        @else
+                                            <a href="{{ route('change-requests.assess-risk', $rfc) }}"
+                                                class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-xs transition">
+                                                Evaluasi
+                                            </a>
+                                        @endif
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ $showTicketColumn ? 7 : 6 }}" class="px-5 py-8 text-center text-slate-400">
+                            <td colspan="6" class="px-5 py-8 text-center text-slate-400">
                                 Belum ada dokumen RFC yang cocok dengan filter yang dipilih.
                             </td>
                         </tr>

@@ -1,0 +1,22 @@
+# Mengabaikan folder dependency (library luar)
+node_modules/
+vendor/
+
+# Mengabaikan folder sistem, konfigurasi, dan git
+.git/
+.agents/
+.claude/
+.docker/
+.github/
+
+# Mengabaikan file rahasia (kredensial)
+.env
+.env.docker
+
+# Mengabaikan file lock (catatan versi)
+package-lock.json
+composer.lock
+
+# Mengabaikan folder cache dan log Laravel
+storage/
+bootstrap/cache/

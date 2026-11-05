@@ -2,7 +2,8 @@
 
 namespace App\Livewire\ChangeRequests\Concerns;
 
-use App\Models\ChangeRequest;
+use App\Enums\RiskEvent;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 trait ValidatesChangeRequest
@@ -12,22 +13,19 @@ trait ValidatesChangeRequest
      */
     protected function changeRequestRules(): array
     {
-        $approvalLetterMimes = implode(',', (array) config('rfc.approval_letter.mimes', ['pdf']));
-        $approvalLetterMaxKb = (int) config('rfc.approval_letter.max_kb', 5120);
-
         return [
             'title' => 'required|string|max:255',
             'application_id' => 'required|exists:applications,id',
             'change_type' => 'required|in:standard,normal,emergency',
             'description' => 'required|string',
             'reason_for_change' => 'required|string|min:10',
+            'legal_basis' => 'required|string',
+            'change_risk' => 'required|string',
+            'risk_event' => ['nullable', 'string', Rule::enum(RiskEvent::class)],
             'impact_description' => 'nullable|string',
-            'target_implementation_date' => 'required|date|after:now',
-            'is_physical_letter' => 'boolean',
-            'physical_letter_number' => 'nullable|required_if:is_physical_letter,true|string|max:100',
+            'head_of_department_approved' => 'boolean',
             'attachments' => 'array|max:5',
-            'attachments.*' => 'file|mimes:pdf,jpg,jpeg,png|max:5120',
-            'approval_letter' => "nullable|file|mimes:{$approvalLetterMimes}|max:{$approvalLetterMaxKb}",
+            'attachments.*' => 'file|mimes:pdf|max:5120',
         ];
     }
 
@@ -44,20 +42,20 @@ trait ValidatesChangeRequest
             'description.required' => 'Deskripsi perubahan wajib diisi.',
             'reason_for_change.required' => 'Alasan perubahan wajib diisi.',
             'reason_for_change.min' => 'Alasan perubahan minimal 10 karakter.',
-            'target_implementation_date.required' => 'Usulan tanggal dan jam wajib diisi.',
-            'target_implementation_date.after' => 'Usulan tanggal dan jam harus di masa mendatang.',
-            'physical_letter_number.required_if' => 'Nomor surat fisik wajib diisi jika opsi surat fisik dipilih.',
-            'physical_letter_number.max' => 'Nomor surat tidak boleh lebih dari 100 karakter.',
+            'legal_basis.required' => 'Dasar hukum wajib diisi.',
+            'change_risk.required' => 'Risiko perubahan wajib diisi.',
+            'risk_event.Illuminate\Validation\Rules\Enum' => 'Register risiko tidak valid.',
+            'head_of_department_approved.accepted' => 'Persetujuan Kepala Dinas wajib dikonfirmasi sebelum mengajukan RFC.',
             'attachments.max' => 'Maksimal 5 lampiran per RFC.',
-            'attachments.*.mimes' => 'Lampiran harus berformat PDF, JPG, JPEG, atau PNG.',
+            'attachments.*.mimes' => 'Lampiran harus berformat PDF.',
             'attachments.*.max' => 'Setiap lampiran maksimal 5 MB.',
-            'approval_letter.mimes' => 'Surat persetujuan harus berformat PDF.',
-            'approval_letter.max' => 'Surat persetujuan maksimal 5 MB.',
         ];
     }
 
     protected function validateChangeRequest(int $existingAttachmentCount = 0): void
     {
+        $this->risk_event = filled($this->risk_event) ? $this->risk_event : null;
+
         $this->validate($this->changeRequestRules(), $this->changeRequestMessages());
 
         if ($existingAttachmentCount + count($this->attachments) > 5) {
@@ -67,45 +65,20 @@ trait ValidatesChangeRequest
         }
     }
 
-    protected function validatePhysicalLetterAttachment(int $existingAttachmentCount = 0): void
+    /**
+     * Syarat tambahan saat RFC benar-benar diajukan, bukan saat disimpan draft.
+     */
+    protected function validateForSubmission(int $existingAttachmentCount = 0): void
     {
-        if ($this->is_physical_letter && $existingAttachmentCount + count($this->attachments) < 1) {
+        $this->validate([
+            'head_of_department_approved' => 'accepted',
+        ], $this->changeRequestMessages());
+
+        if ($existingAttachmentCount + count($this->attachments) < 1) {
             throw ValidationException::withMessages([
-                'attachments' => 'Lampiran surat/nota dinas wajib diunggah saat mengajukan RFC.',
+                'attachments' => 'Minimal 1 lampiran PDF wajib diunggah saat mengajukan RFC.',
             ]);
         }
-    }
-
-    /**
-     * Surat persetujuan wajib tersedia saat submit. Aturan ini sementara
-     * berlaku untuk semua kategori dan dapat diubah lewat config saat SOP final.
-     */
-    protected function validateApprovalLetterForSubmission(bool $hasExisting, bool $hasPending): void
-    {
-        if (! config('rfc.approval_letter.required_for_submission', true)) {
-            return;
-        }
-
-        $requiredChangeTypes = (array) config('rfc.approval_letter.change_types', []);
-
-        if ($requiredChangeTypes !== [] && ! in_array($this->change_type, $requiredChangeTypes, true)) {
-            return;
-        }
-
-        if ($hasExisting || $hasPending) {
-            return;
-        }
-
-        $maxKb = (int) config('rfc.approval_letter.max_kb', 5120);
-
-        throw ValidationException::withMessages([
-            'approval_letter' => "Surat persetujuan bertanda tangan wajib diunggah saat mengajukan RFC (PDF, maks. {$maxKb} KB).",
-        ]);
-    }
-
-    protected function hasExistingApprovalLetter(?ChangeRequest $rfc): bool
-    {
-        return $rfc !== null && $rfc->approvalLetters()->exists();
     }
 
     public function removePendingAttachment(int $index): void
@@ -116,10 +89,5 @@ trait ValidatesChangeRequest
 
         unset($this->attachments[$index]);
         $this->attachments = array_values($this->attachments);
-    }
-
-    public function removePendingApprovalLetter(): void
-    {
-        $this->approval_letter = null;
     }
 }

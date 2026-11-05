@@ -54,10 +54,8 @@
                     <p class="mt-1 font-medium text-slate-800">{{ $requester?->email ?? '-' }}</p>
                 </div>
                 <div>
-                    <span class="block text-xs font-semibold uppercase tracking-wide text-slate-500">Tanggal Pengajuan</span>
-                    <p class="mt-1 font-medium text-slate-800">
-                        {{ $submittedAt?->copy()->locale('id')->translatedFormat('d M Y, H:i') ?? '-' }}
-                    </p>
+                    <span class="block text-xs font-semibold uppercase tracking-wide text-slate-500">NIP</span>
+                    <p class="mt-1 font-medium text-slate-800">{{ $requester?->nip ?: '-' }}</p>
                 </div>
             </div>
         </div>
@@ -91,7 +89,7 @@
 
             <!-- Aplikasi / Sistem Tujuan -->
             <div>
-                <label for="application_id" class="block text-sm font-semibold text-slate-700 mb-1">Sistem / Aplikasi
+                <label for="application_id" class="block text-sm font-semibold text-slate-700 mb-1">Sistem / Layanan
                     yang Terdampak *</label>
                 <select id="application_id" wire:model="application_id"
                     class="w-full text-sm px-3.5 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 {{ $errors->has('application_id') ? 'border-red-500' : 'border-slate-300' }}">
@@ -108,10 +106,10 @@
             </div>
         </div>
 
-        <!-- Deskripsi Perubahan -->
+        <!-- Detail Perubahan -->
         <div>
             <label for="description" class="block text-sm font-semibold text-slate-700 mb-1">
-                Apa yang diubah dan tujuannya *
+                Detail Perubahan *
             </label>
             <textarea id="description" wire:model="description" rows="4"
                 placeholder="Jelaskan perubahan yang diajukan beserta tujuan yang ingin dicapai..."
@@ -121,15 +119,65 @@
             @enderror
         </div>
 
-        <!-- Alasan Bisnis -->
+        <!-- Alasan Perubahan -->
         <div>
             <label for="reason_for_change" class="block text-sm font-semibold text-slate-700 mb-1">
-                Kenapa ini harus diubah? *
+                Alasan Perubahan *
             </label>
             <textarea id="reason_for_change" wire:model="reason_for_change" rows="3"
-                placeholder="Jelaskan latar belakang bisnis dan urgensi perubahan ini..."
+                placeholder="Jelaskan latar belakang dan urgensi perubahan ini..."
                 class="w-full text-sm px-3.5 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 {{ $errors->has('reason_for_change') ? 'border-red-500' : 'border-slate-300' }}"></textarea>
             @error('reason_for_change')
+                <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>
+            @enderror
+        </div>
+
+        <!-- Dasar Hukum -->
+        <div>
+            <label for="legal_basis" class="block text-sm font-semibold text-slate-700 mb-1">
+                Dasar Hukum *
+            </label>
+            <textarea id="legal_basis" wire:model="legal_basis" rows="3"
+                placeholder="Sebutkan dasar hukum atau regulasi yang melandasi perubahan ini..."
+                class="w-full text-sm px-3.5 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 {{ $errors->has('legal_basis') ? 'border-red-500' : 'border-slate-300' }}"></textarea>
+            @error('legal_basis')
+                <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>
+            @enderror
+        </div>
+
+        <!-- Risiko Perubahan -->
+        <div>
+            <label for="change_risk" class="block text-sm font-semibold text-slate-700 mb-1">
+                Risiko Perubahan *
+            </label>
+            <textarea id="change_risk" wire:model="change_risk" rows="3"
+                placeholder="Jelaskan risiko yang mungkin timbul jika perubahan dilakukan atau tidak dilakukan..."
+                class="w-full text-sm px-3.5 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 {{ $errors->has('change_risk') ? 'border-red-500' : 'border-slate-300' }}"></textarea>
+            @error('change_risk')
+                <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>
+            @enderror
+        </div>
+
+        <!-- Register Risiko -->
+        <div>
+            <label for="risk_event" class="block text-sm font-semibold text-slate-700 mb-1">
+                Register Risiko *
+            </label>
+            <select id="risk_event" wire:model="risk_event"
+                class="w-full text-sm px-3.5 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 {{ $errors->has('risk_event') ? 'border-red-500' : 'border-slate-300' }}">
+                <option value="">-- Pilih Register Risiko --</option>
+                @foreach (\App\Enums\RiskEvent::cases() as $riskEvent)
+                    <option value="{{ $riskEvent->value }}">{{ $riskEvent->optionLabel() }}</option>
+                @endforeach
+            </select>
+            <p class="mt-1 text-xs text-slate-500">
+                Pilih kejadian risiko pada gambar Panduan Manajemen Risiko
+                <a href="{{ asset('images/register-risiko-indikatif.png') }}" target="_blank" rel="noopener"
+                    class="font-semibold text-indigo-600 hover:text-indigo-800 hover:underline">
+                    Lampiran B — Register Risiko Indikatif Tingkat Kota (Tabel B.1)
+                </a>.
+            </p>
+            @error('risk_event')
                 <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>
             @enderror
         </div>
@@ -145,12 +193,12 @@
             @enderror
         </div>
 
-        <!-- Estimasi Dampak -->
+        <!-- Keterangan -->
         <div>
-            <label for="impact_description" class="block text-sm font-semibold text-slate-700 mb-1">Estimasi Dampak
+            <label for="impact_description" class="block text-sm font-semibold text-slate-700 mb-1">Keterangan
                 (opsional)</label>
             <textarea id="impact_description" wire:model="impact_description" rows="3"
-                placeholder="Jelaskan estimasi downtime, jumlah pengguna terdampak, atau modul lain yang dipengaruhi..."
+                placeholder="Tuliskan keterangan tambahan terkait perubahan, misalnya perkiraan downtime, jumlah pengguna terdampak, atau modul lain yang dipengaruhi..."
                 class="w-full text-sm px-3.5 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 {{ $errors->has('impact_description') ? 'border-red-500' : 'border-slate-300' }}"></textarea>
             @error('impact_description')
                 <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>
@@ -179,59 +227,19 @@
             @endif
         </div>
 
-        <!-- Surat Persetujuan Bertanda Tangan -->
-        <div class="space-y-3 rounded-xl border border-indigo-200 bg-indigo-50/60 p-5">
-            <div class="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                    <h2 class="text-sm font-bold text-indigo-950">Surat Persetujuan Bertanda Tangan *</h2>
-                    <p class="mt-1 text-xs leading-relaxed text-indigo-800">
-                        Wajib diunggah saat mengajukan RFC untuk kategori Standar, Normal, dan Emergency. Format PDF,
-                        maksimal 5 MB. Boleh dikosongkan bila baru menyimpan draft.
-                    </p>
-                    <p class="mt-1 text-[11px] font-medium text-indigo-700">
-                        {{ config('rfc.approval_letter.note') }}
-                    </p>
-                </div>
-                @if (config('rfc.approval_letter.temporary'))
-                    <span class="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-800">
-                        Aturan Sementara
-                    </span>
-                @endif
-            </div>
-
-            <input type="file" id="approval_letter" wire:model="approval_letter" accept=".pdf,application/pdf"
-                class="block w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-100 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-200">
-
-            <div wire:loading wire:target="approval_letter" class="text-xs text-slate-500">
-                Mengunggah surat persetujuan...
-            </div>
-
-            @error('approval_letter')
-                <span class="block text-xs text-red-600">{{ $message }}</span>
-            @enderror
-
-            @if ($approval_letter)
-                <div class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm">
-                    <span class="min-w-0 flex-1 truncate text-slate-700">{{ $approval_letter->getClientOriginalName() }}</span>
-                    <span class="text-xs text-slate-400">{{ number_format($approval_letter->getSize() / 1024, 0, ',', '.') }} KB</span>
-                    <button type="button" wire:click="removePendingApprovalLetter"
-                        class="text-xs font-semibold text-rose-600 hover:text-rose-700">
-                        Hapus
-                    </button>
-                </div>
-            @endif
-        </div>
-
         <!-- Lampiran -->
         <div class="space-y-3">
             <div>
-                <label for="attachments" class="block text-sm font-semibold text-slate-700 mb-1">Lampiran Pendukung</label>
+                <label for="attachments" class="block text-sm font-semibold text-slate-700 mb-1">Lampiran *</label>
                 <p class="text-xs text-slate-500">
-                    PDF, JPG, JPEG, atau PNG. Maksimal 5 file pendukung per RFC dan 5 MB per file. Wajib diunggah saat
-                    mengajukan jika menggunakan surat/nota dinas fisik.
+                    Unggah <span class="font-semibold">Surat Persetujuan Bertanda Tangan (PDF)</span> sebagai
+                    <span class="font-semibold">file pertama</span>, disusul lampiran pendukung lainnya. Format PDF,
+                    JPG, JPEG, atau PNG. Maksimal 5 file per RFC dan 5 MB per file.
+                    <span class="text-slate-400">{{ config('rfc.approval_letter.note') }}</span>
                 </p>
             </div>
 
+            <!-- Lampiran (Surat Persetujuan + Pendukung) -->
             <input type="file" id="attachments" wire:model="attachments" multiple accept=".pdf,.jpg,.jpeg,.png"
                 class="block w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100">
 

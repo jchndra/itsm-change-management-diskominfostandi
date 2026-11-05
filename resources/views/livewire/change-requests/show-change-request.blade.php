@@ -5,6 +5,19 @@
         $isReleaseTeam = auth()->user()?->isReleaseTeam() ?? false;
         $isReleaseTeamView = $isReleaseTeam && ! $isStaff;
         $returnsToRfcList = $isStaff || $isReleaseTeam;
+        $releaseTeamDispositionTask = $isReleaseTeamView && $rfc->relationLoaded('releaseTasks')
+            ? $rfc->releaseTasks->first(
+                fn ($task) => $task->releaseTeamMember?->user_id === auth()->id()
+            )
+            : null;
+        $releaseTeamDispositionPeers = $releaseTeamDispositionTask
+            ? $rfc->releaseTasks
+                ->reject(fn ($task) => $task->id === $releaseTeamDispositionTask->id)
+                ->map(fn ($task) => $task->releaseTeamMember?->name)
+                ->filter()
+                ->unique()
+                ->values()
+            : collect();
         $status = \App\Enums\RfcStatus::fromValue($rfc->status);
         $submittedChangeType = match ((string) $rfc->change_type) {
             'standard' => 'Standar',
@@ -270,7 +283,7 @@
                         <p class="text-slate-800 font-medium">{{ $rfc->title }}</p>
                     </div>
                     <div>
-                        <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Sistem / Aplikasi Target</span>
+                        <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Sistem / Layanan Target</span>
                         <p class="text-slate-800 font-medium">{{ $rfc->application?->name }}</p>
                     </div>
                     @if (filled($rfc->change_type))
@@ -330,17 +343,39 @@
                     @endif
                     @if (filled($rfc->description))
                         <div class="md:col-span-2">
-                            <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Deskripsi Perubahan</span>
+                            <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Detail Perubahan</span>
                             <p class="text-slate-800 whitespace-pre-wrap">{{ $rfc->description }}</p>
+                        </div>
+                    @endif
+                    @if (filled($rfc->legal_basis))
+                        <div class="md:col-span-2">
+                            <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Dasar Hukum</span>
+                            <p class="text-slate-800 whitespace-pre-wrap">{{ $rfc->legal_basis }}</p>
+                        </div>
+                    @endif
+                    @if ($rfc->risk_event instanceof \App\Enums\RiskEvent)
+                        <div>
+                            <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Register Risiko</span>
+                            <p class="text-slate-800 font-medium">{{ $rfc->risk_event->optionLabel() }}</p>
+                            <a href="{{ asset('images/register-risiko-indikatif.png') }}" target="_blank" rel="noopener"
+                                class="text-xs font-medium text-indigo-600 hover:text-indigo-800 hover:underline">
+                                Lihat Lampiran B — Register Risiko Indikatif Tingkat Kota &nearr;
+                            </a>
                         </div>
                     @endif
                     <div class="md:col-span-2">
                         <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Alasan Perubahan</span>
                         <p class="text-slate-800 whitespace-pre-wrap">{{ $rfc->reason_for_change }}</p>
                     </div>
+                    @if (filled($rfc->change_risk))
+                        <div class="md:col-span-2">
+                            <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Risiko Perubahan</span>
+                            <p class="text-slate-800 whitespace-pre-wrap">{{ $rfc->change_risk }}</p>
+                        </div>
+                    @endif
                     @if (filled($rfc->impact_description))
                         <div class="md:col-span-2">
-                            <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Estimasi Dampak</span>
+                            <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Keterangan</span>
                             <p class="text-slate-800 whitespace-pre-wrap">{{ $rfc->impact_description }}</p>
                         </div>
                     @endif
@@ -421,6 +456,37 @@
                             mengajukan RFC.
                         </p>
                     @endif
+                </div>
+            @endif
+
+            @if ($releaseTeamDispositionTask)
+                <div id="disposisi" class="bg-white rounded-xl shadow-sm border border-blue-100 p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Disposisi</h3>
+
+                    <div class="rounded-lg border border-blue-100 bg-blue-50/50 p-4">
+                        <div class="flex flex-wrap items-start justify-between gap-2">
+                            <p class="text-sm font-semibold text-slate-800">
+                                Diberikan oleh {{ $releaseTeamDispositionTask->assignedBy?->name ?? 'Change Manager' }}
+                            </p>
+                            <span class="text-[11px] text-slate-500">
+                                {{ $releaseTeamDispositionTask->created_at?->copy()->locale('id')->translatedFormat('d M Y, H:i') }}
+                            </span>
+                        </div>
+
+                        <div class="mt-3">
+                            <span class="block text-[11px] font-semibold uppercase tracking-wider text-slate-500">Instruksi</span>
+                            <p class="mt-1 whitespace-pre-wrap text-sm text-slate-700">{{ $releaseTeamDispositionTask->instruction }}</p>
+                        </div>
+
+                        <div class="mt-3 border-t border-blue-100 pt-3">
+                            <span class="block text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                                Rekan Tim Rilis yang Ikut Ditugaskan
+                            </span>
+                            <p class="mt-1 text-sm text-slate-700">
+                                {{ $releaseTeamDispositionPeers->isEmpty() ? 'Tidak ada rekan lain' : $releaseTeamDispositionPeers->join(', ') }}
+                            </p>
+                        </div>
+                    </div>
                 </div>
             @endif
 
@@ -885,7 +951,12 @@
             </div>
 
             @php
-                $history = app(\App\Services\RfcHistoryService::class)->build($rfc, $isStaff, $isReleaseTeamView);
+                $history = app(\App\Services\RfcHistoryService::class)->build(
+                    $rfc,
+                    $isStaff,
+                    $isReleaseTeamView,
+                    $releaseTeamDispositionTask !== null,
+                );
                 $events = $history['events'];
                 $nextSteps = $history['next_steps'];
             @endphp
@@ -951,6 +1022,20 @@
 
                                 @if (filled($event['note']))
                                     <p class="mt-1 text-xs text-slate-600 whitespace-pre-wrap">{{ $event['note'] }}</p>
+                                @endif
+
+                                @if (filled($event['attachment_url'] ?? null))
+                                    <a href="{{ $event['attachment_url'] }}" target="_blank" rel="noopener"
+                                        class="mt-1.5 inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:underline">
+                                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                            aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                        Lihat lampiran
+                                    </a>
                                 @endif
                             </div>
                         </div>

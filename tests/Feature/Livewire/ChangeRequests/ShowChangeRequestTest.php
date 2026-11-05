@@ -2,6 +2,7 @@
 
 use App\Enums\DecisionStatus;
 use App\Enums\RfcStatus;
+use App\Enums\RiskEvent;
 use App\Livewire\ChangeRequests\CreateChangeRequest;
 use App\Livewire\ChangeRequests\ShowChangeRequest;
 use App\Models\Application;
@@ -156,13 +157,16 @@ it('shows submitted request details and hides the old purpose section', function
         ->set('application_id', (string) $application->id)
         ->set('change_type', 'normal')
         ->set('description', "Modul persuratan akan dimigrasikan ke server baru.\nTujuannya menjaga ketersediaan layanan.")
+        ->set('risk_event', RiskEvent::DATACENTER_DISRUPTION->value)
         ->set('reason_for_change', "Server lama sudah tidak layak.\nPerlu migrasi ke server baru.")
+        ->set('legal_basis', "Peraturan Wali Kota tentang Penyelenggaraan SPBE.\nInstruksi migrasi pusat data.")
+        ->set('change_risk', "Layanan surat dapat terhenti sementara.\nRisiko kehilangan data perlu dimitigasi.")
         ->set('impact_description', "Layanan surat berhenti sementara.\nPengguna diberi notifikasi.")
         ->set('target_implementation_date', now()->addDays(3)->format('Y-m-d\TH:i'))
         ->set('is_physical_letter', true)
         ->set('physical_letter_number', 'ND-123/2026')
         ->set('attachments', [UploadedFile::fake()->create('nota-dinas.pdf', 100, 'application/pdf')])
-        ->set('approval_letter', UploadedFile::fake()->create('surat-persetujuan.pdf', 100, 'application/pdf'))
+        ->set('attachments', [UploadedFile::fake()->create('surat-persetujuan.pdf', 100, 'application/pdf')])
         ->call('save', RfcStatus::TICKET_CREATED->value)
         ->assertHasNoErrors();
 

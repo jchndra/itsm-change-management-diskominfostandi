@@ -5,6 +5,7 @@ use App\Enums\RfcStatus;
 use App\Exceptions\InvalidRfcStatusTransitionException;
 use App\Livewire\ChangeRequests\DeletionHistory;
 use App\Livewire\ChangeRequests\ListChangeRequests;
+use App\Livewire\ChangeRequests\ShowChangeRequest;
 use App\Models\ChangeRequest;
 use App\Models\ChangeRequestImplementation;
 use App\Models\Decision;
@@ -64,6 +65,28 @@ function releaseTeamPolicyImplementation(ChangeRequest $rfc): ChangeRequestImple
         'summary' => 'Implementasi pengujian.',
         'test_results' => 'Seluruh pengujian berhasil.',
     ]);
+}
+
+/**
+ * @param  array<int, string>  $recipientNames
+ */
+function releaseTeamPolicyDispositionActivity(
+    ChangeRequest $rfc,
+    User $manager,
+    array $recipientNames,
+    string $instruction,
+): void {
+    activity('rfc')
+        ->performedOn($rfc)
+        ->causedBy($manager)
+        ->withProperties([
+            'event' => 'release_disposition',
+            'recipient_names' => $recipientNames,
+            'recipient_count' => count($recipientNames),
+            'instruction' => $instruction,
+            'assigned_by_id' => $manager->id,
+        ])
+        ->log('Disposisi ke Tim Rilis');
 }
 
 it('hanya menampilkan RFC yang ditugaskan kepada Tim Rilis', function () {
@@ -126,10 +149,16 @@ it('hanya menampilkan RFC yang ditugaskan kepada Tim Rilis', function () {
         ->and($user->can('viewEvidence', $otherRfc))->toBeFalse();
 });
 
-it('menyembunyikan nomor tiket, keputusan, disposisi, dan riwayat internal dari Tim Rilis', function () {
-    $manager = releaseTeamPolicyUser(['Change Manager'], ['name' => 'Manajer Internal Rahasia']);
-    $user = releaseTeamPolicyUser(['Tim Rilis']);
-    $member = releaseTeamPolicyMember($user);
+it('menampilkan instruksi disposisi kepada Tim Rilis yang ditugaskan beserta pemberi, tanggal, dan rekan', function () {
+    $manager = releaseTeamPolicyUser(['Change Manager'], [
+        'name' => 'Change Manager Disposisi',
+        'email' => 'change.manager.rahasia@example.test',
+        'nip' => '198001012006041001',
+    ]);
+    $user = releaseTeamPolicyUser(['Tim Rilis'], ['name' => 'Anggota Tim Rilis Utama']);
+    $member = releaseTeamPolicyMember($user, ['name' => $user->name]);
+    $peer = releaseTeamPolicyUser(['Tim Rilis'], ['name' => 'Rekan Tim Rilis Ditugaskan']);
+    $peerMember = releaseTeamPolicyMember($peer, ['name' => $peer->name]);
 
     $rfc = ChangeRequest::factory()->create([
         'title' => 'RFC Tugas Dengan Data Internal',
@@ -137,8 +166,110 @@ it('menyembunyikan nomor tiket, keputusan, disposisi, dan riwayat internal dari 
         'ticket_number' => 'CHG-2026-7777',
     ]);
 
+    $task = releaseTeamPolicyTask($rfc, $member, [
+        'assigned_by_id' => $manager->id,
+        'instruction' => 'Instruksi disposisi untuk anggota yang ditugaskan.',
+        'created_at' => now()->setDate(2026, 10, 20)->setTime(9, 30),
+    ]);
+    releaseTeamPolicyTask($rfc, $peerMember, [
+        'assigned_by_id' => $manager->id,
+        'instruction' => 'Instruksi disposisi untuk anggota yang ditugaskan.',
+        'created_at' => now()->setDate(2026, 10, 20)->setTime(9, 30),
+    ]);
+
+    releaseTeamPolicyDispositionActivity(
+        $rfc,
+        $manager,
+        [$member->name, $peerMember->name],
+        'Instruksi disposisi untuk anggota yang ditugaskan.',
+    );
+
+    $this->actingAs($user);
+
+    $response = $this->get(route('change-requests.show', $rfc));
+
+    $response->assertOk()
+        ->assertSee('Disposisi')
+        ->assertSee('Instruksi disposisi untuk anggota yang ditugaskan.')
+        ->assertSee('Diberikan oleh '.$manager->name)
+        ->assertSee('20 Okt 2026, 09:30')
+        ->assertSee('Rekan Tim Rilis yang Ikut Ditugaskan')
+        ->assertSee($peer->name)
+        ->assertSee('Disposisi ke Tim Rilis');
+
+    expect($task->fresh()->assigned_by_id)->toBe($manager->id);
+
+    $history = app(RfcHistoryService::class)->build($rfc->fresh(), false, true, true);
+    $dispositionEvent = collect($history['events'])->firstWhere('key', 'release_disposition');
+
+    expect($dispositionEvent)->not->toBeNull()
+        ->and($dispositionEvent['label'])->toBe('Disposisi ke Tim Rilis')
+        ->and($dispositionEvent['note'])->toContain('Instruksi disposisi untuk anggota yang ditugaskan.')
+        ->and($dispositionEvent['note'])->toContain($peer->name)
+        ->and($dispositionEvent['actor_name'])->toBe($manager->name);
+});
+
+it('menolak Tim Rilis lain yang tidak ditugaskan pada RFC yang sama', function () {
+    $manager = releaseTeamPolicyUser(['Change Manager']);
+    $user = releaseTeamPolicyUser(['Tim Rilis']);
+    $member = releaseTeamPolicyMember($user);
+    $otherUser = releaseTeamPolicyUser(['Tim Rilis']);
+    releaseTeamPolicyMember($otherUser);
+
+    $rfc = ChangeRequest::factory()->create([
+        'title' => 'RFC Hanya Untuk Anggota Tertentu',
+        'status' => RfcStatus::APPROVED->value,
+    ]);
+
     releaseTeamPolicyTask($rfc, $member, [
-        'instruction' => 'Instruksi disposisi rahasia.',
+        'assigned_by_id' => $manager->id,
+        'instruction' => 'Instruksi hanya untuk anggota yang ditugaskan.',
+    ]);
+
+    $this->actingAs($otherUser);
+
+    $this->get(route('change-requests.show', $rfc))->assertForbidden();
+    Livewire::actingAs($otherUser)
+        ->test(ShowChangeRequest::class, ['rfc' => $rfc])
+        ->assertForbidden();
+});
+
+it('menyembunyikan data internal dari HTML dan riwayat Tim Rilis yang ditugaskan', function () {
+    $manager = releaseTeamPolicyUser(['Change Manager'], [
+        'name' => 'Change Manager Internal',
+        'email' => 'manager.internal@example.test',
+        'nip' => '197912312005011002',
+    ]);
+    $requester = releaseTeamPolicyUser(['Pemohon'], [
+        'name' => 'Pemohon Internal',
+        'email' => 'pemohon.internal@example.test',
+        'nip' => '199001012010011003',
+    ]);
+    $user = releaseTeamPolicyUser(['Tim Rilis'], ['name' => 'Anggota Tim Rilis Aman']);
+    $member = releaseTeamPolicyMember($user);
+
+    $rfc = ChangeRequest::factory()->create([
+        'submitted_by_id' => $requester->id,
+        'created_by_id' => $requester->id,
+        'title' => 'RFC Tugas Dengan Data Internal',
+        'status' => RfcStatus::CLOSED->value,
+        'ticket_number' => 'CHG-2026-7777',
+        'admin_note' => 'Catatan pemeriksaan Admin lama yang rahasia.',
+        'closed_at' => now(),
+        'closed_by_id' => $manager->id,
+        'closure_notes' => 'Catatan penutupan internal rahasia.',
+    ]);
+
+    releaseTeamPolicyTask($rfc, $member, [
+        'assigned_by_id' => $manager->id,
+        'instruction' => 'Instruksi disposisi yang boleh dilihat penerima.',
+    ]);
+
+    $implementation = releaseTeamPolicyImplementation($rfc);
+    $implementation->update([
+        'evaluated_at' => now(),
+        'evaluated_by_id' => $manager->id,
+        'evaluation_notes' => 'Catatan evaluasi internal rahasia.',
     ]);
 
     Decision::create([
@@ -164,26 +295,36 @@ it('menyembunyikan nomor tiket, keputusan, disposisi, dan riwayat internal dari 
 
     $this->actingAs($user);
 
-    $this->get(route('change-requests.show', $rfc))
+    $html = $this->get(route('change-requests.show', $rfc))
         ->assertOk()
-        ->assertSee($rfc->title)
-        ->assertDontSee('Nomor Tiket')
-        ->assertDontSee('CHG-2026-7777')
-        ->assertDontSee('Alasan keputusan internal rahasia.')
-        ->assertDontSee('Catatan transisi internal rahasia.')
-        ->assertDontSee('Instruksi disposisi rahasia.')
-        ->assertDontSee('Manajer Internal Rahasia');
+        ->assertSee('Instruksi disposisi yang boleh dilihat penerima.')
+        ->assertSee('Diberikan oleh '.$manager->name)
+        ->getContent();
 
-    $history = app(RfcHistoryService::class)->build($rfc->fresh(), false, true);
+    expect($html)
+        ->not->toContain('Nomor Tiket')
+        ->not->toContain('CHG-2026-7777')
+        ->not->toContain('Catatan pemeriksaan Admin lama yang rahasia.')
+        ->not->toContain('Alasan keputusan internal rahasia.')
+        ->not->toContain('Catatan transisi internal rahasia.')
+        ->not->toContain('Catatan evaluasi internal rahasia.')
+        ->not->toContain('Catatan penutupan internal rahasia.')
+        ->not->toContain($requester->email)
+        ->not->toContain($requester->nip)
+        ->not->toContain($manager->email)
+        ->not->toContain($manager->nip);
+
+    $history = app(RfcHistoryService::class)->build($rfc->fresh(), false, true, true);
     $serializedHistory = json_encode($history['events']);
 
     expect($serializedHistory)
+        ->not->toContain('Catatan pemeriksaan Admin lama yang rahasia.')
         ->not->toContain('Alasan keputusan internal rahasia.')
         ->not->toContain('Catatan transisi internal rahasia.')
-        ->not->toContain('Instruksi disposisi rahasia.')
-        ->not->toContain('Manajer Internal Rahasia')
-        ->and(collect($history['events'])->pluck('note')->filter()->every(fn ($note): bool => ! str_contains((string) $note, 'rahasia')))
-        ->toBeTrue();
+        ->not->toContain('Catatan evaluasi internal rahasia.')
+        ->not->toContain('Catatan penutupan internal rahasia.')
+        ->not->toContain($requester->email)
+        ->not->toContain($requester->nip);
 
     $this->actingAs($manager);
 
@@ -191,7 +332,52 @@ it('menyembunyikan nomor tiket, keputusan, disposisi, dan riwayat internal dari 
         ->assertOk()
         ->assertSee('CHG-2026-7777')
         ->assertSee('Alasan keputusan internal rahasia.')
-        ->assertSee('Manajer Internal Rahasia');
+        ->assertSee($manager->name);
+});
+
+it('tetap menyembunyikan instruksi dan penerima disposisi dari Pemohon', function () {
+    $manager = releaseTeamPolicyUser(['Change Manager'], ['name' => 'Change Manager Pemohon']);
+    $requester = releaseTeamPolicyUser(['Pemohon']);
+    $user = releaseTeamPolicyUser(['Tim Rilis'], ['name' => 'Penerima Disposisi Pemohon']);
+    $member = releaseTeamPolicyMember($user, ['name' => $user->name]);
+
+    $rfc = ChangeRequest::factory()->create([
+        'submitted_by_id' => $requester->id,
+        'created_by_id' => $requester->id,
+        'status' => RfcStatus::APPROVED->value,
+    ]);
+
+    releaseTeamPolicyTask($rfc, $member, [
+        'assigned_by_id' => $manager->id,
+        'instruction' => 'Instruksi yang tidak boleh dilihat Pemohon.',
+    ]);
+
+    releaseTeamPolicyDispositionActivity(
+        $rfc,
+        $manager,
+        [$member->name],
+        'Instruksi yang tidak boleh dilihat Pemohon.',
+    );
+
+    $this->actingAs($requester);
+
+    $this->get(route('change-requests.show', $rfc))
+        ->assertOk()
+        ->assertSee('Diteruskan ke Tim Rilis')
+        ->assertDontSee('Disposisi ke Tim Rilis')
+        ->assertDontSee('Instruksi yang tidak boleh dilihat Pemohon.')
+        ->assertDontSee($user->name)
+        ->assertDontSee('Diberikan oleh');
+
+    $history = app(RfcHistoryService::class)->build($rfc->fresh(), false);
+    $dispositionEvent = collect($history['events'])->firstWhere('key', 'release_disposition');
+
+    expect($dispositionEvent)->not->toBeNull()
+        ->and($dispositionEvent['label'])->toBe('Diteruskan ke Tim Rilis')
+        ->and($dispositionEvent['note'])->toBeNull()
+        ->and($dispositionEvent['actor_name'])->toBeNull()
+        ->and(json_encode($history['events']))->not->toContain('Instruksi yang tidak boleh dilihat Pemohon.')
+        ->and(json_encode($history['events']))->not->toContain($user->name);
 });
 
 it('menolak Tim Rilis membuka arsip penghapusan RFC', function () {

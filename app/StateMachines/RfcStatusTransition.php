@@ -82,7 +82,15 @@ class RfcStatusTransition
             // baru ini terjadi pada transisi langsung ke ticket_created.
             if (in_array($newStatus, [RfcStatus::SUBMITTED, RfcStatus::TICKET_CREATED], true)
                 && blank($rfc->rfc_number)) {
-                $attributes['rfc_number'] = RfcNumberGenerator::generate();
+                $opdCode = $rfc->opdCode();
+
+                if (blank($opdCode)) {
+                    throw new InvalidRfcStatusTransitionException(
+                        'Kode OPD pemohon belum diisi sehingga nomor RFC tidak dapat diterbitkan.'
+                    );
+                }
+
+                $attributes['rfc_number'] = RfcNumberGenerator::generate($opdCode);
             }
 
             $rfc->update($attributes);

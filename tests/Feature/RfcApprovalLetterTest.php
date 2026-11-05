@@ -1,12 +1,14 @@
 <?php
 
 use App\Enums\RfcStatus;
+use App\Enums\RiskEvent;
 use App\Livewire\ChangeRequests\CreateChangeRequest;
 use App\Livewire\ChangeRequests\EditChangeRequest;
 use App\Livewire\ChangeRequests\ShowChangeRequest;
 use App\Models\Application;
 use App\Models\ChangeRequest;
 use App\Models\ChangeRequestAttachment;
+use App\Models\Opd;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -20,7 +22,9 @@ beforeEach(function () {
     $this->seed(PermissionSeeder::class);
     Storage::fake('local');
 
-    $this->pemohon = User::factory()->create();
+    $this->pemohon = User::factory()->create([
+        'opd_id' => Opd::factory()->create(['code' => 'PD01'])->id,
+    ]);
     $this->pemohon->assignRole('Pemohon');
 
     $this->application = Application::factory()->create();
@@ -38,7 +42,10 @@ function approvalLetterFormFields(Application $application, string $title): arra
         'application_id' => (string) $application->id,
         'change_type' => 'normal',
         'description' => 'Deskripsi perubahan untuk pengujian surat persetujuan.',
+        'legal_basis' => 'Dasar hukum perubahan untuk pengujian surat persetujuan.',
+        'risk_event' => RiskEvent::CYBER_INCIDENT->value,
         'reason_for_change' => 'Alasan perubahan yang cukup jelas untuk pengujian.',
+        'change_risk' => 'Risiko perubahan untuk pengujian surat persetujuan.',
         'impact_description' => 'Dampak perubahan yang perlu diketahui pemohon.',
         'target_implementation_date' => now()->addDays(3)->format('Y-m-d\TH:i'),
     ];
@@ -52,6 +59,7 @@ function approvalLetterDraft(User $owner, Application $application, array $attri
         'application_id' => $application->id,
         'status' => RfcStatus::DRAFT->value,
         'rfc_number' => null,
+        'risk_event' => RiskEvent::CYBER_INCIDENT,
         'target_implementation_date' => now()->addDays(5),
         ...$attributes,
     ]);
@@ -86,36 +94,37 @@ it('menyimpan draft tanpa nomor resmi dan tanpa surat persetujuan', function () 
         ->and($rfc->approvalLetters()->count())->toBe(0);
 });
 
-it('mewajibkan surat persetujuan pdf dan menerbitkan nomor resmi saat pengajuan', function () {
+it('menuntut surat persetujuan pdf dan menerbitkan nomor resmi saat pengajuan', function () {
     $newForm = fn () => Livewire::test(CreateChangeRequest::class)
         ->set(approvalLetterFormFields($this->application, 'Pengajuan Dengan Surat Persetujuan'));
 
     $newForm()
         ->call('save', RfcStatus::TICKET_CREATED->value)
-        ->assertHasErrors('approval_letter');
+        ->assertHasErrors('attachments');
 
     expect(ChangeRequest::count())->toBe(0);
 
+    // Format selain PDF pada file pertama tetap ditolak: surat persetujuan wajib PDF.
     $newForm()
-        ->set('approval_letter', UploadedFile::fake()->create(
+        ->set('attachments', [UploadedFile::fake()->create(
             'surat-persetujuan.docx',
             100,
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        ))
+        )])
         ->call('save', RfcStatus::TICKET_CREATED->value)
-        ->assertHasErrors('approval_letter');
+        ->assertHasErrors('attachments.0');
 
     expect(ChangeRequest::count())->toBe(0);
 
     $newForm()
-        ->set('approval_letter', UploadedFile::fake()->create('surat-persetujuan.pdf', 100, 'application/pdf'))
+        ->set('attachments', [UploadedFile::fake()->create('surat-persetujuan.pdf', 100, 'application/pdf')])
         ->call('save', RfcStatus::TICKET_CREATED->value)
         ->assertHasNoErrors();
 
     $rfc = ChangeRequest::latest('id')->firstOrFail();
 
     expect($rfc->status)->toBe(RfcStatus::TICKET_CREATED->value)
-        ->and($rfc->rfc_number)->toBe('RFC-'.date('Y').'-0001')
+        ->and($rfc->rfc_number)->toBe('RFC-PD01-1')
         ->and($rfc->displayIdentifier())->toBe($rfc->rfc_number)
         ->and($rfc->approvalLetters()->count())->toBe(1)
         ->and($rfc->supportingAttachments()->count())->toBe(0);
@@ -132,9 +141,9 @@ it('menampilkan nomor draft lama sebagai identitas draft, bukan nomor resmi', fu
 it('menolak surat persetujuan pdf yang lebih dari 5 mb', function () {
     Livewire::test(CreateChangeRequest::class)
         ->set(approvalLetterFormFields($this->application, 'Surat Persetujuan Terlalu Besar'))
-        ->set('approval_letter', UploadedFile::fake()->create('surat-besar.pdf', 5121, 'application/pdf'))
+        ->set('attachments', [UploadedFile::fake()->create('surat-besar.pdf', 5121, 'application/pdf')])
         ->call('save', RfcStatus::TICKET_CREATED->value)
-        ->assertHasErrors('approval_letter');
+        ->assertHasErrors('attachments.0');
 
     expect(ChangeRequest::count())->toBe(0);
 });
@@ -144,7 +153,7 @@ it('menolak pengajuan draft tanpa surat persetujuan dan menerbitkan nomor saat s
 
     Livewire::test(EditChangeRequest::class, ['rfc' => $rfc])
         ->call('submit')
-        ->assertHasErrors('approval_letter');
+        ->assertHasErrors('attachments');
 
     expect($rfc->fresh()->status)->toBe(RfcStatus::DRAFT->value)
         ->and($rfc->fresh()->rfc_number)->toBeNull();
@@ -158,7 +167,7 @@ it('menolak pengajuan draft tanpa surat persetujuan dan menerbitkan nomor saat s
     $fresh = $rfc->fresh();
 
     expect($fresh->status)->toBe(RfcStatus::TICKET_CREATED->value)
-        ->and($fresh->rfc_number)->toBe('RFC-'.date('Y').'-0001')
+        ->and($fresh->rfc_number)->toBe('RFC-PD01-1')
         ->and($fresh->approvalLetters()->count())->toBe(1);
 });
 
@@ -173,7 +182,7 @@ it('menolak penghapusan surat persetujuan dan menyimpan surat pengganti sebagai 
     expect($oldLetter->fresh())->not->toBeNull();
 
     Livewire::test(EditChangeRequest::class, ['rfc' => $rfc->fresh()])
-        ->set('approval_letter', UploadedFile::fake()->create('surat-baru.pdf', 120, 'application/pdf'))
+        ->set('attachments', [UploadedFile::fake()->create('surat-baru.pdf', 120, 'application/pdf')])
         ->call('saveChanges')
         ->assertHasNoErrors();
 

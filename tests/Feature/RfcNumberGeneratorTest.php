@@ -30,8 +30,7 @@ it('menolak nomor RFC resmi duplikat di database', function () {
 });
 
 it('mempertahankan nomor resmi setelah transisi status dan soft delete', function () {
-    $year = date('Y');
-    $number = "RFC-{$year}-9100";
+    $number = 'RFC-PD01-9100';
 
     $owner = User::factory()->create();
     $owner->assignRole('Pemohon');
@@ -59,5 +58,5 @@ it('mempertahankan nomor resmi setelah transisi status dan soft delete', functio
     $deleted->restore();
 
     expect($deleted->fresh()->rfc_number)->toBe($number)
-        ->and(RfcNumberGenerator::generate())->toBe("RFC-{$year}-9101");
+        ->and(RfcNumberGenerator::generate('PD01'))->toBe('RFC-PD01-9101');
 });

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ImplementationResult;
 use App\Enums\RfcStatus;
+use App\Enums\RiskEvent;
 use App\Enums\ServiceCategory;
 use App\Enums\TicketPriority;
 use Illuminate\Database\Eloquent\Builder;
@@ -32,7 +33,12 @@ class ChangeRequest extends Model
         'physical_letter_number',
         'reason_for_change',
         'description',
+        'legal_basis',
+        'change_risk',
+        'head_of_department_approved',
+        'head_of_department_approved_at',
         'impact_description',
+        'risk_event',
         'status',
         'change_type',
         'emergency_unconfirmed',
@@ -55,8 +61,11 @@ class ChangeRequest extends Model
         return [
             'is_physical_letter' => 'boolean',
             'emergency_unconfirmed' => 'boolean',
+            'head_of_department_approved' => 'boolean',
+            'head_of_department_approved_at' => 'datetime',
             'priority' => TicketPriority::class,
             'category' => ServiceCategory::class,
+            'risk_event' => RiskEvent::class,
             'ticket_created_at' => 'datetime',
             'target_implementation_date' => 'datetime',
             'closed_at' => 'datetime',
@@ -86,6 +95,16 @@ class ChangeRequest extends Model
                 throw new RuntimeException('Nomor RFC hanya dapat diberikan saat RFC diajukan.');
             }
         });
+    }
+
+    /**
+     * Kode OPD yang dipakai untuk penomoran RFC. OPD pemohon menjadi acuan
+     * utama; bila belum diisi, gunakan OPD aplikasi yang terdampak.
+     */
+    public function opdCode(): ?string
+    {
+        return $this->submittedBy?->opd?->code
+            ?? $this->application?->opd?->code;
     }
 
     /**
