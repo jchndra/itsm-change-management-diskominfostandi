@@ -571,42 +571,6 @@
                     </div>
                 @endif
             </section>
-
-            {{-- Notifikasi terbaru --}}
-            <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div class="mb-4 flex items-center justify-between gap-3">
-                    <h3 class="flex items-center gap-2.5 text-[15px] font-bold text-slate-800">
-                        <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7"
-                                d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
-                        </svg>
-                        Notifikasi Terbaru
-                    </h3>
-                    <a href="{{ route('notifications.index') }}" wire:navigate
-                        class="text-xs font-semibold text-blue-600 transition hover:text-blue-700">Lihat Semua</a>
-                </div>
-
-                <div class="space-y-3.5">
-                    @forelse ($notifications as $notification)
-                        <a href="{{ route('notifications.index', ['open' => $notification->id]) }}"
-                            class="flex items-start gap-3">
-                            <x-notification-icon :status="data_get($notification->data, 'status')" :outcome="data_get($notification->data, 'outcome')" class="h-8 w-8" />
-                            <div class="min-w-0 flex-1">
-                                <p class="line-clamp-2 text-[12px] leading-snug text-slate-700">
-                                    {{ data_get($notification->data, 'message', 'Notifikasi baru') }}
-                                </p>
-                                <p class="mt-0.5 text-[10px] text-slate-400">
-                                    {{ $notification->created_at?->copy()->locale('id')->translatedFormat('d M Y, H:i') }}
-                                    &middot;
-                                    {{ $notification->created_at?->copy()->locale('id')->diffForHumans() }}
-                                </p>
-                            </div>
-                        </a>
-                    @empty
-                        <p class="py-6 text-center text-sm text-slate-500">Belum ada notifikasi baru.</p>
-                    @endforelse
-                </div>
-            </section>
         </div>
     </div>
 </div>

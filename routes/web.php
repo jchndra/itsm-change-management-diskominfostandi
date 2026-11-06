@@ -94,6 +94,10 @@ Route::middleware('auth')->group(function () {
         ->name('disposition.assign');
 
     // Dokumen statis RFC (template surat persetujuan & pedoman)
+    Route::get('/rfc-documents/panduan-analisis-risiko', [RfcDocumentController::class, 'panduanAnalisisRisiko'])
+        ->middleware('can:downloadRfcDocument')
+        ->name('rfc-documents.panduan-analisis-risiko');
+
     Route::get('/rfc-documents/{document}/{download?}', RfcDocumentController::class)
         ->where([
             'document' => '[a-z0-9-]+',

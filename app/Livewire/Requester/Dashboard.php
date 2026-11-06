@@ -66,15 +66,11 @@ class Dashboard extends Component
             ? app(RfcHistoryService::class)->dashboardTimeline($latestActiveRfc, false)
             : [];
 
-        // Notifikasi terbaru (sudah dibaca maupun belum)
-        $notifications = $user->notifications()->take(4)->get();
-
         return view('livewire.requester.dashboard', [
             'stats' => $stats,
             'recentRfcs' => $recentRfcs,
             'latestActiveRfc' => $latestActiveRfc,
             'timeline' => $timeline,
-            'notifications' => $notifications,
             'rfcDocuments' => app(RfcDocumentService::class)->all(),
         ])->title('Dashboard Pemohon');
     }

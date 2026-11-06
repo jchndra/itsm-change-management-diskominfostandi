@@ -182,6 +182,117 @@
             @enderror
         </div>
 
+        <!-- Analisis Dampak dan Risiko Perubahan -->
+        <section class="rounded-xl border-2 border-slate-300 p-5 sm:p-6 space-y-4"
+            x-data="{
+                dampak: @js(old('level_dampak', '')),
+                kemungkinan: @js(old('level_kemungkinan', '')),
+                besaran: @js(old('besaran_risiko', '')),
+                level: @js(old('level_risiko', '')),
+                prioritas: {
+                    1: [0, 25, 23, 21, 18, 16],
+                    2: [0, 24, 19, 14, 12, 9],
+                    3: [0, 22, 15, 11, 7, 5],
+                    4: [0, 20, 13, 8, 4, 2],
+                    5: [0, 17, 10, 6, 3, 1],
+                },
+                hitung() {
+                    if (!this.dampak || !this.kemungkinan) {
+                        this.besaran = '';
+                        this.level = '';
+                        return;
+                    }
+
+                    const nilaiPrioritas = this.prioritas[this.kemungkinan]?.[Number(this.dampak)];
+
+                    if (!nilaiPrioritas) {
+                        this.besaran = '';
+                        this.level = '';
+                        return;
+                    }
+
+                    this.besaran = String(26 - nilaiPrioritas);
+                    this.level = nilaiPrioritas <= 3 ? '5'
+                        : nilaiPrioritas <= 8 ? '4'
+                        : nilaiPrioritas <= 17 ? '3'
+                        : nilaiPrioritas <= 22 ? '2'
+                        : '1';
+                },
+                init() {
+                    this.hitung();
+                },
+            }">
+            <h2 class="text-center text-base font-bold text-slate-800">Analisis Dampak dan Risiko Perubahan</h2>
+
+            <div class="text-center">
+                <a href="{{ route('rfc-documents.panduan-analisis-risiko') }}"
+                    class="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:underline">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14" />
+                    </svg>
+                    Panduan Pengisian Analisis Risiko
+                </a>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Level Dampak -->
+                <div>
+                    <label for="level_dampak" class="block text-sm font-semibold text-slate-700 mb-1">Level Dampak</label>
+                    <select id="level_dampak" name="level_dampak" x-model="dampak" x-on:change="hitung()"
+                        class="w-full text-sm px-3.5 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="">-- Pilih Level Dampak --</option>
+                        <option value="1">Tidak Signifikan (1)</option>
+                        <option value="2">Minor (2)</option>
+                        <option value="3">Moderat (3)</option>
+                        <option value="4">Signifikan (4)</option>
+                        <option value="5">Sangat Signifikan (5)</option>
+                    </select>
+                </div>
+
+                <!-- Level Kemungkinan -->
+                <div>
+                    <label for="level_kemungkinan" class="block text-sm font-semibold text-slate-700 mb-1">Level Kemungkinan</label>
+                    <select id="level_kemungkinan" name="level_kemungkinan" x-model="kemungkinan" x-on:change="hitung()"
+                        class="w-full text-sm px-3.5 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="">-- Pilih Level Kemungkinan --</option>
+                        <option value="1">Hampir Tidak Terjadi (1)</option>
+                        <option value="2">Jarang Terjadi (2)</option>
+                        <option value="3">Kadang Terjadi (3)</option>
+                        <option value="4">Sering Terjadi (4)</option>
+                        <option value="5">Hampir Pasti Terjadi (5)</option>
+                    </select>
+                </div>
+
+                <!-- Besaran Risiko -->
+                <div>
+                    <label for="besaran_risiko" class="block text-sm font-semibold text-slate-700 mb-1">Besaran Risiko</label>
+                    <select id="besaran_risiko" name="besaran_risiko" x-model="besaran" tabindex="-1"
+                        aria-readonly="true"
+                        class="w-full text-sm px-3.5 py-2.5 border border-slate-300 rounded-lg bg-slate-100 text-slate-500 cursor-not-allowed pointer-events-none">
+                        <option value="">-- Besaran Risiko --</option>
+                        @for ($nilai = 1; $nilai <= 25; $nilai++)
+                            <option value="{{ $nilai }}">{{ $nilai }}</option>
+                        @endfor
+                    </select>
+                </div>
+
+                <!-- Level Risiko -->
+                <div>
+                    <label for="level_risiko" class="block text-sm font-semibold text-slate-700 mb-1">Level Risiko</label>
+                    <select id="level_risiko" name="level_risiko" x-model="level" tabindex="-1" aria-readonly="true"
+                        class="w-full text-sm px-3.5 py-2.5 border border-slate-300 rounded-lg bg-slate-100 text-slate-500 cursor-not-allowed pointer-events-none">
+                        <option value="">-- Level Risiko --</option>
+                        <option value="1">Sangat Rendah (1)</option>
+                        <option value="2">Rendah (2)</option>
+                        <option value="3">Sedang (3)</option>
+                        <option value="4">Tinggi (4)</option>
+                        <option value="5">Sangat Tinggi (5)</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
         <!-- Keterangan -->
         <div>
             <label for="impact_description" class="block text-sm font-semibold text-slate-700 mb-1">Keterangan
