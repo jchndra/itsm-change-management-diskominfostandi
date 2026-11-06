@@ -77,6 +77,7 @@ it('menghitung metrik change manager tanpa RFC terhapus', function () {
         RfcStatus::IMPLEMENTED,
         RfcStatus::FAILED,
         RfcStatus::CLOSED,
+        RfcStatus::REJECTED,
         RfcStatus::DRAFT,
         RfcStatus::SUBMITTED,
     ] as $status) {
@@ -93,9 +94,10 @@ it('menghitung metrik change manager tanpa RFC terhapus', function () {
         ->and($overview['in_progress'])->toBe(1)
         ->and($overview['waiting_evaluation'])->toBe(2)
         ->and($overview['closed'])->toBe(1)
+        ->and($overview['rejected'])->toBe(1)
         ->and($overview['action_required'])->toBe(5)
         ->and($overview['queue'])->toHaveCount(5)
-        ->and(array_sum(array_column($overview['distribution'], 'value')))->toBe(8)
+        ->and(array_sum(array_column($overview['distribution'], 'value')))->toBe(9)
         ->and(collect($overview['queue'])->pluck('id'))->not->toContain($deleted->id);
 });
 

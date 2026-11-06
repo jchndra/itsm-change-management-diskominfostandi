@@ -2,6 +2,7 @@
     'label',
     'value' => 0,
     'hint' => null,
+    'percent' => null,
     'change' => null,
     'showComparison' => false,
     'comparisonPolarity' => 'normal',
@@ -44,6 +45,10 @@
     $palette = $tones[$tone] ?? $tones['blue'];
 
     $changeValue = $change === null ? null : (float) $change;
+    $percentValue = $percent === null ? null : (float) $percent;
+    $percentLabel = $percentValue !== null && $percentValue > 0
+        ? number_format($percentValue, 1, ',', '.')
+        : '0';
     $isInverse = $comparisonPolarity === 'inverse';
     $isStable = $changeValue !== null && abs($changeValue) < 0.05;
     $isIncrease = $changeValue !== null && $changeValue > 0;
@@ -85,6 +90,12 @@
 
     @if (filled($hint))
         <p class="relative mt-2.5 text-xs leading-relaxed text-slate-500">{{ $hint }}</p>
+    @endif
+
+    @if ($percentValue !== null)
+        <p class="relative mt-1 text-[11px] tabular-nums text-slate-400">
+            {{ $percentLabel }}% dari total RFC
+        </p>
     @endif
 
     @if ($showComparison)

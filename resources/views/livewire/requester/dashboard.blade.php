@@ -222,30 +222,20 @@
                         Sampaikan kebutuhan perubahan sistem atau infrastruktur TI untuk mendukung layanan di lingkungan
                         Diskominfostandi Kota Bekasi.
                     </p>
-                    <a href="{{ route('change-requests.create') }}" wire:navigate
-                        class="mt-4 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-700 to-blue-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/25 transition hover:from-blue-800 hover:to-blue-600">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 4v16m8-8H4" />
-                        </svg>
-                        Ajukan RFC Baru
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 5l7 7-7 7" />
-                        </svg>
-                    </a>
                 </div>
             </div>
 
-            <div class="relative z-10 hidden items-center gap-3 lg:flex">
-                <div class="rounded-xl bg-white/60 px-4 py-3 text-right shadow-sm ring-1 ring-white/70 backdrop-blur-sm">
-                    <p class="text-sm font-semibold leading-snug text-blue-700">
-                        Transformasi Digital<br>untuk Pelayanan Publik<br>yang Lebih Baik
-                    </p>
-                </div>
-                <svg class="h-6 w-16 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 64 24">
+            <a href="{{ route('change-requests.create') }}" wire:navigate
+                class="group relative z-10 flex w-full items-center justify-between gap-3 rounded-xl bg-gradient-to-r from-blue-700 to-blue-500 px-4 py-3 text-left text-white shadow-md shadow-blue-600/25 transition hover:from-blue-800 hover:to-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 sm:w-auto lg:text-right">
+                <p class="text-sm font-semibold leading-snug text-white">
+                    Ajukan RFC Baru
+                </p>
+                <svg class="h-6 w-16 shrink-0 text-white transition group-hover:translate-x-1" fill="none"
+                    stroke="currentColor" viewBox="0 0 64 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                         d="M2 12h52m0 0-8-8m8 8-8 8" />
                 </svg>
-            </div>
+            </a>
         </div>
 
         {{-- Ilustrasi gedung pemerintahan --}}

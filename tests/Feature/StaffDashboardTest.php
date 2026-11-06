@@ -172,13 +172,13 @@ it('menampilkan menu sidebar staf sesuai izin', function (array $roles, array $p
     'admin' => [
         ['Admin'],
         [],
-        ['Dashboard Admin', 'Daftar RFC', 'Buat Tiket Change', 'Riwayat Penghapusan', 'Notifikasi', 'Profil'],
+        ['Dashboard Admin', 'Daftar RFC', 'Buat Tiket Change', 'Riwayat Penghapusan', 'Profil'],
         ['Dashboard Change Manager', 'Ajukan RFC', 'RFC Saya'],
     ],
     'change manager' => [
         ['Change Manager'],
         [],
-        ['Dashboard Change Manager', 'Daftar RFC', 'Riwayat Penghapusan', 'Notifikasi', 'Profil'],
+        ['Dashboard Change Manager', 'Daftar RFC', 'Riwayat Penghapusan', 'Profil'],
         ['Dashboard Admin', 'Buat Tiket Change', 'Ajukan RFC', 'RFC Saya'],
     ],
     'dua peran' => [
@@ -190,13 +190,13 @@ it('menampilkan menu sidebar staf sesuai izin', function (array $roles, array $p
     'staf tanpa izin dashboard' => [
         [],
         ['rfc.view_all'],
-        ['Daftar RFC', 'Riwayat Penghapusan', 'Notifikasi', 'Profil'],
+        ['Daftar RFC', 'Riwayat Penghapusan', 'Profil'],
         ['Dashboard Admin', 'Dashboard Change Manager', 'Buat Tiket Change'],
     ],
     'pemohon' => [
         ['Pemohon'],
         [],
-        ['Dashboard', 'Ajukan RFC', 'RFC Saya', 'Riwayat Penghapusan', 'Notifikasi', 'Profil'],
+        ['Dashboard', 'Ajukan RFC', 'RFC Saya', 'Riwayat Penghapusan', 'Profil'],
         ['Dashboard Admin', 'Dashboard Change Manager', 'Daftar RFC', 'Buat Tiket Change'],
     ],
 ]);
@@ -239,9 +239,7 @@ it('menampilkan kerangka dashboard admin dengan tanggal dan jam WIB dinamis', fu
     }
 });
 
-it('menampilkan kerangka dashboard change manager dengan tanggal dan jam WIB dinamis', function () {
-    Carbon::setTestNow(Carbon::create(2026, 10, 26, 8, 30, 0, 'Asia/Jakarta'));
-
+it('menampilkan kerangka dashboard change manager tanpa meta tanggal di banner', function () {
     $manager = staffDashboardUser(['Change Manager']);
 
     $response = $this->actingAs($manager)
@@ -249,7 +247,8 @@ it('menampilkan kerangka dashboard change manager dengan tanggal dan jam WIB din
         ->assertOk()
         ->assertSee('Selamat datang, '.$manager->name)
         ->assertSee('Dashboard Change Manager')
-        ->assertSee('Senin, 26 Oktober 2026 pukul 08:30 WIB')
+        ->assertDontSee('Muat ulang')
+        ->assertDontSee('Senin, 26 Oktober 2026 pukul 08:30 WIB')
         ->assertSee('Daftar RFC')
         ->assertDontSee('Antrean RFC Masuk');
 

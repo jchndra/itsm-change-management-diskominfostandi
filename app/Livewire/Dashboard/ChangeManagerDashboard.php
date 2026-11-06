@@ -28,7 +28,6 @@ class ChangeManagerDashboard extends Component
 
         return view('livewire.dashboard.change-manager-dashboard', [
             'user' => $user,
-            'now' => now()->locale('id'),
             'overview' => app(DashboardMetricsService::class)->changeManagerOverview(),
         ])->title('Dashboard Change Manager');
     }

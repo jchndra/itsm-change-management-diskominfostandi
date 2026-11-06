@@ -1,12 +1,15 @@
 <div class="space-y-5 sm:space-y-6">
 
-    {{-- Banner sambutan --}}
-    <x-dashboard.hero-banner class="dashboard-rise" title="Dashboard Change Manager"
-        description="Kelola penilaian risiko, keputusan, implementasi, hingga evaluasi RFC agar perubahan layanan TI berjalan terkendali."
-        :user-name="$user->name" :date-time="$now->translatedFormat('l, j F Y') . ' pukul ' . $now->format('H:i')"
-        role-label="Change Manager" />
+    @php
+        $metricTotal = max(0, (int) ($overview['total'] ?? 0));
+        $metricPercent = fn (int $value): float => $metricTotal > 0 ? ($value / $metricTotal) * 100 : 0.0;
+    @endphp
 
-    {{-- Lima kartu metrik --}}
+    {{-- Banner sambutan --}}
+    <x-dashboard.hero-banner class="dashboard-rise" title="Dashboard Change Manager" :user-name="$user->name"
+        role-label="Change Manager" :show-meta="false" />
+
+    {{-- Enam kartu metrik --}}
     <section aria-labelledby="metrik-change-manager" class="dashboard-rise dashboard-rise-1">
         <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
             <div class="flex items-start gap-3">
@@ -20,20 +23,12 @@
                     <p class="mt-1 text-xs text-slate-500">Posisi RFC yang menjadi tanggung jawab Change Manager.</p>
                 </div>
             </div>
-
-            <span
-                class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-semibold text-slate-500 shadow-sm">
-                <span class="relative flex h-2 w-2" aria-hidden="true">
-                    <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60"></span>
-                    <span class="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
-                </span>
-                Diperbarui {{ $now->translatedFormat('d M Y, H:i') }} WIB
-            </span>
         </div>
 
-        <div class="grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <div class="grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <x-dashboard.stat-card label="Menunggu Review" :value="$overview['pending_review']"
-                hint="Perlu penilaian risiko dan keputusan" tone="blue">
+                :percent="$metricPercent($overview['pending_review'])" hint="Perlu penilaian risiko dan keputusan"
+                tone="blue">
                 <x-slot:icon>
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
@@ -43,7 +38,7 @@
             </x-dashboard.stat-card>
 
             <x-dashboard.stat-card label="Disetujui" :value="$overview['approved']"
-                hint="Siap memulai implementasi" tone="emerald">
+                :percent="$metricPercent($overview['approved'])" hint="Siap memulai implementasi" tone="emerald">
                 <x-slot:icon>
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
@@ -53,7 +48,8 @@
             </x-dashboard.stat-card>
 
             <x-dashboard.stat-card label="Sedang Dikerjakan" :value="$overview['in_progress']"
-                hint="Implementasi sedang berjalan" tone="indigo">
+                :percent="$metricPercent($overview['in_progress'])" hint="Implementasi sedang berjalan"
+                tone="indigo">
                 <x-slot:icon>
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
@@ -63,7 +59,8 @@
             </x-dashboard.stat-card>
 
             <x-dashboard.stat-card label="Menunggu Evaluasi" :value="$overview['waiting_evaluation']"
-                hint="Perlu evaluasi dan penutupan" tone="amber">
+                :percent="$metricPercent($overview['waiting_evaluation'])" hint="Perlu evaluasi dan penutupan"
+                tone="amber">
                 <x-slot:icon>
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
@@ -73,11 +70,21 @@
             </x-dashboard.stat-card>
 
             <x-dashboard.stat-card label="Ditutup" :value="$overview['closed']"
-                hint="RFC telah ditutup" tone="slate">
+                :percent="$metricPercent($overview['closed'])" hint="RFC telah ditutup" tone="slate">
                 <x-slot:icon>
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
                             d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 0h10.5A2.25 2.25 0 0 1 19.5 12.75v6A2.25 2.25 0 0 1 17.25 21H6.75a2.25 2.25 0 0 1-2.25-2.25v-6a2.25 2.25 0 0 1 2.25-2.25Z" />
+                    </svg>
+                </x-slot:icon>
+            </x-dashboard.stat-card>
+
+            <x-dashboard.stat-card label="Ditolak" :value="$overview['rejected']"
+                :percent="$metricPercent($overview['rejected'])" hint="RFC ditolak" tone="rose">
+                <x-slot:icon>
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                            d="M9.75 9.75l4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                     </svg>
                 </x-slot:icon>
             </x-dashboard.stat-card>

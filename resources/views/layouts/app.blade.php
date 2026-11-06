@@ -93,16 +93,6 @@
                         Tugas Saya
                     </x-sidebar-link>
 
-                    <x-sidebar-link :href="route('notifications.index')" :active="request()->routeIs('notifications.*')" :badge="$unreadCount ?: null">
-                        <x-slot:icon>
-                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                                    d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
-                            </svg>
-                        </x-slot:icon>
-                        Notifikasi
-                    </x-sidebar-link>
-
                     <x-sidebar-link :href="route('profile.show')" :active="request()->routeIs('profile.*')">
                         <x-slot:icon>
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -235,16 +225,6 @@
                     Riwayat Penghapusan
                 </x-sidebar-link>
 
-                <x-sidebar-link :href="route('notifications.index')" :active="request()->routeIs('notifications.*')" :badge="$unreadCount ?: null">
-                    <x-slot:icon>
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                                d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
-                        </svg>
-                    </x-slot:icon>
-                    Notifikasi
-                </x-sidebar-link>
-
                 <x-sidebar-link :href="route('profile.show')" :active="request()->routeIs('profile.*')">
                     <x-slot:icon>
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -346,20 +326,61 @@
                         </button>
 
                         {{-- Notifikasi --}}
-                        <div class="relative" x-data="{ open: false }" x-on:click.outside="open = false">
+                        <div class="relative"
+                            x-data="{
+                                count: {{ $unreadCount }},
+                                open: false,
+                                pollingInterval: null,
+                                visibilityHandler: null,
+                                init() {
+                                    this.pollingInterval = setInterval(() => this.syncUnreadCount(), 30000);
+                                    this.visibilityHandler = () => {
+                                        if (! document.hidden) {
+                                            this.syncUnreadCount();
+                                        }
+                                    };
+                                    document.addEventListener('visibilitychange', this.visibilityHandler);
+                                },
+                                destroy() {
+                                    clearInterval(this.pollingInterval);
+                                    document.removeEventListener('visibilitychange', this.visibilityHandler);
+                                },
+                                async syncUnreadCount() {
+                                    if (document.hidden) {
+                                        return;
+                                    }
+
+                                    try {
+                                        const response = await fetch('{{ route('notifications.unread-count') }}', {
+                                            headers: { Accept: 'application/json' },
+                                        });
+
+                                        if (! response.ok) {
+                                            return;
+                                        }
+
+                                        const payload = await response.json();
+
+                                        if (Number.isFinite(payload.count)) {
+                                            this.count = payload.count;
+                                        }
+                                    } catch (error) {
+                                        // Abaikan error jaringan.
+                                    }
+                                },
+                            }" x-on:click.outside="open = false">
                             <button type="button" x-on:click="open = !open"
                                 class="relative grid h-10 w-10 place-items-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
                                 aria-label="Notifikasi">
-                                <svg class="h-[22px] w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="h-[22px] w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                    :class="{ 'bell-ring': count > 0 && !open }">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7"
                                         d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
                                 </svg>
-                                @if ($unreadCount > 0)
-                                    <span data-notification-badge
-                                        class="absolute right-0 top-0 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">
-                                        {{ $unreadCount }}
-                                    </span>
-                                @endif
+                                <span x-show="count > 0" x-text="count" x-cloak data-notification-badge
+                                    class="absolute right-0 top-0 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">
+                                    {{ $unreadCount }}
+                                </span>
                             </button>
 
                             <div x-show="open" x-cloak x-transition.origin.top.right

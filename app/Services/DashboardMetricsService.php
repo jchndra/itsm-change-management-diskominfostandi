@@ -53,6 +53,8 @@ class DashboardMetricsService
      *     in_progress: int,
      *     waiting_evaluation: int,
      *     closed: int,
+     *     rejected: int,
+     *     total: int,
      *     action_required: int,
      *     queue: array<int, array{
      *         id: int,
@@ -98,6 +100,8 @@ class DashboardMetricsService
             'in_progress' => $inProgress,
             'waiting_evaluation' => $waitingEvaluation,
             'closed' => (int) ($statusCounts[RfcStatus::CLOSED->value] ?? 0),
+            'rejected' => (int) ($statusCounts[RfcStatus::REJECTED->value] ?? 0),
+            'total' => array_sum($statusCounts),
             'action_required' => $pendingReview + $approved + $inProgress + $waitingEvaluation,
             'queue' => $this->changeManagerQueue($now),
             'trend' => $this->changeManagerTrend($periodStart, $periodEnd),

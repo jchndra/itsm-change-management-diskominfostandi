@@ -43,6 +43,39 @@
     }
 }
 
+/* Lonceng notifikasi: bergetar ~0.8 detik lalu diam sebelum siklus berikutnya */
+@keyframes bell-shake {
+    0%,
+    21%,
+    100% {
+        transform: rotate(0deg);
+    }
+
+    3% {
+        transform: rotate(12deg);
+    }
+
+    6% {
+        transform: rotate(-12deg);
+    }
+
+    9% {
+        transform: rotate(10deg);
+    }
+
+    12% {
+        transform: rotate(-8deg);
+    }
+
+    15% {
+        transform: rotate(6deg);
+    }
+
+    18% {
+        transform: rotate(-4deg);
+    }
+}
+
 /* Scrollbar tipis untuk panel navigasi & dropdown */
 @layer utilities {
     .scrollbar-thin {
@@ -80,6 +113,11 @@
         animation: chart-area-fade 0.9s 0.2s ease-out both;
     }
 
+    .bell-ring {
+        animation: bell-shake 3.8s ease-in-out infinite;
+        transform-origin: top center;
+    }
+
     @media (prefers-reduced-motion: reduce) {
         .dashboard-rise,
         .chart-line-draw,
@@ -90,6 +128,12 @@
         .chart-line-draw {
             stroke-dashoffset: 0;
         }
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bell-ring {
+        animation: none;
     }
 }
 

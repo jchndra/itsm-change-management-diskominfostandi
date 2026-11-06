@@ -27,6 +27,8 @@ use App\Livewire\Profile;
 use App\Livewire\Requester\Dashboard;
 use App\Models\User;
 use App\Services\DashboardRedirector;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -82,6 +84,9 @@ Route::middleware('auth')->group(function () {
 
     // Notifikasi & profil pengguna
     Route::get('/notifications', Notifications::class)->name('notifications.index');
+    Route::get('/notifications/unread-count', fn (Request $request): JsonResponse => response()->json([
+        'count' => $request->user()->unreadNotifications()->count(),
+    ]))->name('notifications.unread-count');
     Route::get('/profile', Profile::class)->name('profile.show');
 
     // Disposisi RFC (di luar prefix change-requests agar menu Daftar RFC tidak

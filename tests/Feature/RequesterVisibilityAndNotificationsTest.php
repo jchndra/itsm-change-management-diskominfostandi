@@ -286,7 +286,7 @@ it('tetap menampilkan notifikasi lama tanpa error dan tidak menulis ulang teksny
         ->assertSee($legacyMessage);
 });
 
-it('menyamakan jumlah belum dibaca pada lencana sidebar dan lonceng dengan halaman notifikasi', function () {
+it('menyamakan jumlah belum dibaca pada lonceng dengan halaman notifikasi', function () {
     $rfc = ($this->makeRfc)();
 
     $this->pemohon->notify(new RfcStatusChangedNotification($rfc, RfcStatus::APPROVED));
@@ -303,7 +303,7 @@ it('menyamakan jumlah belum dibaca pada lencana sidebar dan lonceng dengan halam
 
     preg_match_all('/data-notification-badge[^>]*>\s*2\s*</', $response->getContent(), $badges);
 
-    expect($badges[0])->toHaveCount(2);
+    expect($badges[0])->toHaveCount(1);
 });
 
 it('memakai ikon notifikasi sesuai jenis pesan dan tanggal Indonesia', function () {
@@ -377,4 +377,22 @@ it('tetap menampilkan kategori dan lampiran yang diisi Pemohon', function () {
         ->assertSee('Lampiran')
         ->assertSee('lampiran-pemohon.pdf')
         ->assertDontSee('Penilaian Risiko (Change Manager)');
+});
+
+it('menolak guest pada endpoint jumlah notifikasi belum dibaca', function () {
+    $this->get(route('notifications.unread-count'))
+        ->assertRedirect(route('login'));
+});
+
+it('mengembalikan jumlah notifikasi belum dibaca milik pengguna', function () {
+    $rfc = ($this->makeRfc)();
+
+    $this->pemohon->notify(new RfcStatusChangedNotification($rfc, RfcStatus::APPROVED));
+    $this->pemohon->notify(new RfcStatusChangedNotification($rfc, RfcStatus::REJECTED));
+    $this->pemohon->notifications()->firstOrFail()->markAsRead();
+
+    $this->actingAs($this->pemohon)
+        ->getJson(route('notifications.unread-count'))
+        ->assertOk()
+        ->assertExactJson(['count' => 1]);
 });

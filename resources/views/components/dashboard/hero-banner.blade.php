@@ -1,9 +1,10 @@
 @props([
     'title',
-    'description',
+    'description' => '',
     'userName',
-    'dateTime',
+    'dateTime' => null,
     'roleLabel',
+    'showMeta' => true,
 ])
 
 @php
@@ -36,7 +37,7 @@
         aria-hidden="true"></span>
 
     <div
-        class="relative z-10 grid min-h-[228px] gap-7 px-6 py-7 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(290px,390px)] lg:items-center lg:py-6">
+        class="{{ filled($description) || $showMeta ? 'min-h-[228px]' : 'min-h-0' }} relative z-10 grid gap-7 px-6 py-7 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(290px,390px)] lg:items-center lg:py-6">
         <div class="min-w-0">
             <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
                 <span
@@ -57,37 +58,43 @@
                 {{ $title }}
             </h1>
 
-            <p class="mt-3 max-w-xl text-sm leading-relaxed text-blue-100/75">
-                {{ $description }}
-            </p>
+            @if (filled($description))
+                <p class="mt-3 max-w-xl text-sm leading-relaxed text-blue-100/75">
+                    {{ $description }}
+                </p>
+            @endif
 
-            <div class="mt-6 flex flex-wrap items-center gap-2.5">
-                <span
-                    class="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-xs font-medium text-blue-50 backdrop-blur">
-                    <svg class="h-4 w-4 text-sky-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                        aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                            d="M6.75 3v2.25M17.25 3v2.25M3.75 8.25h16.5M5.25 5.25h13.5A1.5 1.5 0 0 1 20.25 6.75v12A1.5 1.5 0 0 1 18.75 20.25H5.25a1.5 1.5 0 0 1-1.5-1.5v-12a1.5 1.5 0 0 1 1.5-1.5Z" />
-                    </svg>
-                    {{ $dateTime }} WIB
-                </span>
+            @if ($showMeta)
+                <div class="mt-6 flex flex-wrap items-center gap-2.5">
+                    @if (filled($dateTime))
+                        <span
+                            class="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-xs font-medium text-blue-50 backdrop-blur">
+                            <svg class="h-4 w-4 text-sky-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                    d="M6.75 3v2.25M17.25 3v2.25M3.75 8.25h16.5M5.25 5.25h13.5A1.5 1.5 0 0 1 20.25 6.75v12A1.5 1.5 0 0 1 18.75 20.25H5.25a1.5 1.5 0 0 1-1.5-1.5v-12a1.5 1.5 0 0 1 1.5-1.5Z" />
+                            </svg>
+                            {{ $dateTime }} WIB
+                        </span>
+                    @endif
 
-                <button type="button" wire:click="$refresh" wire:loading.attr="disabled"
-                    class="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-[#08294a] shadow-lg shadow-black/10 transition hover:-translate-y-0.5 hover:bg-blue-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-sky-300/40 disabled:cursor-wait disabled:opacity-70">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                        aria-hidden="true" wire:loading.remove wire:target="$refresh">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M4 4v6h6M20 20v-6h-6M20 9A8 8 0 0 0 5.3 5.3L4 10m16 4-1.3 4.7A8 8 0 0 1 4 15" />
-                    </svg>
-                    <svg class="h-4 w-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                        aria-hidden="true" wire:loading wire:target="$refresh">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 3a9 9 0 1 0 9 9" />
-                    </svg>
-                    <span wire:loading.remove wire:target="$refresh">Muat ulang</span>
-                    <span wire:loading wire:target="$refresh">Memuat...</span>
-                </button>
-            </div>
+                    <button type="button" wire:click="$refresh" wire:loading.attr="disabled"
+                        class="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-[#08294a] shadow-lg shadow-black/10 transition hover:-translate-y-0.5 hover:bg-blue-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-sky-300/40 disabled:cursor-wait disabled:opacity-70">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            aria-hidden="true" wire:loading.remove wire:target="$refresh">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 4v6h6M20 20v-6h-6M20 9A8 8 0 0 0 5.3 5.3L4 10m16 4-1.3 4.7A8 8 0 0 1 4 15" />
+                        </svg>
+                        <svg class="h-4 w-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            aria-hidden="true" wire:loading wire:target="$refresh">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 3a9 9 0 1 0 9 9" />
+                        </svg>
+                        <span wire:loading.remove wire:target="$refresh">Muat ulang</span>
+                        <span wire:loading wire:target="$refresh">Memuat...</span>
+                    </button>
+                </div>
+            @endif
         </div>
 
         <div class="relative hidden min-h-[210px] items-center justify-center lg:flex">
