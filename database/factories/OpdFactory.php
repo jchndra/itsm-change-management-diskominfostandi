@@ -12,8 +12,8 @@ class OpdFactory extends Factory
     public function definition(): array
     {
         return [
-            'code' => 'OPD-' . $this->faker->unique()->numberBetween(100, 999),
-            'name' => 'Dinas ' . $this->faker->company(),
+            'code' => 'OPD-'.$this->faker->unique()->numberBetween(100, 999),
+            'name' => 'Dinas '.$this->faker->company(),
             'is_active' => true,
         ];
     }

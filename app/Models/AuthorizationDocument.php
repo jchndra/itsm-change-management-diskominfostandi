@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -29,8 +28,8 @@ class AuthorizationDocument extends Model
 
     protected static function booted(): void
     {
-        static::updating(fn() => throw new \BadMethodCallException('Dokumen otorisasi bersifat append-only.'));
-        static::deleting(fn() => throw new \BadMethodCallException('Dokumen otorisasi bersifat append-only.'));
+        static::updating(fn () => throw new \BadMethodCallException('Dokumen otorisasi bersifat append-only.'));
+        static::deleting(fn () => throw new \BadMethodCallException('Dokumen otorisasi bersifat append-only.'));
     }
 
     public function changeRequest(): BelongsTo

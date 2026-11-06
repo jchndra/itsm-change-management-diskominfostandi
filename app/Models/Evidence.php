@@ -12,6 +12,7 @@ class Evidence extends Model
     use HasFactory;
 
     protected $table = 'evidences';
+
     public $timestamps = false;
 
     protected $fillable = [
