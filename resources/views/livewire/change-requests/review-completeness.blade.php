@@ -39,27 +39,46 @@
                 <p class="text-slate-400">Sistem / Layanan</p>
                 <p class="mt-0.5 font-semibold text-slate-800">{{ $rfc->application?->name ?? '-' }}</p>
             </div>
-            <div>
-                <p class="text-slate-400">Target Tanggal Pelaksanaan</p>
-                <p class="mt-0.5 font-semibold text-slate-800">
-                    {{ $rfc->target_implementation_date?->copy()->locale('id')->translatedFormat('d M Y, H:i') ?? '-' }}
-                    @if ($rfc->target_implementation_date)
-                        WIB
-                    @endif
-                </p>
-            </div>
+            @if (filled($rfc->target_implementation_date))
+                <div>
+                    <p class="text-slate-400">Target Tanggal Pelaksanaan</p>
+                    <p class="mt-0.5 font-semibold text-slate-800">
+                        {{ $rfc->target_implementation_date?->copy()->locale('id')->translatedFormat('d M Y, H:i') ?? '-' }}
+                        @if ($rfc->target_implementation_date)
+                            WIB
+                        @endif
+                    </p>
+                </div>
+            @endif
             <div>
                 <p class="text-slate-400">Kategori yang Diusulkan Pemohon</p>
                 <div class="mt-0.5">
                     <x-category-badge :kategori="$rfc->change_type" size="sm" />
                 </div>
             </div>
+            @if ($rfc->is_physical_letter)
+                <div>
+                    <p class="text-slate-400">Nota Dinas</p>
+                    <p class="mt-0.5 font-semibold text-slate-800">
+                        Ya
+                        @if (filled($rfc->physical_letter_number))
+                            <span class="block font-normal text-slate-600">{{ $rfc->physical_letter_number }}</span>
+                        @endif
+                    </p>
+                </div>
+            @endif
             <div>
-                <p class="text-slate-400">Nota Dinas</p>
+                <p class="text-slate-400">Persetujuan Kepala Dinas</p>
                 <p class="mt-0.5 font-semibold text-slate-800">
-                    {{ $rfc->is_physical_letter ? 'Ya' : 'Tidak' }}
-                    @if ($rfc->is_physical_letter && filled($rfc->physical_letter_number))
-                        <span class="block font-normal text-slate-600">{{ $rfc->physical_letter_number }}</span>
+                    @if ($rfc->head_of_department_approved)
+                        Disetujui
+                        @if ($rfc->head_of_department_approved_at)
+                            <span class="block font-normal text-slate-600">
+                                {{ $rfc->head_of_department_approved_at->copy()->locale('id')->translatedFormat('d M Y, H:i') }} WIB
+                            </span>
+                        @endif
+                    @else
+                        Belum ada pernyataan persetujuan
                     @endif
                 </p>
             </div>
@@ -202,7 +221,7 @@
 
             <label class="flex items-start gap-3 text-xs text-slate-700">
                 <input type="checkbox" wire:model="attachments_verified" class="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
-                <span>Lampiran dan nota dinas sudah sesuai</span>
+                <span>Lampiran sudah sesuai</span>
             </label>
             @error('attachments_verified')
                 <p class="text-xs font-medium text-rose-600">{{ $message }}</p>

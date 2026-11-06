@@ -316,19 +316,17 @@
                             @endif
                         </p>
                     </div>
-                    <div>
-                        <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Nota Dinas</span>
-                        @if ($rfc->is_physical_letter)
+                    @if ($rfc->is_physical_letter)
+                        <div>
+                            <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Nota Dinas</span>
                             <p class="text-slate-800 font-medium">
                                 Ya
                                 @if (filled($rfc->physical_letter_number))
                                     <span class="block text-slate-600">{{ $rfc->physical_letter_number }}</span>
                                 @endif
                             </p>
-                        @else
-                            <p class="text-slate-800 font-medium">Tidak</p>
-                        @endif
-                    </div>
+                        </div>
+                    @endif
                     @if ($isStaff)
                         <div>
                             <span class="block text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Nama Pemohon</span>
@@ -382,10 +380,10 @@
                 </div>
             </div>
 
-            {{-- Surat Persetujuan Bertanda Tangan --}}
-            @if ($approvalLetters->isNotEmpty() || (auth()->user()?->can('update', $rfc) ?? false))
+            {{-- Surat Persetujuan Bertanda Tangan (arsip data historis) --}}
+            @if ($approvalLetters->isNotEmpty())
                 <div class="bg-white rounded-xl shadow-sm border border-indigo-100 p-6">
-                    <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Surat Persetujuan Bertanda Tangan</h3>
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Arsip Surat Persetujuan Bertanda Tangan</h3>
 
                     @if ($currentApprovalLetter)
                         <div class="rounded-lg border border-indigo-200 bg-indigo-50/60 px-4 py-3">
@@ -393,9 +391,8 @@
                                 <div class="min-w-0 flex-1">
                                     <p class="flex items-center gap-2 text-sm font-semibold text-slate-800">
                                         <span class="min-w-0 truncate">{{ $currentApprovalLetter->original_name }}</span>
-                                        <span
-                                            class="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
-                                            Berlaku
+                                        <span class="shrink-0 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-700">
+                                            Arsip
                                         </span>
                                     </p>
                                     <p class="mt-0.5 text-xs text-slate-500">
@@ -450,14 +447,37 @@
                                 </div>
                             @endif
                         </div>
-                    @else
-                        <p class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
-                            Belum ada surat persetujuan bertanda tangan. Unggah PDF melalui halaman edit sebelum
-                            mengajukan RFC.
-                        </p>
                     @endif
                 </div>
             @endif
+
+            {{-- Persetujuan Kepala Dinas --}}
+            <div class="bg-white rounded-xl shadow-sm border border-emerald-100 p-6">
+                <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Persetujuan Kepala Dinas</h3>
+
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 text-sm">
+                    <div>
+                        <p class="text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Status</p>
+                        <p class="text-slate-800 font-medium flex items-center gap-2">
+                            @if ($rfc->head_of_department_approved)
+                                <span class="inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+                                Disetujui Kepala Dinas
+                            @else
+                                <span class="inline-flex h-2 w-2 rounded-full bg-slate-300"></span>
+                                Belum ada pernyataan persetujuan
+                            @endif
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-slate-500 text-xs uppercase tracking-wider font-semibold mb-1">Waktu Persetujuan</p>
+                        <p class="text-slate-800 font-medium">
+                            {{ $rfc->head_of_department_approved_at
+                                ? $rfc->head_of_department_approved_at->copy()->locale('id')->translatedFormat('d M Y, H:i')
+                                : '—' }}
+                        </p>
+                    </div>
+                </div>
+            </div>
 
             @if ($releaseTeamDispositionTask)
                 <div id="disposisi" class="bg-white rounded-xl shadow-sm border border-blue-100 p-6">

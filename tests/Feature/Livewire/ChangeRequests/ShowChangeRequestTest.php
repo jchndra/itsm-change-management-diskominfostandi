@@ -162,11 +162,8 @@ it('shows submitted request details and hides the old purpose section', function
         ->set('legal_basis', "Peraturan Wali Kota tentang Penyelenggaraan SPBE.\nInstruksi migrasi pusat data.")
         ->set('change_risk', "Layanan surat dapat terhenti sementara.\nRisiko kehilangan data perlu dimitigasi.")
         ->set('impact_description', "Layanan surat berhenti sementara.\nPengguna diberi notifikasi.")
-        ->set('target_implementation_date', now()->addDays(3)->format('Y-m-d\TH:i'))
-        ->set('is_physical_letter', true)
-        ->set('physical_letter_number', 'ND-123/2026')
+        ->set('head_of_department_approved', true)
         ->set('attachments', [UploadedFile::fake()->create('nota-dinas.pdf', 100, 'application/pdf')])
-        ->set('attachments', [UploadedFile::fake()->create('surat-persetujuan.pdf', 100, 'application/pdf')])
         ->call('save', RfcStatus::TICKET_CREATED->value)
         ->assertHasNoErrors();
 
@@ -179,7 +176,8 @@ it('shows submitted request details and hides the old purpose section', function
         ->assertSee('Perlu migrasi ke server baru.')
         ->assertSee('Layanan surat berhenti sementara.')
         ->assertSee('Pengguna diberi notifikasi.')
-        ->assertSee('ND-123/2026')
+        ->assertSee('Disetujui')
+        ->assertSee('Persetujuan Kepala Dinas')
         ->assertDontSee('Tujuan Perubahan')
         ->assertDontSee('Deskripsi Lengkap');
 });

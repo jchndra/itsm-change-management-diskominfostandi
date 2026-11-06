@@ -137,8 +137,11 @@ class DatabaseSeeder extends Seeder
             'impact_description' => 'Layanan mengalami jeda pemrosesan selama 15 menit saat pembaruan.',
             'status' => RfcStatus::SUBMITTED->value,
             'target_implementation_date' => '2026-10-24 22:00:00',
+            'head_of_department_approved' => true,
+            'head_of_department_approved_at' => '2026-10-20 09:30:00',
         ]);
 
+        // RFC lama: tetap memakai nota dinas fisik dan tanggal usulan dari alur sebelumnya.
         ChangeRequest::create([
             'rfc_number' => 'RFC-2026-2',
             'title' => 'Penambahan Fitur Laporan Eksternal pada Aplikasi Sample B',

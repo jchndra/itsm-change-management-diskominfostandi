@@ -129,7 +129,7 @@ class ReviewCompleteness extends Component
             'category.enum' => 'Kategori layanan tidak valid.',
             'admin_note.max' => 'Catatan untuk Change Manager maksimal 1000 karakter.',
             'data_complete.accepted' => 'Checklist "Data RFC sudah lengkap" wajib dicentang.',
-            'attachments_verified.accepted' => 'Checklist "Lampiran dan nota dinas sudah sesuai" wajib dicentang.',
+            'attachments_verified.accepted' => 'Checklist "Lampiran sudah sesuai" wajib dicentang.',
             'application_verified.accepted' => 'Checklist "Sistem/aplikasi sudah sesuai" wajib dicentang.',
         ]);
 
@@ -138,7 +138,7 @@ class ReviewCompleteness extends Component
         $ticketNumber = null;
         $checklist = [
             'data_rfc_lengkap' => (bool) $validated['data_complete'],
-            'lampiran_nota_dinas_sesuai' => (bool) $validated['attachments_verified'],
+            'lampiran_sesuai' => (bool) $validated['attachments_verified'],
             'sistem_aplikasi_sesuai' => (bool) $validated['application_verified'],
         ];
 

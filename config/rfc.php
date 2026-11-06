@@ -54,26 +54,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Surat Persetujuan Bertanda Tangan
-    |--------------------------------------------------------------------------
-    |
-    | SEMENTARA: seluruh kategori perubahan wajib melampirkan surat persetujuan
-    | bertanda tangan saat diajukan. Aturan ini menunggu konfirmasi SOP; jangan
-    | menambahkan pengecualian otomatis untuk Emergency sebelum SOP ditetapkan.
-    |
-    */
-
-    'approval_letter' => [
-        'required_for_submission' => true,
-        'temporary' => true,
-        'note' => 'Kewajiban surat persetujuan untuk semua kategori masih bersifat sementara menunggu konfirmasi SOP.',
-        'change_types' => ['standard', 'normal', 'emergency'],
-        'mimes' => ['pdf'],
-        'max_kb' => 5120,
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
     | Defer RFC Notifications Until Commit
     |--------------------------------------------------------------------------
     |

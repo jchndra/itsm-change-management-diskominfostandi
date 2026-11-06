@@ -58,7 +58,6 @@ function makeRfcForAttachmentTests(User $owner, Application $application, array 
         'created_by_id' => $owner->id,
         'application_id' => $application->id,
         'status' => RfcStatus::DRAFT->value,
-        'target_implementation_date' => now()->addDays(3),
         ...$attributes,
     ]);
 }
@@ -106,7 +105,7 @@ it('menyimpan seluruh field baru dan lampiran dari form create lalu menampilkann
         ->set('legal_basis', 'Peraturan Wali Kota tentang Penyelenggaraan SPBE.')
         ->set('change_risk', 'Kesalahan integrasi dapat menghambat proses persuratan.')
         ->set('impact_description', 'Layanan persuratan berhenti sementara saat pemeliharaan.')
-        ->set('target_implementation_date', now()->addDays(3)->format('Y-m-d\TH:i'))
+        ->set('head_of_department_approved', true)
         ->set('attachments', [
             UploadedFile::fake()->create('surat-persetujuan.pdf', 200, 'application/pdf'),
             UploadedFile::fake()->create('surat-pengajuan.pdf', 120, 'application/pdf'),
@@ -116,20 +115,22 @@ it('menyimpan seluruh field baru dan lampiran dari form create lalu menampilkann
         ->assertRedirect(route('requester.dashboard'));
 
     $rfc = ChangeRequest::latest('id')->firstOrFail();
-    $attachment = $rfc->supportingAttachments()->firstOrFail();
-    $approvalLetter = $rfc->approvalLetters()->firstOrFail();
+    $attachments = $rfc->supportingAttachments()->get();
 
-    // Satu kolom unggahan: PDF pertama (surat-persetujuan) menjadi surat persetujuan,
-    // file kedua menjadi lampiran pendukung.
+    // Seluruh unggahan disimpan sebagai lampiran pendukung; tidak ada lagi
+    // penunjukan otomatis Surat Persetujuan Bertanda Tangan.
     expect($rfc->description)->toBe('Modul persuratan akan diperbarui agar mendukung tanda tangan digital.')
         ->and($rfc->legal_basis)->toBe('Peraturan Wali Kota tentang Penyelenggaraan SPBE.')
         ->and($rfc->change_risk)->toBe('Kesalahan integrasi dapat menghambat proses persuratan.')
         ->and($rfc->change_type)->toBe('normal')
         ->and($rfc->impact_description)->toBe('Layanan persuratan berhenti sementara saat pemeliharaan.')
         ->and($rfc->rfc_number)->not->toBeNull()
-        ->and($attachment->original_name)->toBe('surat-pengajuan.pdf')
-        ->and($approvalLetter->original_name)->toBe('surat-persetujuan.pdf')
-        ->and($approvalLetter->isApprovalLetter())->toBeTrue();
+        ->and($rfc->head_of_department_approved)->toBeTrue()
+        ->and($rfc->head_of_department_approved_at)->not->toBeNull()
+        ->and($attachments)->toHaveCount(2)
+        ->and($attachments->first()->original_name)->toBe('surat-persetujuan.pdf')
+        ->and($attachments->first()->isApprovalLetter())->toBeFalse()
+        ->and($rfc->approvalLetters()->count())->toBe(0);
 
     Livewire::test(ShowChangeRequest::class, ['rfc' => $rfc->fresh()])
         ->assertOk()
@@ -141,9 +142,9 @@ it('menyimpan seluruh field baru dan lampiran dari form create lalu menampilkann
         ->assertSee('Kesalahan integrasi dapat menghambat proses persuratan.')
         ->assertSee('Normal')
         ->assertSee('surat-pengajuan.pdf')
-        ->assertSee('Surat Persetujuan Bertanda Tangan')
         ->assertSee('surat-persetujuan.pdf')
-        ->assertSee('Lampiran Pendukung');
+        ->assertSee('Persetujuan Kepala Dinas')
+        ->assertSee('Disetujui Kepala Dinas');
 
     $activity = Activity::query()
         ->where('subject_type', $rfc->getMorphClass())
@@ -156,11 +157,16 @@ it('menyimpan seluruh field baru dan lampiran dari form create lalu menampilkann
         ->and(data_get($activity->properties, 'file_name'))->toBe('surat-pengajuan.pdf');
 
     $history = app(RfcHistoryService::class)->build($rfc->fresh(), true);
-    $event = collect($history['events'])->firstWhere('key', 'attachment_added');
+    $attachmentNotes = collect($history['events'])
+        ->where('key', 'attachment_added')
+        ->pluck('note');
 
-    expect($event)->not->toBeNull()
-        ->and($event['note'])->toContain('surat-pengajuan.pdf')
-        ->and($event['actor_name'])->toBe($this->pemohon->name);
+    expect($attachmentNotes)->toHaveCount(2)
+        ->and($attachmentNotes->implode(' | '))
+        ->toContain('surat-pengajuan.pdf')
+        ->toContain('surat-persetujuan.pdf')
+        ->and(collect($history['events'])->firstWhere('key', 'attachment_added')['actor_name'])
+        ->toBe($this->pemohon->name);
 });
 
 it('memberikan tautan lampiran pada riwayat proses untuk staf dan tim rilis yang ditugaskan', function () {
@@ -248,7 +254,6 @@ it('menyimpan lampiran di disk privat, bukan disk public', function () {
         ->set('reason_for_change', 'Dokumen pendukung bersifat internal.')
         ->set('legal_basis', 'Kebijakan pengelolaan dokumen internal.')
         ->set('change_risk', 'Akses dokumen yang tidak tepat dapat membocorkan data.')
-        ->set('target_implementation_date', now()->addDays(3)->format('Y-m-d\TH:i'))
         ->set('attachments', [UploadedFile::fake()->create('dokumen.pdf', 20, 'application/pdf')])
         ->call('save', RfcStatus::DRAFT->value)
         ->assertHasNoErrors();
@@ -258,8 +263,8 @@ it('menyimpan lampiran di disk privat, bukan disk public', function () {
     Storage::disk('local')->assertExists($attachment->path);
     Storage::disk('public')->assertMissing($attachment->path);
 
-    // Satu kolom unggahan: PDF pertama otomatis menjadi Surat Persetujuan, meski masih draft.
-    expect($attachment->document_type)->toBe(ChangeRequestAttachment::TYPE_APPROVAL_LETTER)
+    // Draft juga menyimpan unggahan sebagai lampiran pendukung.
+    expect($attachment->document_type)->toBe(ChangeRequestAttachment::TYPE_SUPPORTING)
         ->and($attachment->changeRequest->rfc_number)->toBeNull();
 });
 
@@ -273,7 +278,6 @@ it('mencegah double submit membuat dua RFC dan lampiran ganda', function () {
         ->set('reason_for_change', 'Memastikan klik ganda tidak membuat data ganda.')
         ->set('legal_basis', 'Prosedur pengendalian perubahan layanan.')
         ->set('change_risk', 'Pengajuan ganda dapat menimbulkan duplikasi data.')
-        ->set('target_implementation_date', now()->addDays(3)->format('Y-m-d\TH:i'))
         ->set('attachments', [UploadedFile::fake()->create('lampiran.pdf', 20, 'application/pdf')]);
 
     $component->call('save', RfcStatus::DRAFT->value)->assertHasNoErrors();
@@ -316,7 +320,6 @@ it('menandai emergency_unconfirmed untuk kategori emergency dan tidak untuk kate
         ->set('reason_for_change', 'Layanan utama sedang tidak dapat digunakan.')
         ->set('legal_basis', 'Prosedur penanganan gangguan layanan prioritas.')
         ->set('change_risk', 'Perbaikan darurat berpotensi menimbulkan gangguan lain.')
-        ->set('target_implementation_date', now()->addDays(1)->format('Y-m-d\TH:i'))
         ->call('save', RfcStatus::DRAFT->value)
         ->assertHasNoErrors();
 
@@ -334,7 +337,6 @@ it('menandai emergency_unconfirmed untuk kategori emergency dan tidak untuk kate
         ->set('reason_for_change', 'Peningkatan kualitas layanan secara berkala.')
         ->set('legal_basis', 'Rencana pemeliharaan layanan tahunan.')
         ->set('change_risk', 'Gangguan singkat dapat terjadi saat pemeliharaan.')
-        ->set('target_implementation_date', now()->addDays(3)->format('Y-m-d\TH:i'))
         ->call('save', RfcStatus::DRAFT->value)
         ->assertHasNoErrors();
 
@@ -350,8 +352,7 @@ it('menolak lampiran exe, php, lebih dari 5 MB, dan lebih dari 5 file', function
         ->set('risk_event', RiskEvent::CYBER_INCIDENT->value)
         ->set('reason_for_change', 'Memastikan hanya dokumen pendukung yang aman.')
         ->set('legal_basis', 'Kebijakan keamanan informasi.')
-        ->set('change_risk', 'Lampiran berbahaya dapat membahayakan sistem.')
-        ->set('target_implementation_date', now()->addDays(3)->format('Y-m-d\TH:i'));
+        ->set('change_risk', 'Lampiran berbahaya dapat membahayakan sistem.');
 
     $newForm()
         ->set('attachments', [UploadedFile::fake()->create('virus.exe', 10, 'application/x-msdownload')])
@@ -417,25 +418,23 @@ it('mengembalikan 404 jika lampiran bukan milik RFC pada URL', function () {
         ->assertNotFound();
 });
 
-it('mewajibkan lampiran surat fisik saat diajukan tetapi tidak saat simpan draft', function () {
+it('mewajibkan lampiran PDF saat diajukan tetapi tidak saat simpan draft', function () {
     Livewire::test(CreateChangeRequest::class)
-        ->set('title', 'Pengajuan Surat Fisik')
+        ->set('title', 'Pengajuan Tanpa Lampiran')
         ->set('application_id', (string) $this->application->id)
         ->set('change_type', 'normal')
-        ->set('description', 'Pengajuan dengan surat fisik tanpa lampiran saat draft.')
+        ->set('description', 'Pengajuan dengan draft tanpa lampiran.')
         ->set('risk_event', RiskEvent::INSUFFICIENT_PD_CAPACITY->value)
-        ->set('reason_for_change', 'Dokumen fisik akan dilengkapi kemudian.')
-        ->set('legal_basis', 'Ketentuan pengajuan perubahan melalui nota dinas.')
+        ->set('reason_for_change', 'Dokumen pendukung akan dilengkapi kemudian.')
+        ->set('legal_basis', 'Ketentuan pengajuan perubahan layanan.')
         ->set('change_risk', 'Kelengkapan dokumen dapat tertunda.')
-        ->set('target_implementation_date', now()->addDays(3)->format('Y-m-d\TH:i'))
-        ->set('is_physical_letter', true)
-        ->set('physical_letter_number', 'ND-001/2026')
         ->call('save', RfcStatus::DRAFT->value)
         ->assertHasNoErrors();
 
     $rfc = ChangeRequest::latest('id')->firstOrFail();
 
     expect($rfc->status)->toBe(RfcStatus::DRAFT->value)
+        ->and($rfc->head_of_department_approved)->toBeFalse()
         ->and($rfc->attachments()->count())->toBe(0);
 
     Livewire::test(EditChangeRequest::class, ['rfc' => $rfc])
@@ -444,24 +443,21 @@ it('mewajibkan lampiran surat fisik saat diajukan tetapi tidak saat simpan draft
 
     Livewire::test(EditChangeRequest::class, ['rfc' => $rfc])
         ->call('submit')
-        ->assertHasErrors('attachments');
+        ->assertHasErrors(['attachments', 'head_of_department_approved']);
 
     expect($rfc->fresh()->status)->toBe(RfcStatus::DRAFT->value);
 
     Livewire::test(CreateChangeRequest::class)
-        ->set('title', 'Pengajuan Surat Fisik Tanpa Lampiran')
+        ->set('title', 'Pengajuan Tanpa Lampiran Sekaligus Tanpa Pernyataan')
         ->set('application_id', (string) $this->application->id)
         ->set('change_type', 'normal')
         ->set('description', 'Pengajuan ini tidak menyertakan lampiran.')
         ->set('risk_event', RiskEvent::SATISFACTION_SURVEY->value)
-        ->set('reason_for_change', 'Menguji kewajiban lampiran surat fisik.')
-        ->set('legal_basis', 'Ketentuan pengajuan perubahan melalui nota dinas.')
+        ->set('reason_for_change', 'Menguji kewajiban lampiran saat pengajuan.')
+        ->set('legal_basis', 'Ketentuan pengajuan perubahan layanan.')
         ->set('change_risk', 'Pengajuan tanpa lampiran tidak dapat diproses.')
-        ->set('target_implementation_date', now()->addDays(3)->format('Y-m-d\TH:i'))
-        ->set('is_physical_letter', true)
-        ->set('physical_letter_number', 'ND-002/2026')
         ->call('save', RfcStatus::TICKET_CREATED->value)
-        ->assertHasErrors('attachments');
+        ->assertHasErrors(['attachments', 'head_of_department_approved']);
 
     expect(ChangeRequest::count())->toBe(1);
 });
@@ -567,7 +563,6 @@ it('mewajibkan alasan, dasar hukum, dan risiko perubahan saat menyimpan RFC', fu
         ->set('change_type', 'normal')
         ->set('description', 'Detail perubahan yang akan diajukan.')
         ->set('risk_event', RiskEvent::CYBER_INCIDENT->value)
-        ->set('target_implementation_date', now()->addDays(3)->format('Y-m-d\TH:i'))
         ->call('save', RfcStatus::DRAFT->value)
         ->assertHasErrors([
             'reason_for_change' => 'required',

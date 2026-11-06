@@ -118,7 +118,7 @@ test('RFC yang diajukan lewat komponen create memakai nomor berurutan dari gener
             ->set('legal_basis', 'Dasar hukum perubahan yang cukup jelas untuk pengujian.')
             ->set('change_risk', 'Risiko perubahan yang sudah diidentifikasi untuk pengujian.')
             ->set('impact_description', 'Dampak perubahan yang cukup jelas untuk pengujian.')
-            ->set('target_implementation_date', now()->addDays(3)->format('Y-m-d\TH:i'))
+            ->set('head_of_department_approved', true)
             ->set('attachments', [UploadedFile::fake()->create('surat-persetujuan.pdf', 100, 'application/pdf')])
             ->call('save', RfcStatus::TICKET_CREATED->value)
             ->assertHasNoErrors()

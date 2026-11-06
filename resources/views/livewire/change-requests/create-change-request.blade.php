@@ -161,7 +161,7 @@
         <!-- Register Risiko -->
         <div>
             <label for="risk_event" class="block text-sm font-semibold text-slate-700 mb-1">
-                Register Risiko *
+                Register Risiko
             </label>
             <select id="risk_event" wire:model="risk_event"
                 class="w-full text-sm px-3.5 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 {{ $errors->has('risk_event') ? 'border-red-500' : 'border-slate-300' }}">
@@ -182,17 +182,6 @@
             @enderror
         </div>
 
-        <!-- Usulan Tanggal dan Jam -->
-        <div>
-            <label for="target_implementation_date" class="block text-sm font-semibold text-slate-700 mb-1">Usulan
-                Tanggal dan Jam *</label>
-            <input type="datetime-local" id="target_implementation_date" wire:model="target_implementation_date"
-                class="w-full text-sm px-3.5 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 {{ $errors->has('target_implementation_date') ? 'border-red-500' : 'border-slate-300' }}">
-            @error('target_implementation_date')
-                <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>
-            @enderror
-        </div>
-
         <!-- Keterangan -->
         <div>
             <label for="impact_description" class="block text-sm font-semibold text-slate-700 mb-1">Keterangan
@@ -205,42 +194,17 @@
             @enderror
         </div>
 
-        <!-- Checkbox & Input Surat Fisik -->
-        <div class="p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-3">
-            <label class="flex items-center text-sm font-medium text-slate-700 cursor-pointer">
-                <input type="checkbox" wire:model.live="is_physical_letter"
-                    class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mr-2.5">
-                Pengajuan Menggunakan Surat / Nota Dinas Fisik
-            </label>
-
-            @if ($is_physical_letter)
-                <div class="pt-2">
-                    <label for="physical_letter_number" class="block text-xs font-semibold text-slate-600 mb-1">Nomor
-                        Surat Dinas / Nota Dinas *</label>
-                    <input type="text" id="physical_letter_number" wire:model="physical_letter_number"
-                        maxlength="100" placeholder="Contoh: 500/012/DISKOMINFO/2026"
-                        class="w-full text-sm px-3.5 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 {{ $errors->has('physical_letter_number') ? 'border-red-500' : 'border-slate-300' }}">
-                    @error('physical_letter_number')
-                        <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>
-                    @enderror
-                </div>
-            @endif
-        </div>
-
         <!-- Lampiran -->
         <div class="space-y-3">
             <div>
                 <label for="attachments" class="block text-sm font-semibold text-slate-700 mb-1">Lampiran *</label>
                 <p class="text-xs text-slate-500">
-                    Unggah <span class="font-semibold">Surat Persetujuan Bertanda Tangan (PDF)</span> sebagai
-                    <span class="font-semibold">file pertama</span>, disusul lampiran pendukung lainnya. Format PDF,
-                    JPG, JPEG, atau PNG. Maksimal 5 file per RFC dan 5 MB per file.
-                    <span class="text-slate-400">{{ config('rfc.approval_letter.note') }}</span>
+                    Berkas pendukung lainnya. Format PDF Maksimal 5 file per RFC dan 5 MB per file.
                 </p>
             </div>
 
-            <!-- Lampiran (Surat Persetujuan + Pendukung) -->
-            <input type="file" id="attachments" wire:model="attachments" multiple accept=".pdf,.jpg,.jpeg,.png"
+            <!-- Lampiran Pendukung -->
+            <input type="file" id="attachments" wire:model="attachments" multiple accept=".pdf"
                 class="block w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100">
 
             <div wire:loading wire:target="attachments" class="text-xs text-slate-500">
@@ -269,6 +233,18 @@
                     @endforeach
                 </ul>
             @endif
+        </div>
+
+        <!-- Pernyataan Persetujuan Kepala Dinas -->
+        <div>
+            <label class="flex items-start text-sm font-medium text-slate-700 cursor-pointer">
+                <input type="checkbox" wire:model.live="head_of_department_approved"
+                    class="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mr-2.5">
+                <span>Saya menyatakan bahwa perubahan ini telah disetujui oleh Kepala Dinas.</span>
+            </label>
+            @error('head_of_department_approved')
+                <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>
+            @enderror
         </div>
 
         <!-- Tombol Aksi Form -->

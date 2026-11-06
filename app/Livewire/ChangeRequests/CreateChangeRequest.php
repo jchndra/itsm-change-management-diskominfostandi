@@ -36,7 +36,7 @@ class CreateChangeRequest extends Component
 
     public string $legal_basis = '';
 
-    public string $risk_event = '';
+    public ?string $risk_event = null;
 
     public string $reason_for_change = '';
 

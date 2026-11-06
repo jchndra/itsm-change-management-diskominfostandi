@@ -14,6 +14,9 @@ use Throwable;
 class RfcAttachmentService
 {
     /**
+     * Seluruh unggahan dari form pemohon disimpan sebagai lampiran pendukung.
+     * Surat persetujuan bertanda tangan hanya milik data historis RFC lama.
+     *
      * @param  array<int, UploadedFile>  $files
      * @return array<int, ChangeRequestAttachment>
      */

@@ -20,7 +20,6 @@ class ChangeRequestFactory extends Factory
             'application_id' => Application::factory(),
             'submitted_by_id' => User::factory(),
             'created_by_id' => User::factory(),
-            'is_physical_letter' => false,
             'description' => $this->faker->paragraph(),
             'legal_basis' => $this->faker->sentence(),
             'reason_for_change' => $this->faker->paragraph(),
@@ -28,7 +27,6 @@ class ChangeRequestFactory extends Factory
             'impact_description' => $this->faker->paragraph(),
             'change_type' => 'normal',
             'status' => RfcStatus::SUBMITTED->value,
-            'target_implementation_date' => now()->addDays(3),
         ];
     }
 }

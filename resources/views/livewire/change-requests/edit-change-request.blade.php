@@ -183,7 +183,7 @@
         <!-- Register Risiko -->
         <div>
             <label for="risk_event" class="block text-sm font-semibold text-slate-700 mb-1">
-                Register Risiko *
+                Register Risiko
             </label>
             <select id="risk_event" wire:model="risk_event"
                 class="w-full text-sm px-3.5 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 {{ $errors->has('risk_event') ? 'border-red-500' : 'border-slate-300' }}">
@@ -204,17 +204,6 @@
             @enderror
         </div>
 
-        <!-- Usulan Tanggal dan Jam -->
-        <div>
-            <label for="target_implementation_date" class="block text-sm font-semibold text-slate-700 mb-1">Usulan
-                Tanggal dan Jam *</label>
-            <input type="datetime-local" id="target_implementation_date" wire:model="target_implementation_date"
-                class="w-full text-sm px-3.5 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 {{ $errors->has('target_implementation_date') ? 'border-red-500' : 'border-slate-300' }}">
-            @error('target_implementation_date')
-                <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>
-            @enderror
-        </div>
-
         <!-- Keterangan -->
         <div>
             <label for="impact_description" class="block text-sm font-semibold text-slate-700 mb-1">Keterangan
@@ -227,131 +216,13 @@
             @enderror
         </div>
 
-        <!-- Checkbox & Input Surat Fisik -->
-        <div class="p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-3">
-            <label class="flex items-center text-sm font-medium text-slate-700 cursor-pointer">
-                <input type="checkbox" wire:model.live="is_physical_letter"
-                    class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mr-2.5">
-                Pengajuan Menggunakan Surat / Nota Dinas Fisik
-            </label>
-
-            @if ($is_physical_letter)
-                <div class="pt-2">
-                    <label for="physical_letter_number" class="block text-xs font-semibold text-slate-600 mb-1">Nomor
-                        Surat Dinas / Nota Dinas *</label>
-                    <input type="text" id="physical_letter_number" wire:model="physical_letter_number"
-                        maxlength="100" placeholder="Contoh: 500/012/DISKOMINFO/2026"
-                        class="w-full text-sm px-3.5 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 {{ $errors->has('physical_letter_number') ? 'border-red-500' : 'border-slate-300' }}">
-                    @error('physical_letter_number')
-                        <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>
-                    @enderror
-                </div>
-            @endif
-        </div>
-
         <!-- Lampiran -->
         <div class="space-y-5">
-            <!-- Surat Persetujuan Bertanda Tangan -->
-            @php
-                $approvalLetters = $rfc->attachments
-                    ->where('document_type', \App\Models\ChangeRequestAttachment::TYPE_APPROVAL_LETTER)
-                    ->sortByDesc('id')
-                    ->values();
-            @endphp
-            <div class="space-y-3 rounded-xl border border-indigo-200 bg-indigo-50/60 p-5">
-            <div class="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                    <h2 class="text-sm font-bold text-indigo-950">Surat Persetujuan Bertanda Tangan *</h2>
-                    <p class="mt-1 text-xs leading-relaxed text-indigo-800">
-                        Wajib tersedia saat mengajukan RFC untuk kategori Standar, Normal, dan Emergency. Format PDF,
-                        maksimal 5 MB. Surat lama tidak akan dihapus; unggahan terbaru menjadi surat yang berlaku.
-                    </p>
-                    <p class="mt-1 text-[11px] font-medium text-indigo-700">
-                        {{ config('rfc.approval_letter.note') }}
-                    </p>
-                </div>
-                @if (config('rfc.approval_letter.temporary'))
-                    <span class="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-800">
-                        Aturan Sementara
-                    </span>
-                @endif
-            </div>
-
-            @if ($approvalLetters->isNotEmpty())
-                @php
-                    $currentApprovalLetter = $approvalLetters->first();
-                    $previousApprovalLetters = $approvalLetters->slice(1);
-                @endphp
-
-                <div class="rounded-lg border border-indigo-200 bg-white px-3 py-3">
-                    <div class="flex flex-wrap items-center justify-between gap-2">
-                        <div class="min-w-0 flex-1">
-                            <p class="flex items-center gap-2 text-sm font-semibold text-slate-800">
-                                <span class="min-w-0 truncate">{{ $currentApprovalLetter->original_name }}</span>
-                                <span class="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
-                                    Terbaru
-                                </span>
-                            </p>
-                            <p class="mt-0.5 text-xs text-slate-400">
-                                {{ number_format($currentApprovalLetter->size / 1024, 0, ',', '.') }} KB
-                                &middot; {{ $currentApprovalLetter->created_at?->copy()->locale('id')->translatedFormat('d M Y, H:i') }}
-                            </p>
-                        </div>
-                        <div class="flex items-center gap-3 text-xs font-semibold">
-                            <a href="{{ route('change-requests.attachments.show', ['rfc' => $rfc, 'attachment' => $currentApprovalLetter]) }}"
-                                target="_blank" rel="noopener" class="text-indigo-600 hover:text-indigo-700">
-                                Lihat
-                            </a>
-                            <a href="{{ route('change-requests.attachments.show', ['rfc' => $rfc, 'attachment' => $currentApprovalLetter, 'download' => 1]) }}"
-                                class="text-indigo-600 hover:text-indigo-700">
-                                Unduh
-                            </a>
-                        </div>
-                    </div>
-
-                    @if ($previousApprovalLetters->isNotEmpty())
-                        <div class="mt-3 border-t border-slate-100 pt-3">
-                            <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Riwayat surat persetujuan</p>
-                            <ul class="mt-2 divide-y divide-slate-100">
-                                @foreach ($previousApprovalLetters as $previousApprovalLetter)
-                                    <li class="flex flex-wrap items-center justify-between gap-2 py-2 text-xs"
-                                        wire:key="previous-approval-letter-{{ $previousApprovalLetter->id }}">
-                                        <div class="min-w-0 flex-1">
-                                            <p class="truncate font-medium text-slate-700">{{ $previousApprovalLetter->original_name }}</p>
-                                            <p class="text-[11px] text-slate-400">
-                                                {{ $previousApprovalLetter->created_at?->copy()->locale('id')->translatedFormat('d M Y, H:i') }}
-                                            </p>
-                                        </div>
-                                        <div class="flex items-center gap-3 font-semibold">
-                                            <a href="{{ route('change-requests.attachments.show', ['rfc' => $rfc, 'attachment' => $previousApprovalLetter]) }}"
-                                                target="_blank" rel="noopener" class="text-indigo-600 hover:text-indigo-700">
-                                                Lihat
-                                            </a>
-                                            <a href="{{ route('change-requests.attachments.show', ['rfc' => $rfc, 'attachment' => $previousApprovalLetter, 'download' => 1]) }}"
-                                                class="text-indigo-600 hover:text-indigo-700">
-                                                Unduh
-                                            </a>
-                                        </div>
-                                    </li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    @endif
-                </div>
-            @else
-                <p class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
-                    Belum ada surat persetujuan. Unggah PDF bertanda tangan sebelum mengajukan RFC.
-                </p>
-            @endif
-            </div>
-
             <!-- Lampiran Pendukung -->
             <div>
                 <label for="attachments" class="block text-sm font-semibold text-slate-700 mb-1">Lampiran *</label>
                 <p class="text-xs text-slate-500">
-                    Unggahan baru ke satu kolom ini: PDF pertama menjadi <span class="font-semibold">Surat Persetujuan
-                    Bertanda Tangan</span> (pengganti surat saat ini, riwayat tetap tersimpan), sisanya menjadi lampiran
-                    pendukung. Format PDF, JPG, JPEG, atau PNG. Maksimal 5 file per RFC dan 5 MB per file.
+                    Berkas pendukung lainnya. Format PDF Maksimal 5 file per RFC dan 5 MB per file.
                 </p>
             </div>
 
@@ -375,11 +246,13 @@
                                         class="text-indigo-600 hover:text-indigo-700">
                                         Unduh
                                     </a>
-                                    <button type="button" wire:click="deleteAttachment({{ $attachment->id }})"
-                                        wire:confirm="Hapus lampiran ini?"
-                                        class="text-rose-600 hover:text-rose-700">
-                                        Hapus
-                                    </button>
+                                    @unless ($attachment->isApprovalLetter())
+                                        <button type="button" wire:click="deleteAttachment({{ $attachment->id }})"
+                                            wire:confirm="Hapus lampiran ini?"
+                                            class="text-rose-600 hover:text-rose-700">
+                                            Hapus
+                                        </button>
+                                    @endunless
                                 </div>
                             </li>
                         @endforeach
@@ -387,7 +260,7 @@
                 </div>
             @endif
 
-            <input type="file" id="attachments" wire:model="attachments" multiple accept=".pdf,.jpg,.jpeg,.png"
+            <input type="file" id="attachments" wire:model="attachments" multiple accept=".pdf"
                 class="block w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100">
 
             <div wire:loading wire:target="attachments" class="text-xs text-slate-500">
@@ -416,6 +289,18 @@
                     @endforeach
                 </ul>
             @endif
+        </div>
+
+        <!-- Pernyataan Persetujuan Kepala Dinas -->
+        <div>
+            <label class="flex items-start text-sm font-medium text-slate-700 cursor-pointer">
+                <input type="checkbox" wire:model.live="head_of_department_approved"
+                    class="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mr-2.5">
+                <span>Saya menyatakan bahwa perubahan ini telah disetujui oleh Kepala Dinas.</span>
+            </label>
+            @error('head_of_department_approved')
+                <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>
+            @enderror
         </div>
 
         <!-- Tombol Aksi Form -->

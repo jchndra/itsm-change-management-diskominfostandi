@@ -82,7 +82,7 @@ test('admin membuat tiket change dari RFC submitted dan menyimpan metadata tiket
         ->assertOk()
         ->assertSee('Buat Tiket Change')
         ->assertSee('Data RFC sudah lengkap')
-        ->assertSee('Lampiran dan nota dinas sudah sesuai')
+        ->assertSee('Lampiran sudah sesuai')
         ->assertSee('Sistem/aplikasi sudah sesuai');
 
     ($this->fillTicketForm)($component, ['admin_note' => $admin_note]);
@@ -115,7 +115,7 @@ test('admin membuat tiket change dari RFC submitted dan menyimpan metadata tiket
         ->and(data_get($activity->properties, 'priority'))->toBe(TicketPriority::HIGH->value)
         ->and(data_get($activity->properties, 'category'))->toBe(ServiceCategory::SECURITY->value)
         ->and(data_get($activity->properties, 'checklist.data_rfc_lengkap'))->toBeTrue()
-        ->and(data_get($activity->properties, 'checklist.lampiran_nota_dinas_sesuai'))->toBeTrue()
+        ->and(data_get($activity->properties, 'checklist.lampiran_sesuai'))->toBeTrue()
         ->and(data_get($activity->properties, 'checklist.sistem_aplikasi_sesuai'))->toBeTrue();
 });
 

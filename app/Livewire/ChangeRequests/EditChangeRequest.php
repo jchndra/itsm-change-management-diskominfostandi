@@ -42,7 +42,7 @@ class EditChangeRequest extends Component
 
     public string $legal_basis = '';
 
-    public string $risk_event = '';
+    public ?string $risk_event = null;
 
     public string $reason_for_change = '';
 
@@ -65,7 +65,7 @@ class EditChangeRequest extends Component
         $this->change_type = (string) ($rfc->change_type ?? '');
         $this->description = (string) ($rfc->description ?? '');
         $this->legal_basis = (string) ($rfc->legal_basis ?? '');
-        $this->risk_event = $rfc->risk_event instanceof RiskEvent ? $rfc->risk_event->value : '';
+        $this->risk_event = $rfc->risk_event instanceof RiskEvent ? $rfc->risk_event->value : null;
         $this->reason_for_change = (string) $rfc->reason_for_change;
         $this->change_risk = (string) ($rfc->change_risk ?? '');
         $this->impact_description = (string) ($rfc->impact_description ?? '');
@@ -232,7 +232,9 @@ class EditChangeRequest extends Component
 
     private function existingAttachmentCount(): int
     {
-        return $this->rfc->supportingAttachments()->count();
+        // Hitung seluruh lampiran (termasuk surat persetujuan) agar batas 5 file
+        // dan syarat minimal 1 lampiran saat mengajukan mencakup semua jenis dokumen.
+        return $this->rfc->attachments()->count();
     }
 
     /**
@@ -278,6 +280,23 @@ class EditChangeRequest extends Component
     }
 
     /**
+     * Waktu persetujuan Kepala Dinas hanya dimutakhirkan saat status perubahannya.
+     * Persetujuan lama dipertahankan agar tidak ter-reset tiap kali Pemohon menyimpan revisi.
+     */
+    private function headOfDepartmentApprovedAt(): ?Carbon
+    {
+        if (! $this->head_of_department_approved) {
+            return null;
+        }
+
+        if ($this->rfc->head_of_department_approved) {
+            return $this->rfc->head_of_department_approved_at;
+        }
+
+        return now();
+    }
+
+    /**
      * @param  array<string, mixed>  $before
      * @param  array<string, mixed>  $after
      * @return array<string, array{label: string, old: string, new: string}>
@@ -298,11 +317,6 @@ class EditChangeRequest extends Component
         foreach ($this->changeLabels() as $field => $label) {
             $old = $before[$field] ?? null;
             $new = $after[$field] ?? null;
-
-            if ($field === 'is_physical_letter') {
-                $old = (bool) $old;
-                $new = (bool) $new;
-            }
 
             if ($field === 'risk_event') {
                 $old = $old instanceof RiskEvent ? $old->value : $old;
@@ -341,11 +355,6 @@ class EditChangeRequest extends Component
                 'emergency' => 'Emergency',
                 default => filled($value) ? (string) $value : '-',
             },
-            'is_physical_letter' => $value ? 'Ya' : 'Tidak',
-            'target_implementation_date' => filled($value)
-                ? Carbon::parse($value)->format('d/m/Y H:i')
-                : '-',
-            'physical_letter_number' => filled($value) ? (string) $value : '-',
             default => filled($value) ? (string) $value : '-',
         };
     }
@@ -365,9 +374,6 @@ class EditChangeRequest extends Component
             'reason_for_change' => 'Alasan Perubahan',
             'change_risk' => 'Risiko Perubahan',
             'impact_description' => 'Keterangan',
-            'target_implementation_date' => 'Usulan Tanggal dan Jam',
-            'is_physical_letter' => 'Surat Fisik',
-            'physical_letter_number' => 'Nomor Surat',
         ];
     }
 

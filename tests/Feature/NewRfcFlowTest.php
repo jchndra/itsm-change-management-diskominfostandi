@@ -64,7 +64,6 @@ function newFlowFormFields(Application $application, string $title = 'Pengajuan 
         'reason_for_change' => 'Alasan perubahan untuk pengujian alur baru.',
         'change_risk' => 'Risiko perubahan untuk pengujian alur baru.',
         'impact_description' => 'Dampak perubahan untuk pengujian alur baru.',
-        'target_implementation_date' => now()->addDays(3)->format('Y-m-d\TH:i'),
     ];
 }
 
@@ -104,6 +103,7 @@ test('pengajuan baru langsung masuk ke Change Manager, memakai satu nomor RFC, d
     Livewire::actingAs($this->owner)
         ->test(CreateChangeRequest::class)
         ->set(newFlowFormFields($this->application, 'Pengajuan Langsung Alur Baru'))
+        ->set('head_of_department_approved', true)
         ->set('attachments', [UploadedFile::fake()->create('surat-persetujuan.pdf', 100, 'application/pdf')])
         ->call('save', RfcStatus::TICKET_CREATED->value)
         ->assertHasNoErrors();
@@ -155,6 +155,7 @@ test('pengiriman revisi langsung kembali ke Change Manager dan memberi tahu selu
 
     Livewire::actingAs($this->owner)
         ->test(EditChangeRequest::class, ['rfc' => $rfc])
+        ->set('head_of_department_approved', true)
         ->call('submit')
         ->assertHasNoErrors();
 

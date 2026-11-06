@@ -25,169 +25,6 @@
         </div>
     @endif
 
-    {{-- Banner ajakan mengajukan RFC --}}
-    <section
-        class="relative overflow-hidden rounded-2xl border border-sky-100 bg-gradient-to-r from-sky-50 via-blue-50 to-sky-100 shadow-sm">
-        <div class="relative z-10 flex flex-col gap-6 p-6 sm:p-8 lg:flex-row lg:items-center lg:justify-between">
-            <div class="flex max-w-xl items-start gap-4">
-                <span
-                    class="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/25">
-                    <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                            d="M14 3v4a1 1 0 0 0 1 1h4M6 3h8l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 13h6M9 17h4" />
-                    </svg>
-                </span>
-
-                <div>
-                    <h2 class="text-lg font-bold leading-snug text-slate-800 sm:text-xl">
-                        Ajukan permintaan perubahan layanan TI
-                    </h2>
-                    <p class="mt-1.5 max-w-md text-sm leading-relaxed text-slate-600">
-                        Sampaikan kebutuhan perubahan sistem atau infrastruktur TI untuk mendukung layanan di lingkungan
-                        Diskominfostandi Kota Bekasi.
-                    </p>
-                    <a href="{{ route('change-requests.create') }}" wire:navigate
-                        class="mt-4 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-700 to-blue-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/25 transition hover:from-blue-800 hover:to-blue-600">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 4v16m8-8H4" />
-                        </svg>
-                        Ajukan RFC Baru
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 5l7 7-7 7" />
-                        </svg>
-                    </a>
-                </div>
-            </div>
-
-            <div class="relative z-10 hidden items-center gap-3 lg:flex">
-                <div class="rounded-xl bg-white/60 px-4 py-3 text-right shadow-sm ring-1 ring-white/70 backdrop-blur-sm">
-                    <p class="text-sm font-semibold leading-snug text-blue-700">
-                        Transformasi Digital<br>untuk Pelayanan Publik<br>yang Lebih Baik
-                    </p>
-                </div>
-                <svg class="h-6 w-16 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 64 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                        d="M2 12h52m0 0-8-8m8 8-8 8" />
-                </svg>
-            </div>
-        </div>
-
-        {{-- Ilustrasi gedung pemerintahan --}}
-        <div class="pointer-events-none absolute inset-y-0 right-0 hidden w-[42%] opacity-80 lg:block" aria-hidden="true">
-            <svg viewBox="0 0 520 220" fill="none" preserveAspectRatio="xMaxYMax meet" class="h-full w-full">
-                <defs>
-                    <linearGradient id="hero-sky" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="#dbeafe" stop-opacity="0" />
-                        <stop offset="100%" stop-color="#bfdbfe" stop-opacity=".55" />
-                    </linearGradient>
-                    <linearGradient id="hero-building" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="#ffffff" />
-                        <stop offset="100%" stop-color="#dbeafe" />
-                    </linearGradient>
-                    <linearGradient id="hero-tower" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="#e0f2fe" />
-                        <stop offset="100%" stop-color="#bfdbfe" />
-                    </linearGradient>
-                    <linearGradient id="hero-fade" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stop-color="#eff6ff" stop-opacity="1" />
-                        <stop offset="45%" stop-color="#eff6ff" stop-opacity="0" />
-                    </linearGradient>
-                </defs>
-
-                <rect width="520" height="220" fill="url(#hero-sky)" />
-
-                {{-- Siluet gedung belakang --}}
-                <g fill="#bfdbfe" opacity=".65">
-                    <rect x="292" y="96" width="30" height="124" />
-                    <rect x="326" y="118" width="22" height="102" />
-                    <rect x="352" y="82" width="34" height="138" />
-                    <rect x="390" y="126" width="24" height="94" />
-                    <rect x="418" y="102" width="28" height="118" />
-                    <rect x="450" y="134" width="22" height="86" />
-                    <rect x="476" y="112" width="30" height="108" />
-                    <rect x="508" y="142" width="12" height="78" />
-                </g>
-
-                {{-- Menara utama --}}
-                <g>
-                    <rect x="238" y="46" width="52" height="174" fill="url(#hero-tower)" stroke="#93c5fd"
-                        stroke-width="1" />
-                    <path d="M238 46h52l-8-12h-36l-8 12Z" fill="#bfdbfe" stroke="#93c5fd" stroke-width="1" />
-                    <rect x="250" y="20" width="28" height="14" rx="2" fill="#dbeafe" stroke="#93c5fd"
-                        stroke-width="1" />
-                    <path d="M264 4v16" stroke="#93c5fd" stroke-width="1.5" stroke-linecap="round" />
-                    <circle cx="264" cy="4" r="2.5" fill="#60a5fa" />
-                    <g fill="#bfdbfe" opacity=".85">
-                        <rect x="248" y="62" width="6" height="10" rx="1" />
-                        <rect x="261" y="62" width="6" height="10" rx="1" />
-                        <rect x="274" y="62" width="6" height="10" rx="1" />
-                        <rect x="248" y="80" width="6" height="10" rx="1" />
-                        <rect x="261" y="80" width="6" height="10" rx="1" />
-                        <rect x="274" y="80" width="6" height="10" rx="1" />
-                        <rect x="248" y="98" width="6" height="10" rx="1" />
-                        <rect x="261" y="98" width="6" height="10" rx="1" />
-                        <rect x="274" y="98" width="6" height="10" rx="1" />
-                    </g>
-                    <rect x="256" y="128" width="16" height="20" rx="1" fill="#93c5fd" opacity=".7" />
-                </g>
-
-                {{-- Sayap gedung --}}
-                <g>
-                    <rect x="160" y="118" width="78" height="102" fill="url(#hero-building)" stroke="#bfdbfe"
-                        stroke-width="1" />
-                    <path d="M160 118h78l-10-14h-58l-10 14Z" fill="#e0f2fe" stroke="#bfdbfe"
-                        stroke-width="1" />
-                    <rect x="290" y="118" width="78" height="102" fill="url(#hero-building)" stroke="#bfdbfe"
-                        stroke-width="1" />
-                    <path d="M290 118h78l10-14h-58l-10 14Z" fill="#e0f2fe" stroke="#bfdbfe"
-                        stroke-width="1" />
-
-                    <g fill="#bfdbfe">
-                        <rect x="170" y="132" width="8" height="16" rx="1" />
-                        <rect x="184" y="132" width="8" height="16" rx="1" />
-                        <rect x="198" y="132" width="8" height="16" rx="1" />
-                        <rect x="212" y="132" width="8" height="16" rx="1" />
-                        <rect x="170" y="158" width="8" height="16" rx="1" />
-                        <rect x="184" y="158" width="8" height="16" rx="1" />
-                        <rect x="198" y="158" width="8" height="16" rx="1" />
-                        <rect x="212" y="158" width="8" height="16" rx="1" />
-                        <rect x="300" y="132" width="8" height="16" rx="1" />
-                        <rect x="314" y="132" width="8" height="16" rx="1" />
-                        <rect x="328" y="132" width="8" height="16" rx="1" />
-                        <rect x="342" y="132" width="8" height="16" rx="1" />
-                        <rect x="300" y="158" width="8" height="16" rx="1" />
-                        <rect x="314" y="158" width="8" height="16" rx="1" />
-                        <rect x="328" y="158" width="8" height="16" rx="1" />
-                        <rect x="342" y="158" width="8" height="16" rx="1" />
-                    </g>
-
-                    {{-- Pintu masuk --}}
-                    <rect x="190" y="188" width="20" height="32" rx="2" fill="#93c5fd" opacity=".8" />
-                    <rect x="318" y="188" width="20" height="32" rx="2" fill="#93c5fd" opacity=".8" />
-                </g>
-
-                {{-- Pohon --}}
-                <g fill="#86efac">
-                    <circle cx="146" cy="196" r="14" />
-                    <circle cx="132" cy="204" r="11" />
-                    <circle cx="380" cy="196" r="14" />
-                    <circle cx="394" cy="204" r="11" />
-                    <circle cx="424" cy="200" r="12" />
-                </g>
-                <g stroke="#64748b" stroke-width="3" stroke-linecap="round" opacity=".35">
-                    <path d="M146 208v12M380 208v12M424 210v10" />
-                </g>
-
-                {{-- Tanah --}}
-                <rect y="212" width="520" height="8" fill="#bfdbfe" opacity=".7" />
-
-                {{-- Fade ke arah teks --}}
-                <rect width="180" height="220" fill="url(#hero-fade)" />
-            </svg>
-        </div>
-    </section>
-
     {{-- Dokumen pendukung RFC --}}
     <x-dashboard.panel id="dokumen-rfc" title="Form RFC & Pedoman Manajemen Risiko"
         description="Dokumen resmi untuk membantu pengisian formulir RFC serta analisis dampak dan risiko perubahan.">
@@ -362,6 +199,169 @@
             </a>
         @endforeach
     </div>
+
+    {{-- Banner ajakan mengajukan RFC --}}
+    <section
+        class="relative overflow-hidden rounded-2xl border border-sky-100 bg-gradient-to-r from-sky-50 via-blue-50 to-sky-100 shadow-sm">
+        <div class="relative z-10 flex flex-col gap-6 p-6 sm:p-8 lg:flex-row lg:items-center lg:justify-between">
+            <div class="flex max-w-xl items-start gap-4">
+                <span
+                    class="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/25">
+                    <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                            d="M14 3v4a1 1 0 0 0 1 1h4M6 3h8l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 13h6M9 17h4" />
+                    </svg>
+                </span>
+
+                <div>
+                    <h2 class="text-lg font-bold leading-snug text-slate-800 sm:text-xl">
+                        Ajukan permintaan perubahan layanan TI
+                    </h2>
+                    <p class="mt-1.5 max-w-md text-sm leading-relaxed text-slate-600">
+                        Sampaikan kebutuhan perubahan sistem atau infrastruktur TI untuk mendukung layanan di lingkungan
+                        Diskominfostandi Kota Bekasi.
+                    </p>
+                    <a href="{{ route('change-requests.create') }}" wire:navigate
+                        class="mt-4 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-700 to-blue-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/25 transition hover:from-blue-800 hover:to-blue-600">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Ajukan RFC Baru
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </a>
+                </div>
+            </div>
+
+            <div class="relative z-10 hidden items-center gap-3 lg:flex">
+                <div class="rounded-xl bg-white/60 px-4 py-3 text-right shadow-sm ring-1 ring-white/70 backdrop-blur-sm">
+                    <p class="text-sm font-semibold leading-snug text-blue-700">
+                        Transformasi Digital<br>untuk Pelayanan Publik<br>yang Lebih Baik
+                    </p>
+                </div>
+                <svg class="h-6 w-16 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 64 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                        d="M2 12h52m0 0-8-8m8 8-8 8" />
+                </svg>
+            </div>
+        </div>
+
+        {{-- Ilustrasi gedung pemerintahan --}}
+        <div class="pointer-events-none absolute inset-y-0 right-0 hidden w-[42%] opacity-80 lg:block" aria-hidden="true">
+            <svg viewBox="0 0 520 220" fill="none" preserveAspectRatio="xMaxYMax meet" class="h-full w-full">
+                <defs>
+                    <linearGradient id="hero-sky" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#dbeafe" stop-opacity="0" />
+                        <stop offset="100%" stop-color="#bfdbfe" stop-opacity=".55" />
+                    </linearGradient>
+                    <linearGradient id="hero-building" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#ffffff" />
+                        <stop offset="100%" stop-color="#dbeafe" />
+                    </linearGradient>
+                    <linearGradient id="hero-tower" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#e0f2fe" />
+                        <stop offset="100%" stop-color="#bfdbfe" />
+                    </linearGradient>
+                    <linearGradient id="hero-fade" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stop-color="#eff6ff" stop-opacity="1" />
+                        <stop offset="45%" stop-color="#eff6ff" stop-opacity="0" />
+                    </linearGradient>
+                </defs>
+
+                <rect width="520" height="220" fill="url(#hero-sky)" />
+
+                {{-- Siluet gedung belakang --}}
+                <g fill="#bfdbfe" opacity=".65">
+                    <rect x="292" y="96" width="30" height="124" />
+                    <rect x="326" y="118" width="22" height="102" />
+                    <rect x="352" y="82" width="34" height="138" />
+                    <rect x="390" y="126" width="24" height="94" />
+                    <rect x="418" y="102" width="28" height="118" />
+                    <rect x="450" y="134" width="22" height="86" />
+                    <rect x="476" y="112" width="30" height="108" />
+                    <rect x="508" y="142" width="12" height="78" />
+                </g>
+
+                {{-- Menara utama --}}
+                <g>
+                    <rect x="238" y="46" width="52" height="174" fill="url(#hero-tower)" stroke="#93c5fd"
+                        stroke-width="1" />
+                    <path d="M238 46h52l-8-12h-36l-8 12Z" fill="#bfdbfe" stroke="#93c5fd" stroke-width="1" />
+                    <rect x="250" y="20" width="28" height="14" rx="2" fill="#dbeafe" stroke="#93c5fd"
+                        stroke-width="1" />
+                    <path d="M264 4v16" stroke="#93c5fd" stroke-width="1.5" stroke-linecap="round" />
+                    <circle cx="264" cy="4" r="2.5" fill="#60a5fa" />
+                    <g fill="#bfdbfe" opacity=".85">
+                        <rect x="248" y="62" width="6" height="10" rx="1" />
+                        <rect x="261" y="62" width="6" height="10" rx="1" />
+                        <rect x="274" y="62" width="6" height="10" rx="1" />
+                        <rect x="248" y="80" width="6" height="10" rx="1" />
+                        <rect x="261" y="80" width="6" height="10" rx="1" />
+                        <rect x="274" y="80" width="6" height="10" rx="1" />
+                        <rect x="248" y="98" width="6" height="10" rx="1" />
+                        <rect x="261" y="98" width="6" height="10" rx="1" />
+                        <rect x="274" y="98" width="6" height="10" rx="1" />
+                    </g>
+                    <rect x="256" y="128" width="16" height="20" rx="1" fill="#93c5fd" opacity=".7" />
+                </g>
+
+                {{-- Sayap gedung --}}
+                <g>
+                    <rect x="160" y="118" width="78" height="102" fill="url(#hero-building)" stroke="#bfdbfe"
+                        stroke-width="1" />
+                    <path d="M160 118h78l-10-14h-58l-10 14Z" fill="#e0f2fe" stroke="#bfdbfe"
+                        stroke-width="1" />
+                    <rect x="290" y="118" width="78" height="102" fill="url(#hero-building)" stroke="#bfdbfe"
+                        stroke-width="1" />
+                    <path d="M290 118h78l10-14h-58l-10 14Z" fill="#e0f2fe" stroke="#bfdbfe"
+                        stroke-width="1" />
+
+                    <g fill="#bfdbfe">
+                        <rect x="170" y="132" width="8" height="16" rx="1" />
+                        <rect x="184" y="132" width="8" height="16" rx="1" />
+                        <rect x="198" y="132" width="8" height="16" rx="1" />
+                        <rect x="212" y="132" width="8" height="16" rx="1" />
+                        <rect x="170" y="158" width="8" height="16" rx="1" />
+                        <rect x="184" y="158" width="8" height="16" rx="1" />
+                        <rect x="198" y="158" width="8" height="16" rx="1" />
+                        <rect x="212" y="158" width="8" height="16" rx="1" />
+                        <rect x="300" y="132" width="8" height="16" rx="1" />
+                        <rect x="314" y="132" width="8" height="16" rx="1" />
+                        <rect x="328" y="132" width="8" height="16" rx="1" />
+                        <rect x="342" y="132" width="8" height="16" rx="1" />
+                        <rect x="300" y="158" width="8" height="16" rx="1" />
+                        <rect x="314" y="158" width="8" height="16" rx="1" />
+                        <rect x="328" y="158" width="8" height="16" rx="1" />
+                        <rect x="342" y="158" width="8" height="16" rx="1" />
+                    </g>
+
+                    {{-- Pintu masuk --}}
+                    <rect x="190" y="188" width="20" height="32" rx="2" fill="#93c5fd" opacity=".8" />
+                    <rect x="318" y="188" width="20" height="32" rx="2" fill="#93c5fd" opacity=".8" />
+                </g>
+
+                {{-- Pohon --}}
+                <g fill="#86efac">
+                    <circle cx="146" cy="196" r="14" />
+                    <circle cx="132" cy="204" r="11" />
+                    <circle cx="380" cy="196" r="14" />
+                    <circle cx="394" cy="204" r="11" />
+                    <circle cx="424" cy="200" r="12" />
+                </g>
+                <g stroke="#64748b" stroke-width="3" stroke-linecap="round" opacity=".35">
+                    <path d="M146 208v12M380 208v12M424 210v10" />
+                </g>
+
+                {{-- Tanah --}}
+                <rect y="212" width="520" height="8" fill="#bfdbfe" opacity=".7" />
+
+                {{-- Fade ke arah teks --}}
+                <rect width="180" height="220" fill="url(#hero-fade)" />
+            </svg>
+        </div>
+    </section>
 
     <div class="grid grid-cols-1 items-start gap-6 xl:grid-cols-3">
 

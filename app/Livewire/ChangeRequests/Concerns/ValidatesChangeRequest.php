@@ -45,7 +45,7 @@ trait ValidatesChangeRequest
             'legal_basis.required' => 'Dasar hukum wajib diisi.',
             'change_risk.required' => 'Risiko perubahan wajib diisi.',
             'risk_event.Illuminate\Validation\Rules\Enum' => 'Register risiko tidak valid.',
-            'head_of_department_approved.accepted' => 'Persetujuan Kepala Dinas wajib dikonfirmasi sebelum mengajukan RFC.',
+            'head_of_department_approved.accepted' => 'Pernyataan persetujuan Kepala Dinas wajib dikonfirmasi sebelum mengajukan RFC.',
             'attachments.max' => 'Maksimal 5 lampiran per RFC.',
             'attachments.*.mimes' => 'Lampiran harus berformat PDF.',
             'attachments.*.max' => 'Setiap lampiran maksimal 5 MB.',
@@ -54,6 +54,7 @@ trait ValidatesChangeRequest
 
     protected function validateChangeRequest(int $existingAttachmentCount = 0): void
     {
+        // Register risiko bersifat opsional; nilai kosong dinormalisasi menjadi null.
         $this->risk_event = filled($this->risk_event) ? $this->risk_event : null;
 
         $this->validate($this->changeRequestRules(), $this->changeRequestMessages());
@@ -67,17 +68,23 @@ trait ValidatesChangeRequest
 
     /**
      * Syarat tambahan saat RFC benar-benar diajukan, bukan saat disimpan draft.
+     * Seluruh kegagalan dikumpulkan agar pemohon melihat semua yang perlu dilengkapi.
      */
     protected function validateForSubmission(int $existingAttachmentCount = 0): void
     {
-        $this->validate([
-            'head_of_department_approved' => 'accepted',
-        ], $this->changeRequestMessages());
+        $errors = [];
+
+        if (! $this->head_of_department_approved) {
+            $errors['head_of_department_approved'] =
+                $this->changeRequestMessages()['head_of_department_approved.accepted'];
+        }
 
         if ($existingAttachmentCount + count($this->attachments) < 1) {
-            throw ValidationException::withMessages([
-                'attachments' => 'Minimal 1 lampiran PDF wajib diunggah saat mengajukan RFC.',
-            ]);
+            $errors['attachments'] = 'Minimal 1 lampiran PDF wajib diunggah saat mengajukan RFC.';
+        }
+
+        if ($errors !== []) {
+            throw ValidationException::withMessages($errors);
         }
     }
 

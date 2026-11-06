@@ -148,6 +148,14 @@ class RfcHistoryService
                 continue;
             }
 
+            if (in_array($eventType, ['attachment_added', 'attachment_deleted'], true)
+                && data_get($activity->properties, 'document_type') === 'approval_letter') {
+                // Surat persetujuan ditampilkan sebagai kartu tersendiri pada
+                // detail RFC, jadi riwayat proses hanya mencantumkan lampiran
+                // pendukung agar urutan kejadian tetap tepat.
+                continue;
+            }
+
             if (in_array($eventType, ['attachment_added', 'attachment_deleted'], true)) {
                 $fileName = data_get($activity->properties, 'file_name');
                 $attachmentId = (int) data_get($activity->properties, 'attachment_id');

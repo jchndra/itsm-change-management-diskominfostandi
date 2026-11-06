@@ -54,10 +54,27 @@
                 <p class="font-medium text-slate-800">{{ $rfc->submittedBy?->name ?? '-' }}</p>
                 <p class="text-xs text-slate-500">{{ $rfc->submittedBy?->opd?->name ?? 'Unit kerja belum diisi' }}</p>
             </div>
+            @if (filled($rfc->target_implementation_date))
+                <div>
+                    <span class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Target Tanggal Pemohon</span>
+                    <p class="font-medium text-slate-800">
+                        {{ $rfc->target_implementation_date?->copy()->locale('id')->translatedFormat('d M Y') ?? '-' }}
+                    </p>
+                </div>
+            @endif
             <div>
-                <span class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Target Tanggal Pemohon</span>
+                <span class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Persetujuan Kepala Dinas</span>
                 <p class="font-medium text-slate-800">
-                    {{ $rfc->target_implementation_date?->copy()->locale('id')->translatedFormat('d M Y') ?? '-' }}
+                    @if ($rfc->head_of_department_approved)
+                        Disetujui
+                        @if ($rfc->head_of_department_approved_at)
+                            <span class="block text-xs text-slate-500">
+                                {{ $rfc->head_of_department_approved_at->copy()->locale('id')->translatedFormat('d M Y, H:i') }}
+                            </span>
+                        @endif
+                    @else
+                        Belum ada pernyataan persetujuan
+                    @endif
                 </p>
             </div>
             <div class="md:col-span-2">

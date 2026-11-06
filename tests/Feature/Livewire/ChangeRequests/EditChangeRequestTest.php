@@ -3,7 +3,6 @@
 use App\Enums\RfcStatus;
 use App\Enums\RiskEvent;
 use App\Exceptions\InvalidRfcStatusTransitionException;
-use App\Livewire\ChangeRequests\CreateChangeRequest;
 use App\Livewire\ChangeRequests\EditChangeRequest;
 use App\Livewire\ChangeRequests\ListChangeRequests;
 use App\Livewire\Requester\Dashboard;
@@ -14,6 +13,7 @@ use App\Models\User;
 use App\Services\RfcHistoryService;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Livewire\Livewire;
 use Spatie\Activitylog\Models\Activity;
 
@@ -48,7 +48,6 @@ function editableRfc(
         'status' => $status->value,
         'application_id' => $application->id,
         'risk_event' => RiskEvent::CYBER_INCIDENT,
-        'target_implementation_date' => now()->addDays(5),
         ...$attributes,
     ]);
 }
@@ -141,6 +140,7 @@ it('submits a revision directly to the change manager and clears rejection_note'
 
     Livewire::test(EditChangeRequest::class, ['rfc' => $rfc])
         ->set('reason_for_change', 'Alasan perubahan yang sudah diperbaiki dan lengkap.')
+        ->set('head_of_department_approved', true)
         ->call('submit')
         ->assertHasNoErrors()
         ->assertRedirect(route('change-requests.show', $rfc));
@@ -149,6 +149,8 @@ it('submits a revision directly to the change manager and clears rejection_note'
 
     expect($fresh->status)->toBe(RfcStatus::TICKET_CREATED->value)
         ->and($fresh->rejection_note)->toBeNull()
+        ->and($fresh->head_of_department_approved)->toBeTrue()
+        ->and($fresh->head_of_department_approved_at)->not->toBeNull()
         ->and($fresh->rfc_number)->not->toBeNull();
 });
 
@@ -162,6 +164,7 @@ it('keeps the previous revision reason in the process history after resubmitting
     attachApprovalLetterForTests($rfc, $this->pemohon);
 
     Livewire::test(EditChangeRequest::class, ['rfc' => $rfc])
+        ->set('head_of_department_approved', true)
         ->call('submit')
         ->assertHasNoErrors();
 
@@ -178,7 +181,7 @@ it('keeps the previous revision reason in the process history after resubmitting
         ->and($requesterEvent['note'])->toContain($reason);
 });
 
-it('validates empty title, past date, and physical letter number over 100 characters', function () {
+it('validates empty title and rejects non-PDF attachments', function () {
     $rfc = editableRfc($this->pemohon, $this->application, RfcStatus::DRAFT, [
         'title' => 'Judul Tetap',
     ]);
@@ -192,35 +195,11 @@ it('validates empty title, past date, and physical letter number over 100 charac
 
     $component
         ->set('title', 'Judul Valid')
-        ->set('target_implementation_date', now()->subDay()->format('Y-m-d\TH:i'))
+        ->set('attachments', [UploadedFile::fake()->create('lampiran.docx', 20, 'application/msword')])
         ->call('saveChanges')
-        ->assertHasErrors('target_implementation_date');
-
-    $component
-        ->set('target_implementation_date', now()->addDays(3)->format('Y-m-d\TH:i'))
-        ->set('is_physical_letter', true)
-        ->set('physical_letter_number', str_repeat('A', 101))
-        ->call('saveChanges')
-        ->assertHasErrors('physical_letter_number');
+        ->assertHasErrors('attachments.0');
 
     expect($rfc->fresh()->title)->toBe('Judul Tetap');
-});
-
-it('uses the same 100 character limit on the create form', function () {
-    Livewire::test(CreateChangeRequest::class)
-        ->set('title', 'Pengajuan dengan nomor surat terlalu panjang')
-        ->set('application_id', (string) $this->application->id)
-        ->set('change_type', 'normal')
-        ->set('description', 'Deskripsi perubahan yang cukup jelas.')
-        ->set('reason_for_change', 'Alasan perubahan yang cukup panjang.')
-        ->set('legal_basis', 'Dasar hukum perubahan yang cukup jelas.')
-        ->set('change_risk', 'Risiko perubahan yang sudah diidentifikasi.')
-        ->set('impact_description', 'Dampak perubahan yang cukup jelas.')
-        ->set('target_implementation_date', now()->addDays(3)->format('Y-m-d\TH:i'))
-        ->set('is_physical_letter', true)
-        ->set('physical_letter_number', str_repeat('B', 101))
-        ->call('save', RfcStatus::TICKET_CREATED->value)
-        ->assertHasErrors('physical_letter_number');
 });
 
 it('rolls back data changes when the status transition fails', function () {
@@ -241,6 +220,7 @@ it('rolls back data changes when the status transition fails', function () {
     try {
         Livewire::test(EditChangeRequest::class, ['rfc' => $rfc])
             ->set('title', 'Judul Yang Harus Dibatalkan')
+            ->set('head_of_department_approved', true)
             ->call('submit')
             ->assertHasErrors('status');
     } finally {
@@ -251,7 +231,9 @@ it('rolls back data changes when the status transition fails', function () {
 
     expect($fresh->title)->toBe('Judul Sebelum Gagal')
         ->and($fresh->status)->toBe(RfcStatus::NEEDS_REVISION->value)
-        ->and($fresh->rejection_note)->toBe('Alasan revisi tetap ada.');
+        ->and($fresh->rejection_note)->toBe('Alasan revisi tetap ada.')
+        // Persetujuan lama tidak tersimpan karena transaksi dibatalkan.
+        ->and($fresh->head_of_department_approved)->toBeFalse();
 });
 
 it('links edit actions from the requester dashboard and list to the edit page', function () {
