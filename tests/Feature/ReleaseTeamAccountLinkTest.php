@@ -7,8 +7,10 @@ use App\Models\ReleaseTeamMember;
 use App\Models\User;
 use App\Services\ReleaseTeamAccountLinker;
 use Database\Seeders\PermissionSeeder;
+use Database\Seeders\ReleaseTeamSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
@@ -210,6 +212,33 @@ it('menjaga keunikan tautan akun pada tingkat database', function () {
     releaseTeamLinkMember(['user_id' => $secondUser->id]);
 
     expect(ReleaseTeamMember::query()->whereNotNull('user_id')->count())->toBe(2);
+});
+
+it('menyemai tiga akun Tim Rilis dummy secara idempoten', function () {
+    config(['seeding.release_team_password' => 'TestPassword-123!']);
+
+    $this->seed(ReleaseTeamSeeder::class);
+    $this->seed(ReleaseTeamSeeder::class);
+
+    $members = ReleaseTeamMember::query()->whereNotNull('user_id')->get();
+
+    expect($members)->toHaveCount(3)
+        ->and($members->pluck('user_id')->unique())->toHaveCount(3)
+        ->and($members->pluck('name')->sort()->values()->all())->toBe([
+            'Tim Rilis Aplikasi',
+            'Tim Rilis Database',
+            'Tim Rilis Infrastruktur Jaringan',
+        ]);
+
+    foreach ($members as $member) {
+        $user = $member->user;
+
+        expect($user)->not->toBeNull()
+            ->and($user->is_active)->toBeTrue()
+            ->and($user->hasRole('Tim Rilis'))->toBeTrue()
+            ->and($user->password)->not->toBe('TestPassword-123!')
+            ->and(Hash::check('TestPassword-123!', $user->password))->toBeTrue();
+    }
 });
 
 it('menolak penautan oleh pengguna tanpa permission pengelolaan', function () {

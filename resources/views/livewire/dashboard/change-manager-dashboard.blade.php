@@ -117,8 +117,8 @@
                 :secondary="$overview['trend']['decisions']" />
         </x-dashboard.chart-card>
 
-        <x-dashboard.chart-card class="dashboard-rise dashboard-rise-3 xl:col-span-2" title="Distribusi Status RFC"
-            description="Sebaran status RFC yang tersimpan saat ini, dibedakan antara status aktif dan terminal. RFC terhapus tidak dihitung.">
+        <x-dashboard.chart-card class="dashboard-rise dashboard-rise-3 xl:col-span-2" title="Distribusi RFC per Tim Rilis"
+            description="Jumlah RFC yang didisposisikan ke setiap anggota Tim Rilis. RFC terhapus tidak dihitung.">
             <x-slot:icon>
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
@@ -134,9 +134,11 @@
                 </span>
             </x-slot:actions>
 
-            <x-dashboard.bar-chart id="distribusi-status-cm" title="Jumlah RFC per status"
-                description="Jumlah dan porsi setiap status terhadap total RFC pada dashboard."
-                :items="$overview['distribution']" :show-terminal-groups="true" :columns="2" />
+            <x-dashboard.bar-chart id="distribusi-tim-rilis" title="Jumlah RFC per Tim Rilis"
+                description="Jumlah dan porsi RFC yang ditugaskan ke setiap anggota Tim Rilis."
+                :items="$overview['release_team_distribution']" :palette="true" noun="tim rilis"
+                :show-terminal-groups="false" :columns="1"
+                empty-description="Belum ada RFC yang didisposisikan ke Tim Rilis." />
         </x-dashboard.chart-card>
     </div>
 

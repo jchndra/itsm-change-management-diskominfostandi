@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\RfcStatus;
 use App\Models\ChangeRequest;
+use App\Models\ReleaseTeamMember;
 use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -78,6 +79,7 @@ class DashboardMetricsService
      *         end: string
      *     },
      *     distribution: array<int, array{status: string, label: string, value: int, is_terminal: bool}>,
+     *     release_team_distribution: array<int, array{status: string, label: string, value: int, is_terminal: bool}>,
      *     activities: array<int, array{rfc_number: string, label: string, actor_name: string, occurred_at: Carbon}>
      * }
      */
@@ -106,6 +108,7 @@ class DashboardMetricsService
             'queue' => $this->changeManagerQueue($now),
             'trend' => $this->changeManagerTrend($periodStart, $periodEnd),
             'distribution' => $this->statusDistribution($statusCounts),
+            'release_team_distribution' => $this->releaseTeamDistribution(),
             'activities' => $this->recentActivities([
                 RfcStatus::TICKET_CREATED->value,
                 RfcStatus::RETURNED_TO_ADMIN->value,
@@ -118,6 +121,39 @@ class DashboardMetricsService
                 RfcStatus::CANCELLED->value,
             ]),
         ];
+    }
+
+    /**
+     * Jumlah RFC unik yang didisposisikan ke setiap anggota Tim Rilis aktif.
+     *
+     * @return array<int, array{status: string, label: string, value: int, is_terminal: bool}>
+     */
+    public function releaseTeamDistribution(): array
+    {
+        return ReleaseTeamMember::query()
+            ->leftJoin('release_tasks', 'release_tasks.release_team_member_id', '=', 'release_team_members.id')
+            ->leftJoin('change_requests', function (JoinClause $join): void {
+                $join->on('change_requests.id', '=', 'release_tasks.change_request_id')
+                    ->whereNull('change_requests.deleted_at');
+            })
+            ->where('release_team_members.is_active', true)
+            ->whereNotNull('release_team_members.user_id')
+            ->groupBy('release_team_members.id', 'release_team_members.name')
+            ->select(['release_team_members.id', 'release_team_members.name'])
+            ->selectRaw('COUNT(DISTINCT change_requests.id) as rfc_count')
+            ->get()
+            ->map(fn (ReleaseTeamMember $member): array => [
+                'status' => 'team_'.$member->id,
+                'label' => $member->name,
+                'value' => (int) $member->rfc_count,
+                'is_terminal' => false,
+            ])
+            ->sortBy([
+                ['value', 'desc'],
+                ['label', 'asc'],
+            ])
+            ->values()
+            ->all();
     }
 
     /**

@@ -7,7 +7,6 @@ use App\Models\Application;
 use App\Models\Authority;
 use App\Models\ChangeRequest;
 use App\Models\Opd;
-use App\Models\ReleaseTeamMember;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -110,20 +109,8 @@ class DatabaseSeeder extends Seeder
             'authority_type' => 'head_of_department',
         ]);
 
-        // 6. Seed Master Tim Rilis Dummy
-        ReleaseTeamMember::create([
-            'name' => 'Pelaksana Teknis A',
-            'nip_or_nik' => '3200000000000001',
-            'role_title' => 'DevOps Engineer Sample',
-            'phone_number' => '081300000001',
-        ]);
-
-        ReleaseTeamMember::create([
-            'name' => 'Pelaksana Teknis B',
-            'nip_or_nik' => '3200000000000002',
-            'role_title' => 'Database Administrator Sample',
-            'phone_number' => '081300000002',
-        ]);
+        // 6. Seed akun Tim Rilis Dummy
+        $this->call(ReleaseTeamSeeder::class);
 
         // 7. Seed Sample RFC Dummy
         ChangeRequest::create([

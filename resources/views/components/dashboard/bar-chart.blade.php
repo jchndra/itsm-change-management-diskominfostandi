@@ -7,6 +7,9 @@
     'maxVisible' => 6,
     'showTerminalGroups' => false,
     'columns' => 1,
+    'palette' => false,
+    'noun' => 'status',
+    'emptyDescription' => null,
 ])
 
 @php
@@ -30,7 +33,7 @@
         if ($remainingItems->isNotEmpty()) {
             $visibleItems = $visibleItems->push([
                 'status' => '__remaining',
-                'label' => 'Lainnya (' . $remainingItems->count() . ' status)',
+                'label' => 'Lainnya (' . $remainingItems->count() . ' ' . $noun . ')',
                 'value' => $remainingItems->sum(fn (array $item): int => (int) ($item['value'] ?? 0)),
                 'is_terminal' => false,
                 'is_remaining' => true,
@@ -107,9 +110,50 @@
         'hex' => '#94a3b8',
     ];
 
-    $toneFor = fn (array $item): array => ($item['is_remaining'] ?? false)
-        ? $fallbackTone
-        : ($tones[$item['status']] ?? $fallbackTone);
+    $paletteTones = [
+        [
+            'dot' => 'bg-blue-500',
+            'bar' => 'from-blue-500 to-sky-400',
+            'hex' => '#3b82f6',
+        ],
+        [
+            'dot' => 'bg-emerald-500',
+            'bar' => 'from-emerald-500 to-teal-400',
+            'hex' => '#10b981',
+        ],
+        [
+            'dot' => 'bg-amber-500',
+            'bar' => 'from-amber-500 to-yellow-400',
+            'hex' => '#f59e0b',
+        ],
+        [
+            'dot' => 'bg-indigo-500',
+            'bar' => 'from-indigo-500 to-violet-400',
+            'hex' => '#6366f1',
+        ],
+        [
+            'dot' => 'bg-rose-500',
+            'bar' => 'from-rose-500 to-orange-400',
+            'hex' => '#f43f5e',
+        ],
+        [
+            'dot' => 'bg-cyan-500',
+            'bar' => 'from-cyan-500 to-sky-400',
+            'hex' => '#06b6d4',
+        ],
+    ];
+
+    $toneFor = function (array $item, int $index) use ($palette, $paletteTones, $tones, $fallbackTone): array {
+        if ($item['is_remaining'] ?? false) {
+            return $fallbackTone;
+        }
+
+        if ($palette) {
+            return $paletteTones[$index % count($paletteTones)];
+        }
+
+        return $tones[$item['status']] ?? $fallbackTone;
+    };
 
     $listClasses = (int) $columns > 1
         ? 'grid gap-x-5 gap-y-4 sm:grid-cols-2'
@@ -120,7 +164,7 @@
     $cumulative = 0.0;
     $visibleCount = $visibleItems->count();
 
-    foreach ($visibleItems as $item) {
+    foreach ($visibleItems as $index => $item) {
         $value = (int) ($item['value'] ?? 0);
         $segmentLength = $total > 0 ? ($value / $total) * $circumference : 0;
         $gap = $visibleCount > 1 && $segmentLength > 0 ? min(2.6, $segmentLength / 2) : 0;
@@ -131,7 +175,7 @@
             'item' => $item,
             'value' => $value,
             'share' => $total > 0 ? ($value / $total) * 100 : 0,
-            'tone' => $toneFor($item),
+            'tone' => $toneFor($item, $index),
             'dasharray' => sprintf('%.3f %.3f', $dashLength, max(0, $circumference - $dashLength)),
             'offset' => sprintf('%.3f', $offset),
         ];
@@ -160,7 +204,7 @@
 
     @if (! $hasData)
         <x-dashboard.empty-state title="Belum ada data distribusi"
-            description="Distribusi status akan tampil setelah ada RFC." />
+            :description="$emptyDescription ?? 'Distribusi ' . $noun . ' akan tampil setelah ada RFC.'" />
     @else
         <div class="@container">
             <div class="grid items-center gap-6 @lg:grid-cols-[190px_minmax(0,1fr)]">
@@ -261,10 +305,10 @@
             </summary>
             <div class="mt-3 overflow-x-auto">
                 <table class="w-full min-w-[300px] text-left text-xs text-slate-600">
-                    <caption class="sr-only">{{ $title }} — data status RFC</caption>
+                    <caption class="sr-only">{{ $title }} — data {{ $noun }} RFC</caption>
                     <thead class="border-b border-slate-100 text-[10px] uppercase tracking-wide text-slate-500">
                         <tr>
-                            <th scope="col" class="py-2 pr-3 font-semibold">Status</th>
+                            <th scope="col" class="py-2 pr-3 font-semibold">{{ ucfirst($noun) }}</th>
                             <th scope="col" class="py-2 pr-3 text-right font-semibold">Jumlah RFC</th>
                             <th scope="col" class="py-2 text-right font-semibold">Porsi</th>
                         </tr>

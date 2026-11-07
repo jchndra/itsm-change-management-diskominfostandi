@@ -2,12 +2,15 @@
 
 use App\Enums\ImplementationResult;
 use App\Enums\RfcStatus;
+use App\Models\Application;
 use App\Models\ChangeRequest;
+use App\Models\Opd;
 use App\Models\ReleaseTask;
 use App\Models\ReleaseTeamMember;
 use App\Models\User;
 use App\Services\DashboardMetricsService;
 use Database\Seeders\PermissionSeeder;
+use Database\Seeders\SampleRfcSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -110,6 +113,84 @@ it('membedakan label status tiket dan pengembalian pada distribusi', function ()
 
     expect($distribution[RfcStatus::TICKET_CREATED->value]['label'])->toBe('Sedang Ditinjau (Tiket)')
         ->and($distribution[RfcStatus::RETURNED_TO_ADMIN->value]['label'])->toBe('Dikembalikan ke Admin');
+});
+
+it('menyemai sepuluh RFC contoh secara idempoten untuk dashboard change manager', function () {
+    $opd = Opd::factory()->create(['code' => 'PD01']);
+
+    User::factory()->create(['email' => 'pemohon@example.com', 'opd_id' => $opd->id]);
+    User::factory()->create(['email' => 'admin@example.com']);
+    User::factory()->create(['email' => 'cm@example.com']);
+    Application::factory()->count(2)->create();
+
+    foreach (['Tim Rilis Aplikasi', 'Tim Rilis Database', 'Tim Rilis Infrastruktur Jaringan'] as $name) {
+        ReleaseTeamMember::factory()->create([
+            'name' => $name,
+            'is_active' => true,
+            'user_id' => User::factory()->create(['is_active' => true])->id,
+        ]);
+    }
+
+    $this->seed(SampleRfcSeeder::class);
+    $this->seed(SampleRfcSeeder::class);
+
+    $overview = app(DashboardMetricsService::class)->changeManagerOverview();
+
+    expect(ChangeRequest::count())->toBe(10)
+        ->and($overview['pending_review'])->toBe(2)
+        ->and($overview['approved'])->toBe(2)
+        ->and($overview['in_progress'])->toBe(2)
+        ->and($overview['waiting_evaluation'])->toBe(2)
+        ->and($overview['closed'])->toBe(1)
+        ->and($overview['rejected'])->toBe(1)
+        ->and($overview['total'])->toBe(10);
+});
+
+it('menghitung distribusi RFC unik per anggota Tim Rilis aktif', function () {
+    $memberA = ReleaseTeamMember::factory()->create([
+        'name' => 'Anggota Rilis A',
+        'is_active' => true,
+        'user_id' => cmMetricsUser(['Tim Rilis'])->id,
+    ]);
+    $memberB = ReleaseTeamMember::factory()->create([
+        'name' => 'Anggota Rilis B',
+        'is_active' => true,
+        'user_id' => cmMetricsUser(['Tim Rilis'])->id,
+    ]);
+    ReleaseTeamMember::factory()->create([
+        'name' => 'Anggota Nonaktif',
+        'is_active' => false,
+        'user_id' => cmMetricsUser(['Tim Rilis'])->id,
+    ]);
+
+    $firstRfc = cmMetricsRfc(['rfc_number' => 'RFC-CM-TEAM-001']);
+    $secondRfc = cmMetricsRfc(['rfc_number' => 'RFC-CM-TEAM-002']);
+    $deletedRfc = cmMetricsRfc(['rfc_number' => 'RFC-CM-TEAM-DELETED']);
+
+    ReleaseTask::factory()->forRfc($firstRfc)->assignedTo($memberA)->create();
+    ReleaseTask::factory()->forRfc($firstRfc)->assignedTo($memberA)->create();
+    ReleaseTask::factory()->forRfc($secondRfc)->assignedTo($memberA)->create();
+    ReleaseTask::factory()->forRfc($deletedRfc)->assignedTo($memberA)->create();
+
+    $deletedRfc->delete();
+
+    $distribution = app(DashboardMetricsService::class)->releaseTeamDistribution();
+
+    expect($distribution)->toHaveCount(2)
+        ->and($distribution[0])->toMatchArray([
+            'status' => 'team_'.$memberA->id,
+            'label' => 'Anggota Rilis A',
+            'value' => 2,
+            'is_terminal' => false,
+        ])
+        ->and($distribution[1])->toMatchArray([
+            'status' => 'team_'.$memberB->id,
+            'label' => 'Anggota Rilis B',
+            'value' => 0,
+            'is_terminal' => false,
+        ])
+        ->and(app(DashboardMetricsService::class)->changeManagerOverview()['release_team_distribution'])
+        ->toBe($distribution);
 });
 
 it('menampilkan antrean tindakan terlama dengan aksi yang sesuai status', function () {
