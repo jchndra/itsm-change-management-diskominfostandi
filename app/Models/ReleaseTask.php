@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ReleaseTask extends Model
 {
@@ -15,6 +16,7 @@ class ReleaseTask extends Model
         'release_team_member_id',
         'assigned_by_id',
         'instruction',
+        'estimated_days',
         'scheduled_start',
         'scheduled_end',
         'execution_status',
@@ -25,6 +27,7 @@ class ReleaseTask extends Model
     protected function casts(): array
     {
         return [
+            'estimated_days' => 'integer',
             'scheduled_start' => 'datetime',
             'scheduled_end' => 'datetime',
             'executed_at' => 'datetime',
@@ -44,5 +47,10 @@ class ReleaseTask extends Model
     public function assignedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_by_id');
+    }
+
+    public function updates(): HasMany
+    {
+        return $this->hasMany(ReleaseTaskUpdate::class)->orderByDesc('created_at');
     }
 }

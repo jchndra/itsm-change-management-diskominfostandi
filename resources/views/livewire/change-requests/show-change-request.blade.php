@@ -4,6 +4,7 @@
         $isStaff = auth()->user()?->can('rfc.view_all') ?? false;
         $isReleaseTeam = auth()->user()?->isReleaseTeam() ?? false;
         $isReleaseTeamView = $isReleaseTeam && ! $isStaff;
+        $isRequesterOwner = auth()->id() === $rfc->submitted_by_id;
         $returnsToRfcList = $isStaff || $isReleaseTeam;
         $releaseTeamDispositionTask = $isReleaseTeamView && $rfc->relationLoaded('releaseTasks')
             ? $rfc->releaseTasks->first(
@@ -507,6 +508,298 @@
                             </p>
                         </div>
                     </div>
+                </div>
+            @endif
+
+            @if ($releaseTeamDispositionTask && $isReleaseTeamView)
+                @php
+                    $progressTask = $releaseTeamDispositionTask;
+                    $progressStatusLabel = match ($progressTask->execution_status) {
+                        'pending' => 'Menunggu dimulai',
+                        'in_progress' => 'Sedang dikerjakan',
+                        'successful' => 'Berhasil',
+                        'rolled_back' => 'Gagal / rollback',
+                        default => $progressTask->execution_status,
+                    };
+                    $progressEditable = in_array($progressTask->execution_status, ['pending', 'in_progress'], true)
+                        && ! $rfc->trashed();
+                @endphp
+
+                <div id="progres-pengerjaan" class="bg-white rounded-xl shadow-sm border border-emerald-100 p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Progres Pengerjaan</h3>
+
+                    <div class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Status Tugas</p>
+                            <p class="mt-1 font-medium text-slate-800">{{ $progressStatusLabel }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Estimasi (hari)</p>
+                            <p class="mt-1 font-medium text-slate-800">
+                                {{ $progressTask->estimated_days ? $progressTask->estimated_days.' hari' : 'Belum ditetapkan' }}
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Mulai (WIB)</p>
+                            <p class="mt-1 font-medium text-slate-800">
+                                {{ $progressTask->scheduled_start
+                                    ? $progressTask->scheduled_start->copy()->timezone('Asia/Jakarta')->locale('id')->translatedFormat('d M Y, H:i')
+                                    : '—' }}
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Selesai (WIB)</p>
+                            <p class="mt-1 font-medium text-slate-800">
+                                {{ $progressTask->scheduled_end
+                                    ? $progressTask->scheduled_end->copy()->timezone('Asia/Jakarta')->locale('id')->translatedFormat('d M Y, H:i')
+                                    : '—' }}
+                            </p>
+                        </div>
+                    </div>
+
+                    @if (filled($progressMessage))
+                        <p class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
+                            {{ $progressMessage }}
+                        </p>
+                    @endif
+
+                    @error('progress')
+                        <p class="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-800">
+                            {{ $message }}
+                        </p>
+                    @enderror
+
+                    @if ($progressEditable)
+                        <div class="mt-5 space-y-5 border-t border-slate-100 pt-5">
+                            @if ($progressTask->estimated_days === null)
+                                <form wire:submit="setEstimate" class="flex flex-wrap items-end gap-3">
+                                    <div>
+                                        <label for="estimated-days-{{ $progressTask->id }}"
+                                            class="block text-xs font-semibold text-slate-600">Estimasi (hari)</label>
+                                        <input id="estimated-days-{{ $progressTask->id }}" type="number" min="1"
+                                            max="90" wire:model="estimatedDays" required
+                                            class="mt-1 w-36 rounded-lg border-slate-300 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+                                    </div>
+                                    <button type="submit"
+                                        class="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700">
+                                        Simpan Estimasi
+                                    </button>
+                                </form>
+                            @endif
+
+                            @if ($progressTask->execution_status === 'pending')
+                                <div>
+                                    <button type="button" wire:click="startWork"
+                                        @disabled($progressTask->estimated_days === null)
+                                        class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300">
+                                        Mulai Pengerjaan
+                                    </button>
+                                    @if ($progressTask->estimated_days === null)
+                                        <p class="mt-1 text-xs text-slate-500">Tetapkan estimasi terlebih dahulu untuk memulai.</p>
+                                    @endif
+                                </div>
+                            @endif
+
+                            @if ($progressTask->estimated_days !== null)
+                                <form wire:submit="reviseEstimate" class="space-y-3 rounded-lg border border-amber-100 bg-amber-50/50 p-4">
+                                    <p class="text-xs font-semibold uppercase tracking-wider text-amber-700">Revisi Estimasi</p>
+                                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                        <div>
+                                            <label for="revised-days-{{ $progressTask->id }}"
+                                                class="block text-xs font-semibold text-slate-600">Total hari baru</label>
+                                            <input id="revised-days-{{ $progressTask->id }}" type="number" min="1"
+                                                max="90" wire:model="revisedDays" required
+                                                class="mt-1 w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-amber-500 focus:ring-amber-500">
+                                        </div>
+                                        <div>
+                                            <label for="revision-reason-{{ $progressTask->id }}"
+                                                class="block text-xs font-semibold text-slate-600">Alasan revisi (wajib)</label>
+                                            <input id="revision-reason-{{ $progressTask->id }}" type="text"
+                                                wire:model="revisionReason" required minlength="10" maxlength="500"
+                                                class="mt-1 w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-amber-500 focus:ring-amber-500">
+                                        </div>
+                                    </div>
+                                    <button type="submit"
+                                        class="inline-flex items-center justify-center rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-700">
+                                        Revisi Estimasi
+                                    </button>
+                                </form>
+                            @endif
+
+                            @if ($progressTask->execution_status === 'in_progress')
+                                <form wire:submit="addProgressNote" class="space-y-3 rounded-lg border border-blue-100 bg-blue-50/50 p-4">
+                                    <p class="text-xs font-semibold uppercase tracking-wider text-blue-700">Catatan Kegiatan</p>
+                                    <div>
+                                        <label for="progress-note-{{ $progressTask->id }}"
+                                            class="block text-xs font-semibold text-slate-600">Catatan</label>
+                                        <textarea id="progress-note-{{ $progressTask->id }}" rows="3"
+                                            wire:model="progressNote" required minlength="5" maxlength="1000"
+                                            class="mt-1 w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"></textarea>
+                                    </div>
+                                    <label class="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+                                        <input type="checkbox" wire:model="progressBlocked"
+                                            class="rounded border-slate-300 text-rose-600 focus:ring-rose-500">
+                                        Ada kendala
+                                    </label>
+                                    <div>
+                                        <button type="submit"
+                                            class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
+                                            Tambah Catatan
+                                        </button>
+                                    </div>
+                                </form>
+                            @endif
+                        </div>
+                    @endif
+
+                    @if ($progressTask->updates->isNotEmpty())
+                        <div class="mt-5 border-t border-slate-100 pt-5">
+                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Riwayat Progres</p>
+                            <ol class="mt-3 space-y-3">
+                                @foreach ($progressTask->updates as $update)
+                                    @php
+                                        $updateLabel = match ($update->type) {
+                                            'started' => 'Pengerjaan dimulai',
+                                            'progress' => 'Catatan kegiatan',
+                                            'estimate_set' => 'Estimasi ditetapkan',
+                                            'estimate_revised' => 'Estimasi direvisi',
+                                            'blocked' => 'Kendala',
+                                            default => $update->type,
+                                        };
+                                    @endphp
+                                    <li wire:key="release-task-update-{{ $update->id }}"
+                                        class="rounded-lg border border-slate-100 bg-slate-50/70 px-3 py-2 text-sm">
+                                        <div class="flex flex-wrap items-center justify-between gap-2">
+                                            <p class="font-semibold text-slate-800">{{ $updateLabel }}</p>
+                                            <p class="text-[11px] text-slate-500">
+                                                {{ $update->created_at?->copy()->timezone('Asia/Jakarta')->locale('id')->translatedFormat('d M Y, H:i') }} WIB
+                                            </p>
+                                        </div>
+                                        @if ($update->old_estimated_days !== null || $update->new_estimated_days !== null)
+                                            <p class="mt-1 text-xs text-slate-600">
+                                                {{ $update->old_estimated_days ?? '—' }} hari &rarr; {{ $update->new_estimated_days ?? '—' }} hari
+                                            </p>
+                                        @endif
+                                        @if (filled($update->reason))
+                                            <p class="mt-1 text-xs text-slate-600">Alasan: {{ $update->reason }}</p>
+                                        @endif
+                                        @if (filled($update->note))
+                                            <p class="mt-1 whitespace-pre-wrap text-sm text-slate-700">{{ $update->note }}</p>
+                                        @endif
+                                        <p class="mt-1 text-[11px] text-slate-400">{{ $update->user?->name ?? 'Tim Rilis' }}</p>
+                                    </li>
+                                @endforeach
+                            </ol>
+                        </div>
+                    @endif
+                </div>
+            @endif
+
+            @if ($isStaff || $isRequesterOwner)
+                <div id="progres-tim-rilis" class="bg-white rounded-xl shadow-sm border border-emerald-100 p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Progres Tim Rilis</h3>
+
+                    @if ($rfc->releaseTasks->isEmpty())
+                        <p class="text-sm text-slate-500">Belum didisposisikan ke Tim Rilis.</p>
+                    @else
+                        <div class="space-y-4">
+                            @foreach ($rfc->releaseTasks as $task)
+                                @php
+                                    $taskStatus = match ($task->execution_status) {
+                                        'pending' => ['label' => 'Menunggu dimulai', 'classes' => 'bg-slate-100 text-slate-700'],
+                                        'in_progress' => ['label' => 'Sedang dikerjakan', 'classes' => 'bg-blue-100 text-blue-700'],
+                                        'successful' => ['label' => 'Selesai', 'classes' => 'bg-emerald-100 text-emerald-700'],
+                                        'rolled_back' => ['label' => 'Rollback', 'classes' => 'bg-rose-100 text-rose-700'],
+                                        default => ['label' => $task->execution_status, 'classes' => 'bg-slate-100 text-slate-700'],
+                                    };
+                                    $isOverdue = $task->execution_status === 'in_progress'
+                                        && $task->scheduled_end !== null
+                                        && now()->greaterThan($task->scheduled_end);
+                                    $hasRevision = $task->updates->contains('type', 'estimate_revised');
+                                @endphp
+
+                                <div class="rounded-lg border border-slate-100 bg-slate-50/60 p-4"
+                                    wire:key="readonly-release-task-{{ $task->id }}">
+                                    <div class="flex flex-wrap items-start justify-between gap-2">
+                                        <div>
+                                            <p class="text-sm font-semibold text-slate-800">
+                                                {{ $task->releaseTeamMember?->name ?? 'Tim Rilis' }}
+                                            </p>
+                                            <p class="mt-1 text-xs text-slate-600">
+                                                Estimasi: {{ $task->estimated_days ? $task->estimated_days.' hari' : 'belum ditetapkan' }}
+                                            </p>
+                                        </div>
+                                        <div class="flex flex-wrap items-center gap-1.5">
+                                            <span
+                                                class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold {{ $taskStatus['classes'] }}">
+                                                {{ $taskStatus['label'] }}
+                                            </span>
+                                            @if ($hasRevision)
+                                                <span
+                                                    class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-800">
+                                                    Estimasi direvisi
+                                                </span>
+                                            @endif
+                                            @if ($isOverdue)
+                                                <span
+                                                    class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-1 text-[11px] font-semibold text-red-800">
+                                                    Melewati estimasi
+                                                </span>
+                                            @endif
+                                        </div>
+                                    </div>
+
+                                    @if ($task->scheduled_start !== null && $task->scheduled_end !== null)
+                                        <p class="mt-2 text-xs text-slate-600">
+                                            Target selesai:
+                                            <span class="font-semibold text-slate-800">
+                                                {{ $task->scheduled_end->copy()->timezone('Asia/Jakarta')->locale('id')->translatedFormat('d M Y, H:i') }} WIB
+                                            </span>
+                                        </p>
+                                    @endif
+
+                                    @if ($task->updates->isNotEmpty())
+                                        <ol class="mt-3 space-y-2 border-t border-slate-200 pt-3">
+                                            @foreach ($task->updates as $update)
+                                                @php
+                                                    $updateLabel = match ($update->type) {
+                                                        'started' => 'Pengerjaan dimulai',
+                                                        'progress' => 'Catatan kegiatan',
+                                                        'estimate_set' => 'Estimasi ditetapkan',
+                                                        'estimate_revised' => 'Estimasi direvisi',
+                                                        'blocked' => 'Kendala',
+                                                        default => $update->type,
+                                                    };
+                                                @endphp
+                                                <li wire:key="readonly-release-update-{{ $update->id }}"
+                                                    class="text-xs text-slate-600">
+                                                    <div class="flex flex-wrap items-center justify-between gap-2">
+                                                        <p class="font-semibold text-slate-700">
+                                                            {{ $task->releaseTeamMember?->name ?? 'Tim Rilis' }} &middot; {{ $updateLabel }}
+                                                        </p>
+                                                        <p class="text-[11px] text-slate-400">
+                                                            {{ $update->created_at?->copy()->timezone('Asia/Jakarta')->locale('id')->translatedFormat('d M Y, H:i') }} WIB
+                                                        </p>
+                                                    </div>
+                                                    @if ($update->old_estimated_days !== null || $update->new_estimated_days !== null)
+                                                        <p class="mt-1">
+                                                            {{ $update->old_estimated_days ?? '—' }} hari &rarr; {{ $update->new_estimated_days ?? '—' }} hari
+                                                        </p>
+                                                    @endif
+                                                    @if (filled($update->reason))
+                                                        <p class="mt-1">Alasan: {{ $update->reason }}</p>
+                                                    @endif
+                                                    @if (filled($update->note))
+                                                        <p class="mt-1 whitespace-pre-wrap">{{ $update->note }}</p>
+                                                    @endif
+                                                </li>
+                                            @endforeach
+                                        </ol>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
                 </div>
             @endif
 

@@ -4,9 +4,11 @@ namespace App\Services;
 
 use App\Enums\RfcStatus;
 use App\Models\ChangeRequest;
+use App\Models\ReleaseTaskUpdate;
 use App\Models\User;
 use App\Notifications\ChangeManagerReviewNotification;
 use App\Notifications\RfcDispositionNotification;
+use App\Notifications\RfcReleaseProgressNotification;
 use App\Notifications\RfcStatusChangedNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -74,6 +76,45 @@ class RfcNotifier
                     Log::warning('Notifikasi pemeriksaan Change Manager gagal dikirim.', [
                         'rfc_id' => $rfc->id,
                         'recipient_id' => $recipient->id,
+                    ]);
+                }
+            };
+
+            if (config('rfc.notify_after_commit', true) && DB::transactionLevel() > 0) {
+                DB::afterCommit($send);
+            } else {
+                $send();
+            }
+        }
+    }
+
+    /**
+     * Beri tahu Pemohon dan seluruh Change Manager aktif tentang progres
+     * penting Tim Rilis. Catatan progres biasa tidak dikirim.
+     */
+    public function releaseProgress(ChangeRequest $rfc, ReleaseTaskUpdate $update): void
+    {
+        if (! in_array($update->type, ['started', 'estimate_set', 'estimate_revised', 'blocked'], true)) {
+            return;
+        }
+
+        $recipients = collect([$rfc->submittedBy])
+            ->filter()
+            ->merge(User::role('Change Manager')->where('is_active', true)->get())
+            ->unique('id')
+            ->values();
+
+        foreach ($recipients as $recipient) {
+            $send = function () use ($rfc, $update, $recipient): void {
+                try {
+                    $recipient->notify(new RfcReleaseProgressNotification($rfc, $update));
+                } catch (Throwable $exception) {
+                    report($exception);
+
+                    Log::warning('Notifikasi progres Tim Rilis gagal dikirim.', [
+                        'rfc_id' => $rfc->id,
+                        'recipient_id' => $recipient->id,
+                        'update_id' => $update->id,
                     ]);
                 }
             };

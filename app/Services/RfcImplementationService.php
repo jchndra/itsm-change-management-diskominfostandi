@@ -213,6 +213,13 @@ class RfcImplementationService
                     ]);
                 }
 
+                $releaseTask = $lockedRfc->releaseTaskFor($actor);
+
+                $releaseTask?->update([
+                    'execution_status' => $result === ImplementationResult::SUCCESS ? 'successful' : 'rolled_back',
+                    'executed_at' => now(),
+                ]);
+
                 if ($status === RfcStatus::APPROVED) {
                     RfcStatusTransition::transitionTo($lockedRfc, RfcStatus::IN_PROGRESS, $actor);
                 }
