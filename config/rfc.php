@@ -65,4 +65,23 @@ return [
     */
 
     'notify_after_commit' => env('RFC_NOTIFY_AFTER_COMMIT', true),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Pengingat dan Eskalasi Otomatis
+    |--------------------------------------------------------------------------
+    |
+    | Ambang batas dalam hari kalender dan jeda anti-spam antar pengingat untuk
+    | kondisi RFC yang sama. Semua penerima dibatasi pada akun aktif saja.
+    |
+    */
+
+    'reminders' => [
+        'enabled' => env('RFC_REMINDERS_ENABLED', true),
+        'pending_review_days' => 3,
+        'approved_unassigned_days' => 2,
+        'task_not_started_days' => 2,
+        'waiting_evaluation_days' => 3,
+        'cooldown_days' => 2,
+    ],
 ];

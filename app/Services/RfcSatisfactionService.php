@@ -32,6 +32,12 @@ class RfcSatisfactionService
             $comment = null;
         }
 
+        if ($rating < 5 && ($comment === null || mb_strlen($comment) < 5)) {
+            throw new RfcSatisfactionException(
+                'Komentar wajib diisi (minimal 5 karakter) untuk penilaian 1 sampai 4 bintang.'
+            );
+        }
+
         if ($comment !== null && mb_strlen($comment) > self::MAX_COMMENT_LENGTH) {
             throw new RfcSatisfactionException(
                 'Komentar penilaian maksimal '.self::MAX_COMMENT_LENGTH.' karakter.'

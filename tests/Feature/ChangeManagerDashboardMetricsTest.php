@@ -2,6 +2,7 @@
 
 use App\Enums\ImplementationResult;
 use App\Enums\RfcStatus;
+use App\Livewire\Dashboard\ChangeManagerDashboard;
 use App\Models\Application;
 use App\Models\ChangeRequest;
 use App\Models\Opd;
@@ -14,6 +15,7 @@ use Database\Seeders\SampleRfcSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Livewire\Livewire;
 use Spatie\Activitylog\Models\Activity;
 
 uses(RefreshDatabase::class);
@@ -589,9 +591,9 @@ it('merender grafik aksesibel dengan label change manager', function () {
         ->assertSee('<figure', false)
         ->assertSee('<figcaption', false)
         ->assertSee('role="img"', false)
-        ->assertSee('aria-labelledby="tren-cm-30-hari-title tren-cm-30-hari-description"', false)
+        ->assertSee('aria-labelledby="tren-cm-30-title tren-cm-30-description"', false)
         ->assertSee('<title>Tiket masuk dan keputusan Change Manager</title>', false)
-        ->assertSee('<desc>Tren harian selama 30 hari terakhir.</desc>', false)
+        ->assertSee('<desc>Tren 30 hari dengan agregasi harian.</desc>', false)
         ->assertSee('<polyline', false)
         ->assertSee('<details', false)
         ->assertSee('<caption', false)
@@ -667,4 +669,116 @@ it('membatasi dashboard change manager dan menjaga dashboard lain tetap berfungs
         ->assertOk()
         ->assertSee('Dashboard Pemohon')
         ->assertDontSee('Antrean Tindakan');
+});
+
+it('mempertahankan tren default 30 hari dengan granularitas harian', function () {
+    $overview = app(DashboardMetricsService::class)->changeManagerOverview();
+
+    expect($overview['trend']['labels'])->toHaveCount(30)
+        ->and($overview['trend_granularity'])->toBe('day');
+});
+
+it('menghitung rentang tren 7 hari saja', function () {
+    cmMetricsRfc(['ticket_created_at' => now()->subDays(3)]);
+    cmMetricsRfc(['ticket_created_at' => now()->subDays(10)]);
+
+    $overview = app(DashboardMetricsService::class)
+        ->changeManagerOverview(null, now()->subDays(6), now());
+
+    expect($overview['trend']['labels'])->toHaveCount(7)
+        ->and($overview['trend_granularity'])->toBe('day')
+        ->and(array_sum($overview['trend']['tickets']))->toBe(1);
+});
+
+it('mengagregasi rentang 90 hari per minggu tanpa kehilangan total tiket', function () {
+    foreach ([1, 50, 89] as $days) {
+        cmMetricsRfc(['ticket_created_at' => now()->subDays($days)]);
+    }
+
+    $overview = app(DashboardMetricsService::class)
+        ->changeManagerOverview(null, now()->subDays(89), now());
+
+    expect($overview['trend_granularity'])->toBe('week')
+        ->and($overview['trend']['labels'])->toHaveCount(13)
+        ->and($overview['trend']['table_labels'][0])->toContain(' - ')
+        ->and(array_sum($overview['trend']['tickets']))->toBe(3);
+});
+
+it('menghitung batas periode bulan ini dan bulan lalu', function () {
+    $this->actingAs(cmMetricsUser());
+
+    $component = Livewire::test(ChangeManagerDashboard::class);
+
+    $component = $component->set('period', 'this_month');
+    [$start, $end, $label] = $component->instance()->resolvePeriod();
+
+    expect($label)->toBe('Bulan Ini')
+        ->and($start->toDateString())->toBe('2026-10-01')
+        ->and($end->toDateString())->toBe('2026-10-26');
+
+    $component = $component->set('period', 'last_month');
+    [$start, $end, $label] = $component->instance()->resolvePeriod();
+
+    expect($label)->toBe('Bulan Lalu')
+        ->and($start->toDateString())->toBe('2026-09-01')
+        ->and($end->toDateString())->toBe('2026-09-30');
+});
+
+it('menerima rentang kustom yang valid', function () {
+    $this->actingAs(cmMetricsUser());
+
+    $component = Livewire::test(ChangeManagerDashboard::class)
+        ->set('period', 'custom')
+        ->set('dateFrom', '2026-10-01')
+        ->set('dateTo', '2026-10-12');
+
+    [$start, $end, $label] = $component->instance()->resolvePeriod();
+
+    expect($label)->toBe('01 Okt - 12 Okt 2026')
+        ->and($start->toDateString())->toBe('2026-10-01')
+        ->and($end->toDateString())->toBe('2026-10-12');
+
+    $component->assertSee('Tren 01 Okt - 12 Okt 2026')
+        ->assertSee('01 Okt - 12 Okt 2026');
+});
+
+it('mengembalikan rentang kustom tidak valid ke 30 hari dengan pesan', function () {
+    $this->actingAs(cmMetricsUser());
+
+    $reversed = Livewire::test(ChangeManagerDashboard::class)
+        ->set('period', 'custom')
+        ->set('dateFrom', '2026-10-20')
+        ->set('dateTo', '2026-10-10');
+
+    expect($reversed->instance()->resolvePeriod()[2])->toBe('30 Hari');
+
+    $reversed->assertSee('Tren 30 Hari')
+        ->assertSee('Tanggal mulai tidak boleh melebihi tanggal akhir.')
+        ->assertSeeHtml('role="alert"');
+
+    $tooLong = Livewire::test(ChangeManagerDashboard::class)
+        ->set('period', 'custom')
+        ->set('dateFrom', '2026-04-01')
+        ->set('dateTo', '2026-10-26')
+        ->assertSee('Rentang kustom maksimal 180 hari.');
+
+    expect($tooLong->instance()->resolvePeriod()[2])->toBe('30 Hari');
+
+    $future = Livewire::test(ChangeManagerDashboard::class)
+        ->set('period', 'custom')
+        ->set('dateFrom', '2026-10-01')
+        ->set('dateTo', '2026-12-01')
+        ->assertSee('Tanggal akhir tidak boleh melewati hari ini.');
+
+    expect($future->instance()->resolvePeriod()[2])->toBe('30 Hari');
+});
+
+it('mengubah label tren melalui pemilih periode Livewire', function () {
+    $this->actingAs(cmMetricsUser());
+
+    Livewire::test(ChangeManagerDashboard::class)
+        ->assertSee('Tren 30 Hari')
+        ->set('period', '7')
+        ->assertSee('Tren 7 Hari')
+        ->assertSee('7 Hari');
 });

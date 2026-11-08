@@ -10,6 +10,7 @@ use App\Models\ReleaseTask;
 use App\Models\User;
 use App\Services\ReleaseTaskProgressService;
 use App\Services\RfcSatisfactionService;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 
 class ShowChangeRequest extends Component
@@ -197,13 +198,24 @@ class ShowChangeRequest extends Component
 
         $validated = $this->validate([
             'satisfactionRating' => 'required|integer|between:1,5',
-            'satisfactionComment' => 'nullable|string|max:1000',
+            'satisfactionComment' => [
+                'nullable',
+                'string',
+                'max:1000',
+                Rule::requiredIf(fn (): bool => $this->satisfactionRating >= 1 && $this->satisfactionRating <= 4),
+                Rule::when(
+                    $this->satisfactionRating >= 1 && $this->satisfactionRating <= 4,
+                    ['min:5']
+                ),
+            ],
         ], [
             'satisfactionRating.required' => 'Pilih jumlah bintang penilaian terlebih dahulu.',
             'satisfactionRating.integer' => 'Penilaian harus berupa angka bintang.',
             'satisfactionRating.between' => 'Penilaian harus antara 1 sampai 5 bintang.',
             'satisfactionComment.string' => 'Komentar harus berupa teks.',
             'satisfactionComment.max' => 'Komentar penilaian maksimal 1000 karakter.',
+            'satisfactionComment.required' => 'Komentar wajib diisi untuk penilaian 1 sampai 4 bintang.',
+            'satisfactionComment.min' => 'Komentar minimal 5 karakter.',
         ]);
 
         try {

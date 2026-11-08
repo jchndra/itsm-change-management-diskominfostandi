@@ -113,6 +113,12 @@ class ImplementChange extends Component
         $this->authorize('implement', $rfc);
 
         $this->rfc = $rfc->load(['application.opd', 'submittedBy']);
+
+        $result = request()->query('hasil');
+
+        if (is_string($result) && in_array($result, ImplementationResult::values(), true)) {
+            $this->implementation_result = $result;
+        }
     }
 
     public function removeFile(int $index): void

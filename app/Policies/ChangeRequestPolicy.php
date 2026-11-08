@@ -189,6 +189,48 @@ class ChangeRequestPolicy
         return $rfc->implementation()->whereNotNull('evaluated_at')->exists();
     }
 
+    public function comment(User $user, ChangeRequest $rfc): bool
+    {
+        if ($rfc->trashed()) {
+            return false;
+        }
+
+        if (in_array(RfcStatus::fromValue($rfc->status), [RfcStatus::DRAFT, RfcStatus::CLOSED, RfcStatus::REJECTED], true)) {
+            return false;
+        }
+
+        if ($rfc->submitted_by_id === $user->id) {
+            return true;
+        }
+
+        if ($user->hasRole('Change Manager')) {
+            return true;
+        }
+
+        return $user->hasPermissionTo('rfc.view_assigned')
+            && $user->isReleaseTeam()
+            && $rfc->hasReleaseTaskFor($user);
+    }
+
+    /**
+     * Catatan internal tidak boleh terlihat oleh Pemohon. Admin dan Super
+     * Admin tetap dapat membacanya karena memiliki akses seluruh RFC.
+     */
+    public function viewInternalComments(User $user, ChangeRequest $rfc): bool
+    {
+        if (! $this->view($user, $rfc)) {
+            return false;
+        }
+
+        if ($user->hasRole('Change Manager') || $user->hasPermissionTo('rfc.view_all')) {
+            return true;
+        }
+
+        return $user->hasPermissionTo('rfc.view_assigned')
+            && $user->isReleaseTeam()
+            && $rfc->hasReleaseTaskFor($user);
+    }
+
     public function rate(User $user, ChangeRequest $rfc): bool
     {
         if ($rfc->trashed() || RfcStatus::fromValue($rfc->status) !== RfcStatus::CLOSED) {

@@ -109,6 +109,78 @@ it('menolak rating di luar rentang 1 sampai 5', function () {
     expect(RfcSatisfaction::query()->count())->toBe(0);
 });
 
+it('menolak rating 4 tanpa komentar pada Livewire dan service', function () {
+    $rfc = ($this->makeRfc)(RfcStatus::CLOSED->value);
+
+    $this->actingAs($this->pemohon);
+
+    Livewire::test(ShowChangeRequest::class, ['rfc' => $rfc->fresh()])
+        ->set('satisfactionRating', 4)
+        ->call('submitSatisfaction')
+        ->assertHasErrors(['satisfactionComment' => 'required'])
+        ->assertSee('Komentar wajib diisi untuk penilaian 1 sampai 4 bintang.');
+
+    expect(fn () => app(RfcSatisfactionService::class)->submit($rfc, $this->pemohon, 4, null))
+        ->toThrow(
+            RfcSatisfactionException::class,
+            'Komentar wajib diisi (minimal 5 karakter) untuk penilaian 1 sampai 4 bintang.'
+        );
+
+    expect(fn () => app(RfcSatisfactionService::class)->submit($rfc, $this->pemohon, 4, '   '))
+        ->toThrow(RfcSatisfactionException::class);
+
+    expect(RfcSatisfaction::query()->count())->toBe(0);
+});
+
+it('menolak komentar 4 karakter untuk rating 1', function () {
+    $rfc = ($this->makeRfc)(RfcStatus::CLOSED->value);
+
+    $this->actingAs($this->pemohon);
+
+    Livewire::test(ShowChangeRequest::class, ['rfc' => $rfc->fresh()])
+        ->set('satisfactionRating', 1)
+        ->set('satisfactionComment', 'abcd')
+        ->call('submitSatisfaction')
+        ->assertHasErrors(['satisfactionComment' => 'min'])
+        ->assertSee('Komentar minimal 5 karakter.');
+
+    expect(RfcSatisfaction::query()->count())->toBe(0);
+});
+
+it('menerima komentar 5 karakter untuk rating 2', function () {
+    $rfc = ($this->makeRfc)(RfcStatus::CLOSED->value);
+
+    $this->actingAs($this->pemohon);
+
+    Livewire::test(ShowChangeRequest::class, ['rfc' => $rfc->fresh()])
+        ->set('satisfactionRating', 2)
+        ->set('satisfactionComment', 'abcde')
+        ->call('submitSatisfaction')
+        ->assertHasNoErrors();
+
+    $satisfaction = RfcSatisfaction::query()->where('change_request_id', $rfc->id)->firstOrFail();
+
+    expect($satisfaction->rating)->toBe(2)
+        ->and($satisfaction->comment)->toBe('abcde');
+});
+
+it('menerima rating 5 tanpa komentar dan menyimpan komentar null', function () {
+    $rfc = ($this->makeRfc)(RfcStatus::CLOSED->value);
+
+    $this->actingAs($this->pemohon);
+
+    Livewire::test(ShowChangeRequest::class, ['rfc' => $rfc->fresh()])
+        ->set('satisfactionRating', 5)
+        ->set('satisfactionComment', '   ')
+        ->call('submitSatisfaction')
+        ->assertHasNoErrors();
+
+    $satisfaction = RfcSatisfaction::query()->where('change_request_id', $rfc->id)->firstOrFail();
+
+    expect($satisfaction->rating)->toBe(5)
+        ->and($satisfaction->comment)->toBeNull();
+});
+
 it('menolak RFC yang belum berstatus closed pada policy dan service', function () {
     $rfc = ($this->makeRfc)(RfcStatus::APPROVED->value);
 
@@ -129,7 +201,7 @@ it('menolak Pemohon yang bukan pemilik RFC', function () {
 
     expect(Gate::forUser($this->pemohonLain)->allows('rate', $rfc))->toBeFalse();
 
-    expect(fn () => app(RfcSatisfactionService::class)->submit($rfc, $this->pemohonLain, 4, null))
+    expect(fn () => app(RfcSatisfactionService::class)->submit($rfc, $this->pemohonLain, 4, 'Komentar cukup panjang.'))
         ->toThrow(RfcSatisfactionException::class, 'Hanya Pemohon pemilik RFC yang dapat memberikan penilaian.');
 });
 
@@ -137,7 +209,7 @@ it('menolak pengiriman penilaian kedua untuk RFC yang sama', function () {
     $rfc = ($this->makeRfc)(RfcStatus::CLOSED->value);
     $service = app(RfcSatisfactionService::class);
 
-    $service->submit($rfc, $this->pemohon, 4, null);
+    $service->submit($rfc, $this->pemohon, 4, 'Sudah cukup baik.');
 
     expect(fn () => $service->submit($rfc, $this->pemohon, 5, null))
         ->toThrow(RfcSatisfactionException::class, 'RFC ini sudah dinilai.')

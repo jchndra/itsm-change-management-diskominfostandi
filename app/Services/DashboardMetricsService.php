@@ -85,12 +85,16 @@ class DashboardMetricsService
      *     satisfaction: array{average: ?float, count: int}
      * }
      */
-    public function changeManagerOverview(?Carbon $now = null): array
+    public function changeManagerOverview(?Carbon $now = null, ?Carbon $trendStart = null, ?Carbon $trendEnd = null): array
     {
         $now = ($now ?? now())->copy()->timezone(config('app.timezone'));
         $periodStart = $this->periodStart($now);
         $periodEnd = $now->copy();
         $statusCounts = $this->statusCounts();
+
+        $trend = $this->changeManagerTrend($trendStart ?? $periodStart, $trendEnd ?? $periodEnd);
+        $trendGranularity = $trend['granularity'];
+        unset($trend['granularity']);
 
         $pendingReview = (int) ($statusCounts[RfcStatus::TICKET_CREATED->value] ?? 0);
         $approved = (int) ($statusCounts[RfcStatus::APPROVED->value] ?? 0);
@@ -108,7 +112,8 @@ class DashboardMetricsService
             'total' => array_sum($statusCounts),
             'action_required' => $pendingReview + $approved + $inProgress + $waitingEvaluation,
             'queue' => $this->changeManagerQueue($now),
-            'trend' => $this->changeManagerTrend($periodStart, $periodEnd),
+            'trend' => $trend,
+            'trend_granularity' => $trendGranularity,
             'distribution' => $this->statusDistribution($statusCounts),
             'release_team_distribution' => $this->releaseTeamDistribution(),
             'activities' => $this->recentActivities([
@@ -417,6 +422,10 @@ class DashboardMetricsService
      */
     private function changeManagerTrend(Carbon $start, Carbon $end): array
     {
+        $timezone = config('app.timezone');
+        $start = $start->copy()->timezone($timezone)->startOfDay();
+        $end = $end->copy()->timezone($timezone)->endOfDay();
+
         $tickets = ChangeRequest::query()
             ->whereNotNull('ticket_created_at')
             ->whereBetween('ticket_created_at', [$start, $end])
@@ -439,17 +448,85 @@ class DashboardMetricsService
             ->whereBetween('activity_log.created_at', [$start, $end])
             ->pluck('activity_log.created_at');
 
-        $ticketSeries = $this->dailySeries($tickets, $start, $end);
-        $decisionSeries = $this->dailySeries($decisions, $start, $end);
+        $days = (int) $start->copy()->startOfDay()->diffInDays($end->copy()->startOfDay()) + 1;
+        $isWeekly = $days > 60;
+
+        $ticketSeries = $isWeekly
+            ? $this->weeklySeries($tickets, $start, $end)
+            : $this->dailySeries($tickets, $start, $end);
+        $decisionSeries = $isWeekly
+            ? $this->weeklySeries($decisions, $start, $end)
+            : $this->dailySeries($decisions, $start, $end);
 
         return [
             'labels' => array_column($ticketSeries, 'label'),
-            'table_labels' => array_column($ticketSeries, 'full_label'),
+            'table_labels' => array_column($ticketSeries, $isWeekly ? 'table_label' : 'full_label'),
             'tickets' => array_column($ticketSeries, 'value'),
             'decisions' => array_column($decisionSeries, 'value'),
             'start' => $start->toIso8601String(),
             'end' => $end->toIso8601String(),
+            'granularity' => $isWeekly ? 'week' : 'day',
         ];
+    }
+
+    /**
+     * Agregasi mingguan untuk rentang panjang: bucket 7 hari, bucket terakhir
+     * dipotong pada tanggal akhir.
+     *
+     * @param  iterable<int, \DateTimeInterface|string|null>  $timestamps
+     * @return array<int, array{label: string, table_label: string, value: int}>
+     */
+    private function weeklySeries(iterable $timestamps, Carbon $start, Carbon $end): array
+    {
+        $timezone = config('app.timezone');
+        $start = $start->copy()->timezone($timezone)->startOfDay();
+        $end = $end->copy()->timezone($timezone)->startOfDay();
+
+        $bucketStarts = [];
+
+        for ($bucket = $start->copy(); $bucket->lte($end); $bucket->addDays(7)) {
+            $bucketStarts[] = $bucket->copy();
+        }
+
+        $counts = [];
+
+        foreach ($timestamps as $timestamp) {
+            if ($timestamp === null || $timestamp === '') {
+                continue;
+            }
+
+            $date = ($timestamp instanceof \DateTimeInterface
+                ? Carbon::instance($timestamp)
+                : Carbon::parse($timestamp))
+                ->timezone($timezone)
+                ->startOfDay();
+
+            if ($date->lt($start) || $date->gt($end)) {
+                continue;
+            }
+
+            $index = (int) floor($start->copy()->diffInDays($date) / 7);
+            $counts[$index] = ($counts[$index] ?? 0) + 1;
+        }
+
+        $series = [];
+
+        foreach ($bucketStarts as $index => $bucketStart) {
+            $bucketEnd = $bucketStart->copy()->addDays(6);
+
+            if ($bucketEnd->gt($end)) {
+                $bucketEnd = $end->copy();
+            }
+
+            $series[] = [
+                'label' => $bucketStart->copy()->locale('id')->translatedFormat('d M'),
+                'table_label' => $bucketStart->copy()->locale('id')->translatedFormat('d M')
+                    .' - '.$bucketEnd->copy()->locale('id')->translatedFormat('d M'),
+                'value' => (int) ($counts[$index] ?? 0),
+            ];
+        }
+
+        return $series;
     }
 
     /**

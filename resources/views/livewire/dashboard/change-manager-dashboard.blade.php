@@ -109,8 +109,8 @@
 
     {{-- Grafik --}}
     <div class="grid min-w-0 gap-5 xl:grid-cols-5">
-        <x-dashboard.chart-card class="dashboard-rise dashboard-rise-2 xl:col-span-3" title="Tren 30 Hari"
-            description="Jumlah tiket masuk dan keputusan Change Manager (disetujui atau ditolak) setiap hari pada zona waktu WIB.">
+        <x-dashboard.chart-card class="dashboard-rise dashboard-rise-2 xl:col-span-3" title="Tren {{ $periodLabel }}"
+            description="Jumlah tiket masuk dan keputusan Change Manager (disetujui atau ditolak) {{ $overview['trend_granularity'] === 'week' ? 'per minggu' : 'setiap hari' }} pada zona waktu WIB.">
             <x-slot:icon>
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
@@ -119,18 +119,53 @@
             </x-slot:icon>
 
             <x-slot:actions>
-                <span
-                    class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-500 shadow-sm">
-                    <span class="h-1.5 w-1.5 rounded-full bg-blue-500" aria-hidden="true"></span>
-                    30 hari
-                </span>
+                <div class="flex flex-wrap items-center justify-end gap-2">
+                    <span
+                        class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-500 shadow-sm">
+                        <span class="h-1.5 w-1.5 rounded-full bg-blue-500" aria-hidden="true"></span>
+                        {{ $periodLabel }}
+                    </span>
+
+                    <select wire:model.live="period" aria-label="Pilih periode tren"
+                        class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-600 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="7">7 Hari</option>
+                        <option value="30">30 Hari</option>
+                        <option value="90">90 Hari</option>
+                        <option value="this_month">Bulan Ini</option>
+                        <option value="last_month">Bulan Lalu</option>
+                        <option value="custom">Kustom</option>
+                    </select>
+
+                    @if ($period === 'custom')
+                        <div class="flex flex-wrap items-center gap-1">
+                            <input type="date" wire:model.live="dateFrom" max="{{ now()->format('Y-m-d') }}"
+                                aria-label="Tanggal mulai"
+                                class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
+                            <span class="text-xs text-slate-400">s.d.</span>
+                            <input type="date" wire:model.live="dateTo" max="{{ now()->format('Y-m-d') }}"
+                                aria-label="Tanggal akhir"
+                                class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
+                        </div>
+                    @endif
+
+                    @if (filled($periodError))
+                        <p role="alert" class="basis-full text-right text-[11px] font-medium text-rose-700">
+                            {{ $periodError }}
+                        </p>
+                    @endif
+                </div>
             </x-slot:actions>
 
-            <x-dashboard.line-chart id="tren-cm-30-hari" title="Tiket masuk dan keputusan Change Manager"
-                description="Tren harian selama 30 hari terakhir." primary-label="Tiket masuk"
-                secondary-label="Keputusan CM" :labels="$overview['trend']['labels']"
-                :table-labels="$overview['trend']['table_labels']" :primary="$overview['trend']['tickets']"
-                :secondary="$overview['trend']['decisions']" />
+            <p class="mb-4 text-[11px] text-slate-500">
+                Filter periode hanya berlaku untuk grafik tren. Kartu ringkasan menunjukkan posisi saat ini.
+            </p>
+
+            <x-dashboard.line-chart id="tren-cm-{{ $period }}" wire:key="tren-cm-{{ $period }}-{{ $dateFrom }}-{{ $dateTo }}"
+                title="Tiket masuk dan keputusan Change Manager"
+                description="Tren {{ strtolower($periodLabel) }} dengan agregasi {{ $overview['trend_granularity'] === 'week' ? 'per minggu' : 'harian' }}."
+                primary-label="Tiket masuk" secondary-label="Keputusan CM"
+                :labels="$overview['trend']['labels']" :table-labels="$overview['trend']['table_labels']"
+                :primary="$overview['trend']['tickets']" :secondary="$overview['trend']['decisions']" />
         </x-dashboard.chart-card>
 
         <x-dashboard.chart-card class="dashboard-rise dashboard-rise-3 xl:col-span-2" title="Distribusi RFC per Tim Rilis"

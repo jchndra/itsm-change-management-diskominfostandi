@@ -2,6 +2,7 @@
 
 use App\Enums\RfcStatus;
 use App\Exceptions\ReleaseTaskProgressException;
+use App\Livewire\ChangeRequests\ImplementChange;
 use App\Livewire\ChangeRequests\ShowChangeRequest;
 use App\Models\ChangeRequest;
 use App\Models\ReleaseTask;
@@ -258,3 +259,68 @@ it('menolak aktor yang bukan pemilik tugas', function (string $actorType) {
     expect($task->fresh()->estimated_days)->toBeNull()
         ->and($owner)->not->toBeNull();
 })->with(['anggota lain', 'pemohon', 'change manager']);
+
+it('menampilkan tombol selesaikan pekerjaan dan rollback untuk tugas in progress milik Tim Rilis', function () {
+    [$user, $rfc, $task] = releaseTaskProgressSetup();
+
+    $service = app(ReleaseTaskProgressService::class);
+    $service->setEstimate($task, $user, 3);
+    $service->start($task, $user);
+
+    Livewire::actingAs($user)
+        ->test(ShowChangeRequest::class, ['rfc' => $rfc])
+        ->assertOk()
+        ->assertSee('Selesaikan Pekerjaan')
+        ->assertSee('Isi laporan hasil. Setelah dikirim, RFC masuk review Change Manager.')
+        ->assertSee('Wajib menuliskan alasan rollback.')
+        ->assertSee('hasil=success')
+        ->assertSee('hasil=rolled_back');
+});
+
+it('tidak menampilkan aksi penyelesaian saat tugas masih menunggu dimulai', function () {
+    [$user, $rfc] = releaseTaskProgressSetup();
+
+    Livewire::actingAs($user)
+        ->test(ShowChangeRequest::class, ['rfc' => $rfc])
+        ->assertOk()
+        ->assertSee('Mulai Pengerjaan')
+        ->assertDontSee('Isi laporan hasil. Setelah dikirim, RFC masuk review Change Manager.')
+        ->assertDontSee('Wajib menuliskan alasan rollback.')
+        ->assertDontSee('hasil=rolled_back');
+});
+
+it('tidak menampilkan tombol aksi pengerjaan kepada change manager dan pemohon', function (string $role) {
+    $viewer = User::factory()->create(['is_active' => true]);
+    $viewer->assignRole($role);
+
+    $rfcAttributes = $role === 'Pemohon'
+        ? ['submitted_by_id' => $viewer->id, 'created_by_id' => $viewer->id]
+        : [];
+
+    [$owner, $rfc, $task] = releaseTaskProgressSetup([], $rfcAttributes);
+
+    $service = app(ReleaseTaskProgressService::class);
+    $service->setEstimate($task, $owner, 3);
+    $service->start($task, $owner);
+
+    Livewire::actingAs($viewer)
+        ->test(ShowChangeRequest::class, ['rfc' => $rfc])
+        ->assertOk()
+        ->assertDontSee('Isi laporan hasil. Setelah dikirim, RFC masuk review Change Manager.')
+        ->assertDontSee('Wajib menuliskan alasan rollback.')
+        ->assertDontSee('hasil=success')
+        ->assertDontSee('hasil=rolled_back');
+})->with(['Change Manager', 'Pemohon']);
+
+it('mengisi hasil implementasi dari parameter kueri hasil', function () {
+    [$user, $rfc, $task] = releaseTaskProgressSetup();
+
+    $service = app(ReleaseTaskProgressService::class);
+    $service->setEstimate($task, $user, 3);
+    $service->start($task, $user);
+
+    Livewire::actingAs($user)
+        ->withQueryParams(['hasil' => 'rolled_back'])
+        ->test(ImplementChange::class, ['rfc' => $rfc])
+        ->assertSet('implementation_result', 'rolled_back');
+});

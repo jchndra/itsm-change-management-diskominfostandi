@@ -407,7 +407,8 @@
                                         <a href="{{ route('notifications.index', ['open' => $notification->id]) }}"
                                             class="flex gap-3 rounded-xl p-2.5 transition hover:bg-slate-50">
                                             <x-notification-icon :status="data_get($notification->data, 'status')"
-                                                :outcome="data_get($notification->data, 'outcome')" class="h-8 w-8" />
+                                                :outcome="data_get($notification->data, 'outcome')"
+                                                :event="data_get($notification->data, 'event')" class="h-8 w-8" />
                                             <div class="min-w-0">
                                                 <p class="line-clamp-2 text-xs leading-relaxed text-slate-700">
                                                     {{ data_get($notification->data, 'message', 'Notifikasi baru') }}</p>

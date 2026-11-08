@@ -4,14 +4,19 @@ namespace App\Services;
 
 use App\Enums\RfcStatus;
 use App\Models\ChangeRequest;
+use App\Models\Comment;
+use App\Models\ReleaseTask;
 use App\Models\ReleaseTaskUpdate;
 use App\Models\RfcSatisfaction;
 use App\Models\User;
 use App\Notifications\ChangeManagerReviewNotification;
+use App\Notifications\RfcCommentNotification;
 use App\Notifications\RfcDispositionNotification;
 use App\Notifications\RfcReleaseProgressNotification;
+use App\Notifications\RfcReminderNotification;
 use App\Notifications\RfcSatisfactionNotification;
 use App\Notifications\RfcStatusChangedNotification;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -158,6 +163,99 @@ class RfcNotifier
                 $send();
             }
         }
+    }
+
+    /**
+     * Beri tahu peserta diskusi RFC selain penulis. Isi komentar tidak pernah
+     * dimasukkan ke notifikasi, baik komentar publik maupun internal.
+     */
+    public function commentAdded(ChangeRequest $rfc, Comment $comment): void
+    {
+        $author = $comment->user;
+
+        if (! $author) {
+            return;
+        }
+
+        $recipients = collect();
+
+        if (! $comment->is_internal) {
+            $recipients->push($rfc->submittedBy);
+        }
+
+        $recipients = $recipients
+            ->merge(User::role('Change Manager')->where('is_active', true)->get())
+            ->merge($this->assignedReleaseTeamUsers($rfc))
+            ->filter()
+            ->reject(fn (User $user): bool => $user->id === $author->id)
+            ->unique('id')
+            ->values();
+
+        foreach ($recipients as $recipient) {
+            $send = function () use ($rfc, $comment, $author, $recipient): void {
+                try {
+                    $recipient->notify(new RfcCommentNotification($rfc, $author, $comment->is_internal));
+                } catch (Throwable $exception) {
+                    report($exception);
+
+                    Log::warning('Notifikasi diskusi RFC gagal dikirim.', [
+                        'rfc_id' => $rfc->id,
+                        'recipient_id' => $recipient->id,
+                        'comment_id' => $comment->id,
+                    ]);
+                }
+            };
+
+            if (config('rfc.notify_after_commit', true) && DB::transactionLevel() > 0) {
+                DB::afterCommit($send);
+            } else {
+                $send();
+            }
+        }
+    }
+
+    /**
+     * Anggota Tim Rilis aktif yang ditugaskan pada RFC ini.
+     *
+     * @return Collection<int, User>
+     */
+    private function assignedReleaseTeamUsers(ChangeRequest $rfc): Collection
+    {
+        return $rfc->releaseTasks()
+            ->with('releaseTeamMember.user')
+            ->get()
+            ->map(fn (ReleaseTask $task): ?User => $task->releaseTeamMember?->user)
+            ->filter(fn (?User $user): bool => $user !== null && $user->is_active)
+            ->values();
+    }
+
+    /**
+     * Kirim pengingat otomatis kepada satu penerima tanpa mengganggu proses
+     * pengingat lainnya. Kegagalan kanal dilaporkan, bukan dilempar ulang.
+     */
+    public function reminder(ChangeRequest $rfc, User $recipient, string $kind, int $days): void
+    {
+        $send = function () use ($rfc, $recipient, $kind, $days): void {
+            try {
+                $recipient->notify(new RfcReminderNotification($rfc, $kind, $days));
+            } catch (Throwable $exception) {
+                report($exception);
+
+                Log::warning('Notifikasi pengingat RFC gagal dikirim.', [
+                    'rfc_id' => $rfc->id,
+                    'recipient_id' => $recipient->id,
+                    'kind' => $kind,
+                ]);
+            }
+        };
+
+        if (config('rfc.notify_after_commit', true) && DB::transactionLevel() > 0) {
+            DB::afterCommit($send);
+
+            return;
+        }
+
+        $send();
     }
 
     /**
