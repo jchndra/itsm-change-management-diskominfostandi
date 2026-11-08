@@ -5,6 +5,26 @@
         <p class="mt-1 text-sm text-slate-500">Informasi akun dan pengaturan keamanan Anda.</p>
     </div>
 
+    @if (session('warning'))
+        <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3.5 text-sm font-medium text-amber-800"
+            role="alert">
+            {{ session('warning') }}
+        </div>
+    @endif
+
+    @if ($user->must_change_password)
+        <div class="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3.5 text-sm text-amber-800"
+            role="alert">
+            <svg class="mt-0.5 h-5 w-5 shrink-0 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                    d="M12 9v3.75m0 3.75h.008v.008H12v-.008ZM10.34 3.94 2.7 17.06A1.9 1.9 0 0 0 4.34 20h15.32a1.9 1.9 0 0 0 1.64-2.94L13.66 3.94a1.9 1.9 0 0 0-3.32 0Z" />
+            </svg>
+            <p class="leading-relaxed">
+                Anda harus mengganti kata sandi sementara terlebih dahulu. Buka tab Keamanan untuk membuat kata sandi baru.
+            </p>
+        </div>
+    @endif
+
     <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
 
         {{-- Kartu identitas --}}

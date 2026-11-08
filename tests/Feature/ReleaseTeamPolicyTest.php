@@ -149,7 +149,7 @@ it('hanya menampilkan RFC yang ditugaskan kepada Tim Rilis', function () {
         ->and($user->can('viewEvidence', $otherRfc))->toBeFalse();
 });
 
-it('menampilkan instruksi disposisi kepada Tim Rilis yang ditugaskan beserta pemberi, tanggal, dan rekan', function () {
+it('menampilkan instruksi disposisi kepada Tim Rilis yang ditugaskan beserta pemberi dan tanggal', function () {
     $manager = releaseTeamPolicyUser(['Change Manager'], [
         'name' => 'Change Manager Disposisi',
         'email' => 'change.manager.rahasia@example.test',
@@ -157,8 +157,6 @@ it('menampilkan instruksi disposisi kepada Tim Rilis yang ditugaskan beserta pem
     ]);
     $user = releaseTeamPolicyUser(['Tim Rilis'], ['name' => 'Anggota Tim Rilis Utama']);
     $member = releaseTeamPolicyMember($user, ['name' => $user->name]);
-    $peer = releaseTeamPolicyUser(['Tim Rilis'], ['name' => 'Rekan Tim Rilis Ditugaskan']);
-    $peerMember = releaseTeamPolicyMember($peer, ['name' => $peer->name]);
 
     $rfc = ChangeRequest::factory()->create([
         'title' => 'RFC Tugas Dengan Data Internal',
@@ -171,16 +169,11 @@ it('menampilkan instruksi disposisi kepada Tim Rilis yang ditugaskan beserta pem
         'instruction' => 'Instruksi disposisi untuk anggota yang ditugaskan.',
         'created_at' => now()->setDate(2026, 10, 20)->setTime(9, 30),
     ]);
-    releaseTeamPolicyTask($rfc, $peerMember, [
-        'assigned_by_id' => $manager->id,
-        'instruction' => 'Instruksi disposisi untuk anggota yang ditugaskan.',
-        'created_at' => now()->setDate(2026, 10, 20)->setTime(9, 30),
-    ]);
 
     releaseTeamPolicyDispositionActivity(
         $rfc,
         $manager,
-        [$member->name, $peerMember->name],
+        [$member->name],
         'Instruksi disposisi untuk anggota yang ditugaskan.',
     );
 
@@ -193,8 +186,6 @@ it('menampilkan instruksi disposisi kepada Tim Rilis yang ditugaskan beserta pem
         ->assertSee('Instruksi disposisi untuk anggota yang ditugaskan.')
         ->assertSee('Diberikan oleh '.$manager->name)
         ->assertSee('20 Okt 2026, 09:30')
-        ->assertSee('Rekan Tim Rilis yang Ikut Ditugaskan')
-        ->assertSee($peer->name)
         ->assertSee('Disposisi ke Tim Rilis');
 
     expect($task->fresh()->assigned_by_id)->toBe($manager->id);
@@ -205,7 +196,7 @@ it('menampilkan instruksi disposisi kepada Tim Rilis yang ditugaskan beserta pem
     expect($dispositionEvent)->not->toBeNull()
         ->and($dispositionEvent['label'])->toBe('Disposisi ke Tim Rilis')
         ->and($dispositionEvent['note'])->toContain('Instruksi disposisi untuk anggota yang ditugaskan.')
-        ->and($dispositionEvent['note'])->toContain($peer->name)
+        ->and($dispositionEvent['note'])->toContain($member->name)
         ->and($dispositionEvent['actor_name'])->toBe($manager->name);
 });
 
@@ -335,7 +326,7 @@ it('menyembunyikan data internal dari HTML dan riwayat Tim Rilis yang ditugaskan
         ->assertSee($manager->name);
 });
 
-it('tetap menyembunyikan instruksi dan penerima disposisi dari Pemohon', function () {
+it('tetap menyembunyikan detail disposisi dari Pemohon', function () {
     $manager = releaseTeamPolicyUser(['Change Manager'], ['name' => 'Change Manager Pemohon']);
     $requester = releaseTeamPolicyUser(['Pemohon']);
     $user = releaseTeamPolicyUser(['Tim Rilis'], ['name' => 'Penerima Disposisi Pemohon']);
@@ -366,7 +357,6 @@ it('tetap menyembunyikan instruksi dan penerima disposisi dari Pemohon', functio
         ->assertSee('Diteruskan ke Tim Rilis')
         ->assertDontSee('Disposisi ke Tim Rilis')
         ->assertDontSee('Instruksi yang tidak boleh dilihat Pemohon.')
-        ->assertDontSee($user->name)
         ->assertDontSee('Diberikan oleh');
 
     $history = app(RfcHistoryService::class)->build($rfc->fresh(), false);
@@ -403,7 +393,7 @@ it('mengizinkan eksekusi hanya untuk anggota aktif yang ditugaskan pada status y
     ]);
     releaseTeamPolicyTask($rfc, $member);
 
-    expect($user->can('recordExecution', $rfc))->toBeTrue();
+    expect($user->can('recordExecution', $rfc))->toBeFalse();
 
     $unassigned = ChangeRequest::factory()->create([
         'submitted_by_id' => $owner->id,

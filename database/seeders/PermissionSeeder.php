@@ -57,6 +57,7 @@ class PermissionSeeder extends Seeder
         $adminRole->syncPermissions([
             'rfc.view_all',
             'rfc.review_completeness',
+            'users.manage',
         ]);
 
         // 3. Role Change Manager

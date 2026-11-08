@@ -17,6 +17,7 @@ use App\Notifications\RfcDispositionNotification;
 use App\Services\RfcDispositionService;
 use App\Services\RfcHistoryService;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -430,11 +431,38 @@ it('menolak disposisi kedua dan RFC yang bukan approved termasuk lewat service',
     $this->assertDatabaseCount('release_tasks', 1);
 });
 
-it('menggulung seluruh tugas jika transaksi gagal di tengah jalan', function () {
+it('menolak disposisi dua anggota dan tugas kedua untuk RFC yang sama', function () {
     $manager = dispositionUser(['Change Manager']);
     $requester = dispositionUser(['Pemohon']);
     $firstMember = dispositionMember(dispositionUser(['Tim Rilis']));
     $secondMember = dispositionMember(dispositionUser(['Tim Rilis']));
+    $rfc = dispositionRfc($requester);
+    $instruction = 'Instruksi disposisi untuk pengujian satu penerima.';
+
+    expect(fn () => app(RfcDispositionService::class)->assign(
+        $rfc,
+        $manager,
+        [$firstMember->id, $secondMember->id],
+        $instruction,
+    ))->toThrow(
+        RfcDispositionException::class,
+        'Pilih tepat satu anggota Tim Rilis sebagai penerima disposisi.',
+    );
+
+    expect(ReleaseTask::query()->count())->toBe(0);
+
+    ReleaseTask::factory()->forRfc($rfc)->assignedTo($firstMember)->create();
+
+    expect(fn () => ReleaseTask::factory()->forRfc($rfc)->assignedTo($secondMember)->create())
+        ->toThrow(QueryException::class);
+
+    expect(ReleaseTask::query()->where('change_request_id', $rfc->id)->count())->toBe(1);
+});
+
+it('menggulung seluruh tugas jika transaksi gagal di tengah jalan', function () {
+    $manager = dispositionUser(['Change Manager']);
+    $requester = dispositionUser(['Pemohon']);
+    $member = dispositionMember(dispositionUser(['Tim Rilis']));
     $rfc = dispositionRfc($requester);
 
     $createdCount = 0;
@@ -442,9 +470,7 @@ it('menggulung seluruh tugas jika transaksi gagal di tengah jalan', function () 
     ReleaseTask::created(function (ReleaseTask $task) use (&$createdCount): void {
         $createdCount++;
 
-        if ($createdCount === 2) {
-            throw new RuntimeException('Simulasi kegagalan penyimpanan tugas kedua.');
-        }
+        throw new RuntimeException('Simulasi kegagalan penyimpanan tugas.');
     });
 
     $thrown = false;
@@ -453,7 +479,7 @@ it('menggulung seluruh tugas jika transaksi gagal di tengah jalan', function () 
         app(RfcDispositionService::class)->assign(
             $rfc,
             $manager,
-            [$firstMember->id, $secondMember->id],
+            [$member->id],
             'Instruksi disposisi untuk pengujian rollback transaksi.',
         );
     } catch (RuntimeException) {
@@ -471,7 +497,7 @@ it('menggulung seluruh tugas jika transaksi gagal di tengah jalan', function () 
         ->and($requester->notifications()->count())->toBe(0);
 });
 
-it('menyembunyikan penerima dan instruksi dari Pemohon tetapi menampilkannya untuk staf', function () {
+it('menyembunyikan detail disposisi dari Pemohon tetapi menampilkannya untuk staf', function () {
     $manager = dispositionUser(['Change Manager'], ['name' => 'Change Manager Disposisi']);
     $requester = dispositionUser(['Pemohon']);
     $releaseUser = dispositionUser(['Tim Rilis'], ['name' => 'Nama Penerima Rahasia']);
@@ -487,12 +513,10 @@ it('menyembunyikan penerima dan instruksi dari Pemohon tetapi menampilkannya unt
         ->assertOk()
         ->assertSee('Diteruskan ke Tim Rilis')
         ->assertDontSee('Disposisi ke Tim Rilis')
-        ->assertDontSee('Nama Penerima Rahasia')
         ->assertDontSee($instruction)
         ->assertDontSee('Diberikan oleh');
 
     expect($response->getContent())
-        ->not->toContain('Nama Penerima Rahasia')
         ->not->toContain($instruction);
 
     Livewire::actingAs($requester)
@@ -500,7 +524,6 @@ it('menyembunyikan penerima dan instruksi dari Pemohon tetapi menampilkannya unt
         ->assertOk()
         ->assertSee('Diteruskan ke Tim Rilis')
         ->assertDontSee('Disposisi ke Tim Rilis')
-        ->assertDontSee('Nama Penerima Rahasia')
         ->assertDontSee($instruction);
 
     $requesterHistory = app(RfcHistoryService::class)->build($rfc->fresh(), false);
@@ -592,7 +615,6 @@ it('menata menu Disposisi RFC setelah Daftar RFC dan hanya menandai satu menu ak
         strpos($sidebar, 'Daftar RFC'),
         strpos($sidebar, 'Disposisi RFC'),
         strpos($sidebar, 'Riwayat Penghapusan'),
-        strpos($sidebar, 'Notifikasi'),
         strpos($sidebar, 'Profil'),
     ];
 

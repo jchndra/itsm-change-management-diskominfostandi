@@ -148,6 +148,14 @@ class RfcImplementationService
                     );
                 }
 
+                $releaseTask = $lockedRfc->releaseTaskFor($actor);
+
+                if ($releaseTask === null || $releaseTask->execution_status !== 'in_progress') {
+                    throw new RfcImplementationException(
+                        'Mulai pengerjaan dan isi estimasi terlebih dahulu sebelum mencatat hasil implementasi.'
+                    );
+                }
+
                 // Policy yang sama tetap ditegakkan di service agar pemanggilan
                 // langsung, termasuk oleh Super Admin, tidak melewati penugasan.
                 if (! $actor->can('implement', $lockedRfc)) {
@@ -213,9 +221,7 @@ class RfcImplementationService
                     ]);
                 }
 
-                $releaseTask = $lockedRfc->releaseTaskFor($actor);
-
-                $releaseTask?->update([
+                $releaseTask->update([
                     'execution_status' => $result === ImplementationResult::SUCCESS ? 'successful' : 'rolled_back',
                     'executed_at' => now(),
                 ]);

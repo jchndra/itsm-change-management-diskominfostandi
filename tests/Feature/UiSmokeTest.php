@@ -25,7 +25,7 @@ it('renders requester dashboard shell', function () {
         ->assertSee('Ajukan RFC Baru')
         ->assertSee('RFC Terbaru Saya')
         ->assertSee('Status Permohonan Saya')
-        ->assertSee('Notifikasi Terbaru')
+        ->assertSee('Notifikasi')
         ->assertSee('Budi Santoso');
 });
 

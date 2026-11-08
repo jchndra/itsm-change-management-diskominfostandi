@@ -11,14 +11,6 @@
                 fn ($task) => $task->releaseTeamMember?->user_id === auth()->id()
             )
             : null;
-        $releaseTeamDispositionPeers = $releaseTeamDispositionTask
-            ? $rfc->releaseTasks
-                ->reject(fn ($task) => $task->id === $releaseTeamDispositionTask->id)
-                ->map(fn ($task) => $task->releaseTeamMember?->name)
-                ->filter()
-                ->unique()
-                ->values()
-            : collect();
         $status = \App\Enums\RfcStatus::fromValue($rfc->status);
         $submittedChangeType = match ((string) $rfc->change_type) {
             'standard' => 'Standar',
@@ -499,14 +491,6 @@
                             <p class="mt-1 whitespace-pre-wrap text-sm text-slate-700">{{ $releaseTeamDispositionTask->instruction }}</p>
                         </div>
 
-                        <div class="mt-3 border-t border-blue-100 pt-3">
-                            <span class="block text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                                Rekan Tim Rilis yang Ikut Ditugaskan
-                            </span>
-                            <p class="mt-1 text-sm text-slate-700">
-                                {{ $releaseTeamDispositionPeers->isEmpty() ? 'Tidak ada rekan lain' : $releaseTeamDispositionPeers->join(', ') }}
-                            </p>
-                        </div>
                     </div>
                 </div>
             @endif
@@ -568,6 +552,12 @@
                             {{ $message }}
                         </p>
                     @enderror
+
+                    @if ($progressTask->execution_status === 'pending')
+                        <p class="mt-4 text-xs text-slate-500">
+                            Tetapkan estimasi dan klik Mulai Pengerjaan untuk dapat mencatat hasil implementasi.
+                        </p>
+                    @endif
 
                     @if ($progressEditable)
                         <div class="mt-5 space-y-5 border-t border-slate-100 pt-5">

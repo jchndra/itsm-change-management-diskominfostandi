@@ -158,7 +158,8 @@ it('mengizinkan implement hanya untuk Tim Rilis yang ditugaskan pada approved da
     foreach ([RfcStatus::APPROVED, RfcStatus::IN_PROGRESS] as $status) {
         $rfc = foundationRfc($status);
         $team = foundationReleaseTeamActor($rfc, [
-            'execution_status' => $status === RfcStatus::IN_PROGRESS ? 'in_progress' : 'pending',
+            'execution_status' => 'in_progress',
+            'estimated_days' => 5,
         ]);
 
         expect($team->can('implement', $rfc))->toBeTrue()

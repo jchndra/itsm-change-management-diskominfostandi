@@ -94,7 +94,8 @@ function implementationReleaseTeamActor(ChangeRequest $rfc, array $taskAttribute
     ReleaseTask::factory()->create(array_merge([
         'change_request_id' => $rfc->id,
         'release_team_member_id' => $member->id,
-        'execution_status' => 'pending',
+        'execution_status' => 'in_progress',
+        'estimated_days' => 5,
     ], $taskAttributes));
 
     return $user;
@@ -410,6 +411,24 @@ test('service menolak implementasi kedua pada RFC yang sama', function () {
 
     expect(ChangeRequestImplementation::where('change_request_id', $rfc->id)->count())->toBe(1)
         ->and(Evidence::where('change_request_id', $rfc->id)->count())->toBe(1);
+});
+
+test('menolak implementasi saat tugas masih pending pada policy dan service', function () {
+    $rfc = implementationRfc(RfcStatus::APPROVED);
+    $team = implementationReleaseTeamActor($rfc, [
+        'execution_status' => 'pending',
+        'estimated_days' => null,
+    ]);
+
+    $this->actingAs($team)
+        ->get(route('change-requests.implement', $rfc))
+        ->assertForbidden();
+
+    expect(fn () => recordImplementation($rfc, $team))
+        ->toThrow(
+            RfcImplementationException::class,
+            'Mulai pengerjaan dan isi estimasi terlebih dahulu sebelum mencatat hasil implementasi.',
+        );
 });
 
 test('service menolak Super Admin pada RFC berstatus salah', function () {

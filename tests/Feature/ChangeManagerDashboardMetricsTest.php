@@ -168,7 +168,6 @@ it('menghitung distribusi RFC unik per anggota Tim Rilis aktif', function () {
     $deletedRfc = cmMetricsRfc(['rfc_number' => 'RFC-CM-TEAM-DELETED']);
 
     ReleaseTask::factory()->forRfc($firstRfc)->assignedTo($memberA)->create();
-    ReleaseTask::factory()->forRfc($firstRfc)->assignedTo($memberA)->create();
     ReleaseTask::factory()->forRfc($secondRfc)->assignedTo($memberA)->create();
     ReleaseTask::factory()->forRfc($deletedRfc)->assignedTo($memberA)->create();
 

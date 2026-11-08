@@ -23,6 +23,7 @@ class User extends Authenticatable
         'position',
         'phone_number',
         'is_active',
+        'must_change_password',
     ];
 
     protected $hidden = [
@@ -36,6 +37,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'must_change_password' => 'boolean',
         ];
     }
 

@@ -434,6 +434,11 @@ class ChangeRequest extends Model
         return $this->hasMany(ReleaseTask::class);
     }
 
+    public function releaseTask(): HasOne
+    {
+        return $this->hasOne(ReleaseTask::class);
+    }
+
     public function scopeAssignedToReleaseTeamMember(Builder $query, User $user): Builder
     {
         return $query->whereHas('releaseTasks.releaseTeamMember', function (Builder $member) use ($user): void {

@@ -141,7 +141,7 @@ class ChangeRequestPolicy
         $task = $rfc->releaseTaskFor($user);
 
         return $task !== null
-            && in_array($task->execution_status, ['pending', 'in_progress'], true);
+            && $task->execution_status === 'in_progress';
     }
 
     public function implement(User $user, ChangeRequest $rfc): bool

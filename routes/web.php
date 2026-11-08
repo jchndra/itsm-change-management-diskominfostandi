@@ -4,6 +4,7 @@ use App\Http\Controllers\ChangeRequestAttachmentController;
 use App\Http\Controllers\ImplementationEvidenceController;
 use App\Http\Controllers\RfcDocumentController;
 use App\Livewire\Admin\ReleaseTeamAccounts;
+use App\Livewire\Admin\Users;
 use App\Livewire\Auth\Login;
 use App\Livewire\Auth\Register;
 use App\Livewire\ChangeRequests\AssessRisk;
@@ -25,7 +26,6 @@ use App\Livewire\Disposition\Index as DispositionIndex;
 use App\Livewire\Notifications;
 use App\Livewire\Profile;
 use App\Livewire\Requester\Dashboard;
-use App\Models\User;
 use App\Services\DashboardRedirector;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -33,14 +33,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 // Modifikasi rute root (/) agar otomatis mengarahkan user sesuai perannya
-if (app()->environment('local')) {
-    Route::get('/__preview/{email}', function (string $email) {
-        Auth::login(User::where('email', $email)->firstOrFail());
-
-        return redirect()->route('change-requests.index');
-    });
-}
-
 Route::get('/', function () {
     if (! Auth::check()) {
         return redirect()->route('login');
@@ -78,6 +70,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/admin/release-team-accounts', ReleaseTeamAccounts::class)
         ->middleware('can:viewAny,App\Models\ReleaseTeamMember')
         ->name('admin.release-team-accounts.index');
+
+    Route::get('/admin/users', Users::class)
+        ->middleware('can:users.manage')
+        ->name('admin.users.index');
 
     // Rute Dasbor Pemohon (Dikeluarkan dari prefix agar URL lebih bersih)
     Route::get('/requester/dashboard', Dashboard::class)->name('requester.dashboard');

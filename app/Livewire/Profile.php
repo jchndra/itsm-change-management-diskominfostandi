@@ -17,7 +17,7 @@ class Profile extends Component
     #[Validate('nullable|string|max:20')]
     public string $phone_number = '';
 
-    #[Validate('nullable|string|min:8|max:100')]
+    #[Validate('required|string|min:8|max:100')]
     public string $current_password = '';
 
     #[Validate('required|string|min:8|confirmed')]
@@ -60,7 +60,16 @@ class Profile extends Component
             ]);
         }
 
-        $user->update(['password' => $this->password]);
+        if (Hash::check($this->password, $user->password)) {
+            throw ValidationException::withMessages([
+                'password' => 'Kata sandi baru tidak boleh sama dengan kata sandi saat ini.',
+            ]);
+        }
+
+        $user->update([
+            'password' => $this->password,
+            'must_change_password' => false,
+        ]);
 
         $this->reset('current_password', 'password', 'password_confirmation');
 

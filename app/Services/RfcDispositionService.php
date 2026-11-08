@@ -45,8 +45,8 @@ class RfcDispositionService
 
         $normalizedMemberIds = $this->normalizeMemberIds($memberIds);
 
-        if ($normalizedMemberIds === []) {
-            throw new RfcDispositionException('Pilih minimal satu anggota Tim Rilis sebagai penerima disposisi.');
+        if (count($normalizedMemberIds) !== 1) {
+            throw new RfcDispositionException('Pilih tepat satu anggota Tim Rilis sebagai penerima disposisi.');
         }
 
         $tasks = DB::transaction(function () use ($rfc, $actor, $normalizedMemberIds, $instruction): Collection {
