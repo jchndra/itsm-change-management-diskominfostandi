@@ -261,7 +261,7 @@ class ListChangeRequests extends Component
             'application',
             'implementation',
             'submittedBy.opd',
-        ])))->paginate(10);
+        ])->withExists('satisfaction')))->paginate(10);
 
         return view('livewire.change-requests.list-change-requests', [
             'roleView' => 'pemohon',

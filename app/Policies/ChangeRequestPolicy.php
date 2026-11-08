@@ -189,6 +189,45 @@ class ChangeRequestPolicy
         return $rfc->implementation()->whereNotNull('evaluated_at')->exists();
     }
 
+    public function rate(User $user, ChangeRequest $rfc): bool
+    {
+        if ($rfc->trashed() || RfcStatus::fromValue($rfc->status) !== RfcStatus::CLOSED) {
+            return false;
+        }
+
+        if ($rfc->submitted_by_id !== $user->id) {
+            return false;
+        }
+
+        return ! $rfc->satisfaction()->exists();
+    }
+
+    public function viewSatisfaction(User $user, ChangeRequest $rfc): bool
+    {
+        if ($rfc->trashed()) {
+            return false;
+        }
+
+        if ($rfc->submitted_by_id === $user->id) {
+            return true;
+        }
+
+        return $user->hasRole('Admin') || $user->hasPermissionTo('rfc.view_all');
+    }
+
+    public function exportResult(User $user, ChangeRequest $rfc): bool
+    {
+        if ($rfc->trashed()) {
+            return false;
+        }
+
+        if (! in_array(RfcStatus::fromValue($rfc->status), [RfcStatus::CLOSED, RfcStatus::REJECTED], true)) {
+            return false;
+        }
+
+        return $this->view($user, $rfc);
+    }
+
     public function viewEvidence(User $user, ChangeRequest $rfc): bool
     {
         if ($rfc->trashed()) {

@@ -171,6 +171,11 @@ class ChangeRequest extends Model
         return $this->hasOne(ChangeRequestImplementation::class);
     }
 
+    public function satisfaction(): HasOne
+    {
+        return $this->hasOne(RfcSatisfaction::class);
+    }
+
     /**
      * Hasil akhir implementasi RFC ini: successful, unsuccessful, atau null
      * bila data implementasi tidak tersedia (mis. RFC lama yang ditutup

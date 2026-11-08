@@ -318,6 +318,14 @@
                             </td>
                             <td data-label="Status" class="px-5 py-3.5">
                                 <x-status-badge :status="$rfc->status" :tone="$rfc->displayStatusTone()" :label="$rfc->displayStatusLabel()" />
+                                @if ($roleView === 'pemohon'
+                                    && $statusVal === \App\Enums\RfcStatus::CLOSED
+                                    && ! $rfc->satisfaction_exists)
+                                    <span
+                                        class="mt-1 inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                                        Belum dinilai
+                                    </span>
+                                @endif
                             </td>
                             <td data-label="Aksi" class="whitespace-nowrap px-5 py-3.5">
                                 <div class="flex flex-wrap items-center justify-end gap-2">

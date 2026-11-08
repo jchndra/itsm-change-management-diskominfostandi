@@ -17,9 +17,25 @@
                     aria-hidden="true"></span>
                 <div>
                     <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-600">Ikhtisar Dashboard</p>
-                    <h2 id="metrik-change-manager" class="mt-0.5 text-lg font-bold tracking-tight text-slate-900">
-                        Ringkasan Layanan
-                    </h2>
+                    <div class="mt-0.5 flex flex-wrap items-center gap-2">
+                        <h2 id="metrik-change-manager" class="text-lg font-bold tracking-tight text-slate-900">
+                            Ringkasan Layanan
+                        </h2>
+                        @if (($overview['satisfaction']['count'] ?? 0) > 0)
+                            <span
+                                class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-800 shadow-sm">
+                                <span class="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true"></span>
+                                Kepuasan {{ number_format($overview['satisfaction']['average'], 1, ',', '.') }} / 5
+                                &middot; {{ $overview['satisfaction']['count'] }} penilaian
+                            </span>
+                        @else
+                            <span
+                                class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-bold text-slate-500 shadow-sm">
+                                <span class="h-1.5 w-1.5 rounded-full bg-slate-300" aria-hidden="true"></span>
+                                Belum ada penilaian
+                            </span>
+                        @endif
+                    </div>
                     <p class="mt-1 text-xs text-slate-500">Posisi RFC yang menjadi tanggung jawab Change Manager.</p>
                 </div>
             </div>

@@ -32,6 +32,7 @@ atau Rollback -> review dan evaluasi CM -> penutupan -> penilaian kepuasan Pemoh
 3. Siapa yang membuat akun Tim Rilis dan menonaktifkan akun bermasalah?
 4. Dokumen asli kedua template PDF dari mentor (isi tidak boleh dikarang).
 5. PDF hasil RFC: boleh menambah pustaka PDF, atau cukup halaman cetak?
+   Keputusan sementara: memakai dompdf; view pdf/rfc-result.blade.php dapat dipakai sebagai halaman cetak jika pustaka tidak disetujui mentor.
 6. Register: langsung aktif, verifikasi email, atau persetujuan akun?
 
 ## Urutan kerja

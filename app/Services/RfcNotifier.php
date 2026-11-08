@@ -5,10 +5,12 @@ namespace App\Services;
 use App\Enums\RfcStatus;
 use App\Models\ChangeRequest;
 use App\Models\ReleaseTaskUpdate;
+use App\Models\RfcSatisfaction;
 use App\Models\User;
 use App\Notifications\ChangeManagerReviewNotification;
 use App\Notifications\RfcDispositionNotification;
 use App\Notifications\RfcReleaseProgressNotification;
+use App\Notifications\RfcSatisfactionNotification;
 use App\Notifications\RfcStatusChangedNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -115,6 +117,37 @@ class RfcNotifier
                         'rfc_id' => $rfc->id,
                         'recipient_id' => $recipient->id,
                         'update_id' => $update->id,
+                    ]);
+                }
+            };
+
+            if (config('rfc.notify_after_commit', true) && DB::transactionLevel() > 0) {
+                DB::afterCommit($send);
+            } else {
+                $send();
+            }
+        }
+    }
+
+    /**
+     * Beri tahu seluruh Change Manager aktif bahwa Pemohon telah menilai
+     * layanan. Isi komentar tidak pernah dimasukkan ke notifikasi.
+     */
+    public function satisfactionSubmitted(ChangeRequest $rfc, RfcSatisfaction $satisfaction): void
+    {
+        $recipients = User::role('Change Manager')->where('is_active', true)->get();
+
+        foreach ($recipients as $recipient) {
+            $send = function () use ($rfc, $satisfaction, $recipient): void {
+                try {
+                    $recipient->notify(new RfcSatisfactionNotification($rfc, $satisfaction->rating));
+                } catch (Throwable $exception) {
+                    report($exception);
+
+                    Log::warning('Notifikasi penilaian kepuasan RFC gagal dikirim.', [
+                        'rfc_id' => $rfc->id,
+                        'recipient_id' => $recipient->id,
+                        'satisfaction_id' => $satisfaction->id,
                     ]);
                 }
             };

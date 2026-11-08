@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\RfcStatus;
 use App\Models\ChangeRequest;
 use App\Models\ReleaseTeamMember;
+use App\Models\RfcSatisfaction;
 use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -80,7 +81,8 @@ class DashboardMetricsService
      *     },
      *     distribution: array<int, array{status: string, label: string, value: int, is_terminal: bool}>,
      *     release_team_distribution: array<int, array{status: string, label: string, value: int, is_terminal: bool}>,
-     *     activities: array<int, array{rfc_number: string, label: string, actor_name: string, occurred_at: Carbon}>
+     *     activities: array<int, array{rfc_number: string, label: string, actor_name: string, occurred_at: Carbon}>,
+     *     satisfaction: array{average: ?float, count: int}
      * }
      */
     public function changeManagerOverview(?Carbon $now = null): array
@@ -120,6 +122,27 @@ class DashboardMetricsService
                 RfcStatus::REJECTED->value,
                 RfcStatus::CANCELLED->value,
             ]),
+            'satisfaction' => $this->satisfactionOverview(),
+        ];
+    }
+
+    /**
+     * Rata-rata dan jumlah penilaian kepuasan untuk RFC yang tidak dihapus.
+     * Satu query dipakai agar dashboard tidak menambah beban per kartu.
+     *
+     * @return array{average: ?float, count: int}
+     */
+    private function satisfactionOverview(): array
+    {
+        $ratings = RfcSatisfaction::query()
+            ->whereHas('changeRequest')
+            ->pluck('rating');
+
+        $count = $ratings->count();
+
+        return [
+            'average' => $count > 0 ? round((float) $ratings->avg(), 1) : null,
+            'count' => $count,
         ];
     }
 

@@ -4,10 +4,12 @@ namespace App\Livewire\ChangeRequests;
 
 use App\Exceptions\InvalidRfcStatusTransitionException;
 use App\Exceptions\ReleaseTaskProgressException;
+use App\Exceptions\RfcSatisfactionException;
 use App\Models\ChangeRequest;
 use App\Models\ReleaseTask;
 use App\Models\User;
 use App\Services\ReleaseTaskProgressService;
+use App\Services\RfcSatisfactionService;
 use Livewire\Component;
 
 class ShowChangeRequest extends Component
@@ -25,6 +27,12 @@ class ShowChangeRequest extends Component
     public bool $progressBlocked = false;
 
     public string $progressMessage = '';
+
+    public int $satisfactionRating = 0;
+
+    public string $satisfactionComment = '';
+
+    public string $satisfactionMessage = '';
 
     public function mount(ChangeRequest $rfc)
     {
@@ -48,6 +56,7 @@ class ShowChangeRequest extends Component
             'implementation.evaluatedBy',
             'evidences',
             'closedBy',
+            'satisfaction',
         ];
 
         // Disposisi hanya dimuat untuk staf dan penerima disposisi pada RFC ini.
@@ -178,6 +187,43 @@ class ShowChangeRequest extends Component
         $this->progressBlocked = false;
         $this->progressMessage = 'Catatan kegiatan berhasil ditambahkan.';
         $this->refreshProgressData();
+    }
+
+    public function submitSatisfaction(): void
+    {
+        $this->authorize('rate', $this->rfc);
+        $this->resetValidation(['satisfactionRating', 'satisfactionComment']);
+        $this->satisfactionMessage = '';
+
+        $validated = $this->validate([
+            'satisfactionRating' => 'required|integer|between:1,5',
+            'satisfactionComment' => 'nullable|string|max:1000',
+        ], [
+            'satisfactionRating.required' => 'Pilih jumlah bintang penilaian terlebih dahulu.',
+            'satisfactionRating.integer' => 'Penilaian harus berupa angka bintang.',
+            'satisfactionRating.between' => 'Penilaian harus antara 1 sampai 5 bintang.',
+            'satisfactionComment.string' => 'Komentar harus berupa teks.',
+            'satisfactionComment.max' => 'Komentar penilaian maksimal 1000 karakter.',
+        ]);
+
+        try {
+            app(RfcSatisfactionService::class)->submit(
+                $this->rfc,
+                $this->currentUser(),
+                (int) $validated['satisfactionRating'],
+                $validated['satisfactionComment'] ?? null,
+            );
+        } catch (RfcSatisfactionException $exception) {
+            $this->addError('satisfactionRating', $exception->getMessage());
+
+            return;
+        }
+
+        $this->satisfactionRating = 0;
+        $this->satisfactionComment = '';
+        $this->satisfactionMessage = 'Penilaian layanan berhasil dikirim.';
+        $this->rfc->refresh();
+        $this->rfc->load('satisfaction');
     }
 
     private function assignedTask(): ?ReleaseTask

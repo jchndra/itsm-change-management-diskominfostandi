@@ -224,6 +224,18 @@
                     </a>
                 @endif
 
+                @can('exportResult', $rfc)
+                    <a href="{{ route('change-requests.result-pdf', $rfc) }}"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5 7.5 12M12 16.5V3" />
+                        </svg>
+                        Unduh PDF Hasil RFC
+                    </a>
+                @endcan
+
                 @if ($awaitingEvaluation && $canEvaluate)
                     <p class="text-xs font-medium text-amber-700">
                         Tutup RFC aktif setelah evaluasi dicatat
@@ -1033,6 +1045,115 @@
                     </div>
                 </div>
             @endif
+
+            @can('rate', $rfc)
+                <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Beri Penilaian Layanan</h3>
+
+                    @if (filled($satisfactionMessage))
+                        <p class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800"
+                            role="status">
+                            {{ $satisfactionMessage }}
+                        </p>
+                    @endif
+
+                    @error('satisfactionRating')
+                        <p class="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-800">
+                            {{ $message }}
+                        </p>
+                    @enderror
+
+                    <p class="mb-4 text-sm text-slate-600">
+                        Penilaian hanya dapat dikirim satu kali dan tidak dapat diubah setelah terkirim.
+                    </p>
+
+                    <form wire:submit="submitSatisfaction" class="space-y-5">
+                        <fieldset x-data="{ hover: 0 }" x-on:mouseleave="hover = 0">
+                            <legend class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                Kepuasan terhadap layanan (1 = sangat tidak puas, 5 = sangat puas)
+                            </legend>
+
+                            <div class="mt-2 flex items-center gap-1">
+                                @for ($i = 1; $i <= 5; $i++)
+                                    <label
+                                        class="group cursor-pointer rounded-lg p-1 transition focus-within:ring-2 focus-within:ring-amber-500 focus-within:ring-offset-2"
+                                        x-on:mouseenter="hover = {{ $i }}">
+                                        <input type="radio" name="satisfactionRating" value="{{ $i }}"
+                                            wire:model.live="satisfactionRating" class="peer sr-only">
+                                        <span class="sr-only">{{ $i }} dari 5 bintang</span>
+                                        <svg class="h-9 w-9 transition-colors duration-150 text-slate-300"
+                                            x-bind:class="(hover >= {{ $i }} || (hover === 0 && $wire.satisfactionRating >= {{ $i }})) ?
+                                                'text-amber-400' : 'text-slate-300'"
+                                            fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                            <path
+                                                d="M10 1.5l2.6 5.27 5.82.85-4.21 4.1.99 5.79L10 14.77l-5.2 2.74.99-5.79-4.21-4.1 5.82-.85L10 1.5z" />
+                                        </svg>
+                                    </label>
+                                @endfor
+                            </div>
+
+                            @if ($satisfactionRating > 0)
+                                <p class="mt-1 text-xs font-semibold text-amber-700">
+                                    {{ $satisfactionRating }} dari 5 bintang dipilih
+                                </p>
+                            @endif
+                        </fieldset>
+
+                        <div>
+                            <label for="satisfaction-comment" class="block text-xs font-semibold text-slate-600">
+                                Komentar (opsional)
+                            </label>
+                            <textarea id="satisfaction-comment" rows="3" maxlength="1000"
+                                wire:model.live.debounce.500ms="satisfactionComment"
+                                class="mt-1 w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-amber-500 focus:ring-amber-500"
+                                placeholder="Sampaikan masukan Anda tentang layanan ini."></textarea>
+                            <p class="mt-1 text-right text-[11px] text-slate-400">
+                                {{ mb_strlen($satisfactionComment) }}/1000 karakter
+                            </p>
+                            @error('satisfactionComment')
+                                <p class="mt-1 text-xs font-medium text-rose-700">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <button type="submit" wire:loading.attr="disabled" wire:target="submitSatisfaction"
+                            class="inline-flex items-center justify-center rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:bg-slate-300">
+                            <span wire:loading.remove wire:target="submitSatisfaction">Kirim Penilaian</span>
+                            <span wire:loading wire:target="submitSatisfaction">Mengirim...</span>
+                        </button>
+                    </form>
+                </div>
+            @endcan
+
+            @can('viewSatisfaction', $rfc)
+                @if ($rfc->satisfaction)
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+                        <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Penilaian Pemohon</h3>
+
+                        <div class="flex flex-wrap items-center gap-3">
+                            <div class="flex items-center gap-1">
+                                @for ($i = 1; $i <= 5; $i++)
+                                    <svg class="h-7 w-7 {{ $i <= $rfc->satisfaction->rating ? 'text-amber-400' : 'text-slate-200' }}"
+                                        fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                        <path
+                                            d="M10 1.5l2.6 5.27 5.82.85-4.21 4.1.99 5.79L10 14.77l-5.2 2.74.99-5.79-4.21-4.1 5.82-.85L10 1.5z" />
+                                    </svg>
+                                @endfor
+                            </div>
+                            <p class="text-sm font-bold text-slate-800">{{ $rfc->satisfaction->rating }}/5</p>
+                            <p class="text-xs text-slate-500">
+                                {{ $rfc->satisfaction->created_at?->copy()->timezone('Asia/Jakarta')->locale('id')->translatedFormat('d M Y, H:i') }}
+                                WIB
+                            </p>
+                        </div>
+
+                        @if (filled($rfc->satisfaction->comment))
+                            <p class="mt-3 whitespace-pre-wrap text-sm text-slate-700">{{ $rfc->satisfaction->comment }}</p>
+                        @else
+                            <p class="mt-3 text-sm italic text-slate-400">Tanpa komentar.</p>
+                        @endif
+                    </div>
+                @endif
+            @endcan
 
             {{-- Ditetapkan Petugas --}}
             @php

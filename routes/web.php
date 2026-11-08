@@ -3,6 +3,7 @@
 use App\Http\Controllers\ChangeRequestAttachmentController;
 use App\Http\Controllers\ImplementationEvidenceController;
 use App\Http\Controllers\RfcDocumentController;
+use App\Http\Controllers\RfcResultPdfController;
 use App\Livewire\Admin\ReleaseTeamAccounts;
 use App\Livewire\Admin\Users;
 use App\Livewire\Auth\Login;
@@ -126,6 +127,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/{rfc}/evidences/{evidence}', [ImplementationEvidenceController::class, 'show'])
             ->middleware('can:viewEvidence,rfc')
             ->name('evidences.show');
+        Route::get('/{rfc}/hasil-pdf', RfcResultPdfController::class)
+            ->name('result-pdf');
         Route::get('/{rfc}', ShowChangeRequest::class)->name('show'); // <-- SEKARANG MENGARAH KE KOMPONEN BARU
 
         // Rute Verifikasi Admin
