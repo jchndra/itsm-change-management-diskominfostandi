@@ -82,7 +82,7 @@ it('memberikan Super Admin permission eksplisit tanpa bypass global', function (
     expect($superAdmin->fresh()->can('view', $rfc))->toBeFalse();
 });
 
-it('mengarahkan Tim Rilis ke daftar RFC yang ditugaskan', function () {
+it('mengarahkan Tim Rilis ke dashboard Tim Rilis', function () {
     $releaseTeamUser = releaseTeamPermissionUser(['Tim Rilis']);
 
     ReleaseTeamMember::factory()->create([
@@ -91,11 +91,11 @@ it('mengarahkan Tim Rilis ke daftar RFC yang ditugaskan', function () {
     ]);
 
     expect(app(DashboardRedirector::class)->routeNameFor($releaseTeamUser))
-        ->toBe('change-requests.index');
+        ->toBe('release-team.dashboard');
 
     $this->actingAs($releaseTeamUser)
         ->get('/')
-        ->assertRedirect(route('change-requests.index'));
+        ->assertRedirect(route('release-team.dashboard'));
 });
 
 it('menampilkan menu pengelolaan akun hanya bagi pengguna dengan permission', function () {

@@ -24,7 +24,7 @@ class DashboardRedirector
         }
 
         if ($user->isReleaseTeam() && $user->can('rfc.view_assigned')) {
-            return 'change-requests.index';
+            return 'release-team.dashboard';
         }
 
         return 'requester.dashboard';

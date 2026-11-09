@@ -83,6 +83,16 @@
             {{-- Navigasi --}}
             <nav class="mt-2 flex-1 space-y-1 overflow-y-auto px-3 pb-4">
                 @if ($isReleaseTeamOnly)
+                    <x-sidebar-link :href="route('release-team.dashboard')" :active="request()->routeIs('release-team.*')">
+                        <x-slot:icon>
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                    d="M4 5.25A1.25 1.25 0 0 1 5.25 4h4.5A1.25 1.25 0 0 1 11 5.25v4.5A1.25 1.25 0 0 1 9.75 11h-4.5A1.25 1.25 0 0 1 4 9.75v-4.5Zm9 0A1.25 1.25 0 0 1 14.25 4h4.5A1.25 1.25 0 0 1 20 5.25v4.5A1.25 1.25 0 0 1 18.75 11h-4.5A1.25 1.25 0 0 1 13 9.75v-4.5Zm-9 9A1.25 1.25 0 0 1 5.25 13h4.5A1.25 1.25 0 0 1 11 14.25v4.5A1.25 1.25 0 0 1 9.75 20h-4.5A1.25 1.25 0 0 1 4 18.75v-4.5Zm9 0A1.25 1.25 0 0 1 14.25 13h4.5A1.25 1.25 0 0 1 20 14.25v4.5A1.25 1.25 0 0 1 18.75 20h-4.5A1.25 1.25 0 0 1 13 18.75v-4.5Z" />
+                            </svg>
+                        </x-slot:icon>
+                        Dashboard
+                    </x-sidebar-link>
+
                     <x-sidebar-link :href="route('change-requests.index')" :active="$isReleaseTaskActive">
                         <x-slot:icon>
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

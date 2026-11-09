@@ -23,6 +23,7 @@ use App\Livewire\ChangeRequests\ShowChangeRequest;
 use App\Livewire\ChangeRequests\ShowDeletedChangeRequest;
 use App\Livewire\Dashboard\AdminDashboard;
 use App\Livewire\Dashboard\ChangeManagerDashboard;
+use App\Livewire\Dashboard\ReleaseTeamDashboard;
 use App\Livewire\Disposition\Assign as AssignDisposition;
 use App\Livewire\Disposition\Index as DispositionIndex;
 use App\Livewire\Notifications;
@@ -68,6 +69,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/change-manager/dashboard', ChangeManagerDashboard::class)
         ->middleware('can:viewChangeManagerDashboard')
         ->name('change-manager.dashboard');
+
+    Route::get('/release-team/dashboard', ReleaseTeamDashboard::class)
+        ->middleware('can:rfc.view_assigned')
+        ->name('release-team.dashboard');
 
     Route::get('/admin/release-team-accounts', ReleaseTeamAccounts::class)
         ->middleware('can:viewAny,App\Models\ReleaseTeamMember')
