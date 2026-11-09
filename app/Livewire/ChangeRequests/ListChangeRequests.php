@@ -100,6 +100,28 @@ class ListChangeRequests extends Component
         $this->resetPage();
     }
 
+    /**
+     * Unduh daftar RFC mengikuti filter yang sedang aktif.
+     */
+    public function export(string $format): void
+    {
+        $this->authorize('exportList', ChangeRequest::class);
+
+        abort_unless(in_array($format, ['xlsx', 'csv'], true), 422);
+
+        $this->redirect(route('change-requests.export', array_filter([
+            'format' => $format,
+            'basis' => 'created',
+            'q' => $this->search,
+            'status' => $this->statusFilter,
+            'change_type' => $this->categoryFilter,
+            'application_id' => $this->applicationFilter,
+            'opd_id' => $this->opdFilter,
+            'from' => $this->dateFrom,
+            'to' => $this->dateTo,
+        ], fn (mixed $value) => filled($value))), navigate: false);
+    }
+
     public function mount(?ChangeRequest $rfc = null): void
     {
         $this->authorize('viewAny', ChangeRequest::class);

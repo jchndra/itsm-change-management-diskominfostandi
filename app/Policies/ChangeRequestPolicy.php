@@ -270,6 +270,14 @@ class ChangeRequestPolicy
         return $this->view($user, $rfc);
     }
 
+    /**
+     * Ekspor daftar RFC hanya untuk Change Manager.
+     */
+    public function exportList(User $user): bool
+    {
+        return $user->hasPermissionTo('rfc.record_decision');
+    }
+
     public function viewEvidence(User $user, ChangeRequest $rfc): bool
     {
         if ($rfc->trashed()) {

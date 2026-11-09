@@ -177,6 +177,37 @@
                         {{ $activeFilterCount }} filter aktif
                     </span>
                 @endif
+
+                @if ($roleView === 'change_manager')
+                    @can('exportList', \App\Models\ChangeRequest::class)
+                        <details class="relative">
+                            <summary
+                                class="flex cursor-pointer list-none items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm hover:border-blue-300 hover:text-blue-700 [&::-webkit-details-marker]:hidden">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                    aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                        d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                </svg>
+                                Ekspor
+                            </summary>
+                            <div
+                                class="absolute right-0 z-30 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+                                <p class="px-2 pb-2 text-[10px] leading-relaxed text-slate-500">
+                                    Mengikuti filter yang sedang aktif.
+                                </p>
+                                <button type="button" wire:click="export('xlsx')"
+                                    class="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                                    Excel (.xlsx)
+                                </button>
+                                <button type="button" wire:click="export('csv')"
+                                    class="flex w-full flex-col items-start gap-0.5 rounded-lg px-2 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                                    <span>CSV (.csv)</span>
+                                    <span class="text-[10px] font-normal text-slate-400">Pemisah titik koma, cocok untuk Excel Indonesia.</span>
+                                </button>
+                            </div>
+                        </details>
+                    @endcan
+                @endif
             </div>
         </div>
 

@@ -3,6 +3,7 @@
 use App\Http\Controllers\ChangeRequestAttachmentController;
 use App\Http\Controllers\ImplementationEvidenceController;
 use App\Http\Controllers\RfcDocumentController;
+use App\Http\Controllers\RfcExportController;
 use App\Http\Controllers\RfcResultPdfController;
 use App\Livewire\Admin\ReleaseTeamAccounts;
 use App\Livewire\Admin\Users;
@@ -121,6 +122,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/deletion-history/{rfc}', ShowDeletedChangeRequest::class)
             ->withTrashed()
             ->name('deletions.show');
+        Route::get('/export', RfcExportController::class)
+            ->middleware('can:exportList,App\Models\ChangeRequest')
+            ->name('export');
         Route::get('/{rfc}/edit', EditChangeRequest::class)->name('edit');
         Route::get('/{rfc}/attachments/{attachment}', [ChangeRequestAttachmentController::class, 'show'])
             ->name('attachments.show');

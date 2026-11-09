@@ -84,4 +84,18 @@ return [
         'waiting_evaluation_days' => 3,
         'cooldown_days' => 2,
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Ekspor Daftar RFC
+    |--------------------------------------------------------------------------
+    |
+    | Batas maksimum baris untuk satu berkas ekspor. Dapat diturunkan pada
+    | pengujian untuk memverifikasi penolakan tanpa membuat ribuan data.
+    |
+    */
+
+    'export' => [
+        'max_rows' => (int) env('RFC_EXPORT_MAX_ROWS', 10000),
+    ],
 ];
