@@ -257,6 +257,15 @@ class ChangeRequestPolicy
         return $user->hasRole('Admin') || $user->hasPermissionTo('rfc.view_all');
     }
 
+    /**
+     * Panel persetujuan pimpinan hanya menjadi kewenangan Change Manager;
+     * Pemohon dan Tim Rilis tidak diizinkan melihat datanya.
+     */
+    public function viewLeadershipApproval(User $user, ChangeRequest $rfc): bool
+    {
+        return $user->hasRole('Change Manager');
+    }
+
     public function exportResult(User $user, ChangeRequest $rfc): bool
     {
         if ($rfc->trashed()) {

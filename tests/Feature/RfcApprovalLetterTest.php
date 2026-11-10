@@ -262,9 +262,9 @@ it('menampilkan arsip surat persetujuan lama pada halaman detail', function () {
         ->assertSee('Arsip Surat Persetujuan Bertanda Tangan')
         ->assertSee('Arsip')
         ->assertSee('surat-arsip.pdf')
-        // Panel persetujuan Pimpinan (Eselon II) selalu tampil dengan status saat ini.
-        ->assertSee('Persetujuan Pimpinan (Eselon II)')
-        ->assertSee('Belum ada pernyataan persetujuan');
+        // Panel persetujuan Pimpinan (Eselon II) tidak ditampilkan kepada Pemohon.
+        ->assertDontSee('Persetujuan Pimpinan (Eselon II)')
+        ->assertDontSee('Belum ada pernyataan persetujuan');
 });
 
 it('menolak perubahan nomor RFC yang sudah terbit', function () {
