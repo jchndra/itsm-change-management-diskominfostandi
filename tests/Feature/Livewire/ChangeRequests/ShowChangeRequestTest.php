@@ -177,7 +177,7 @@ it('shows submitted request details and hides the old purpose section', function
         ->assertSee('Layanan surat berhenti sementara.')
         ->assertSee('Pengguna diberi notifikasi.')
         ->assertSee('Disetujui')
-        ->assertSee('Persetujuan Kepala Dinas')
+        ->assertSee('Persetujuan Pimpinan (Eselon II)')
         ->assertDontSee('Tujuan Perubahan')
         ->assertDontSee('Deskripsi Lengkap');
 });

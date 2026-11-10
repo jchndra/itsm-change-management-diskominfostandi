@@ -63,7 +63,7 @@
                 </div>
             @endif
             <div>
-                <span class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Persetujuan Kepala Dinas</span>
+                <span class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Persetujuan Pimpinan (Eselon II)</span>
                 <p class="font-medium text-slate-800">
                     @if ($rfc->head_of_department_approved)
                         Disetujui

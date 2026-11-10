@@ -68,7 +68,7 @@
                 </div>
             @endif
             <div>
-                <p class="text-slate-400">Persetujuan Kepala Dinas</p>
+                <p class="text-slate-400">Persetujuan Pimpinan (Eselon II)</p>
                 <p class="mt-0.5 font-semibold text-slate-800">
                     @if ($rfc->head_of_department_approved)
                         Disetujui

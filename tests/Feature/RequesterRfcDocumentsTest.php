@@ -48,6 +48,15 @@ it('menampilkan tautan unduhan yang berbeda untuk setiap template rfc', function
         ->and($downloads[0]['file'])->not->toBe($downloads[1]['file']);
 });
 
+it('menayangkan panduan pengisian analisis risiko sebagai pratinjau pdf inline', function () {
+    $this->actingAs($this->pemohon)
+        ->get(route('rfc-documents.panduan-analisis-risiko'))
+        ->assertOk()
+        ->assertHeader('content-type', 'application/pdf')
+        ->assertHeader('content-disposition', 'inline; filename="Panduan_Pengisian_Analisis_Resiko.pdf"')
+        ->assertHeader('cache-control', 'max-age=0, no-store, private');
+});
+
 it('mengizinkan pengguna terautentikasi mengunduh semua dokumen rfc', function () {
     $this->actingAs($this->pemohon)
         ->get(route('rfc-documents.download', ['document' => 'analisis-dampak-teknis', 'download' => 'template-diskominfostandi']))

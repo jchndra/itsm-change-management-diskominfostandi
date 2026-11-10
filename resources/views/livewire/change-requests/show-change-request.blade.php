@@ -456,9 +456,9 @@
                 </div>
             @endif
 
-            {{-- Persetujuan Kepala Dinas --}}
+            {{-- Persetujuan Pimpinan (Eselon II) --}}
             <div class="bg-white rounded-xl shadow-sm border border-emerald-100 p-6">
-                <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Persetujuan Kepala Dinas</h3>
+                <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Persetujuan Pimpinan (Eselon II)</h3>
 
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 text-sm">
                     <div>
@@ -466,7 +466,7 @@
                         <p class="text-slate-800 font-medium flex items-center gap-2">
                             @if ($rfc->head_of_department_approved)
                                 <span class="inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
-                                Disetujui Kepala Dinas
+                                Disetujui Pimpinan (Eselon II)
                             @else
                                 <span class="inline-flex h-2 w-2 rounded-full bg-slate-300"></span>
                                 Belum ada pernyataan persetujuan
