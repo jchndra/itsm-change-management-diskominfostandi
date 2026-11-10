@@ -29,25 +29,9 @@ class RfcDispositionService
      */
     public function assign(ChangeRequest $rfc, User $actor, array $memberIds, string $instruction): Collection
     {
-        $instruction = trim($instruction);
-
-        if (mb_strlen($instruction) < self::MIN_INSTRUCTION_LENGTH) {
-            throw new RfcDispositionException(
-                'Instruksi minimal '.self::MIN_INSTRUCTION_LENGTH.' karakter.'
-            );
-        }
-
-        if (mb_strlen($instruction) > self::MAX_INSTRUCTION_LENGTH) {
-            throw new RfcDispositionException(
-                'Instruksi maksimal '.self::MAX_INSTRUCTION_LENGTH.' karakter.'
-            );
-        }
-
+        $instruction = $this->validateInstruction($instruction);
         $normalizedMemberIds = $this->normalizeMemberIds($memberIds);
-
-        if (count($normalizedMemberIds) !== 1) {
-            throw new RfcDispositionException('Pilih tepat satu anggota Tim Rilis sebagai penerima disposisi.');
-        }
+        $this->assertSingleRecipient($normalizedMemberIds);
 
         $tasks = DB::transaction(function () use ($rfc, $actor, $normalizedMemberIds, $instruction): Collection {
             // Baca ulang di bawah row lock agar dua Change Manager tidak dapat
@@ -65,66 +49,7 @@ class RfcDispositionService
                 throw new RfcDispositionException('Disposisi hanya dapat dilakukan untuk RFC yang sudah disetujui.');
             }
 
-            if ($lockedRfc->releaseTasks()->exists()) {
-                throw new RfcDispositionException('RFC ini sudah pernah didisposisikan dan tidak dapat diubah.');
-            }
-
-            $members = ReleaseTeamMember::query()
-                ->with(['user.roles'])
-                ->whereKey($normalizedMemberIds)
-                ->get()
-                ->keyBy('id');
-
-            if ($members->count() !== count($normalizedMemberIds)) {
-                throw new RfcDispositionException('Sebagian penerima disposisi tidak ditemukan.');
-            }
-
-            $eligibleMembers = [];
-
-            foreach ($normalizedMemberIds as $memberId) {
-                $member = $members->get($memberId);
-
-                if (! $member instanceof ReleaseTeamMember || ! $member->isEligibleForAssignment()) {
-                    throw new RfcDispositionException(
-                        'Penerima disposisi harus anggota aktif yang tertaut ke akun aktif dengan role Tim Rilis.'
-                    );
-                }
-
-                $eligibleMembers[] = $member;
-            }
-
-            $createdTasks = new Collection;
-
-            foreach ($eligibleMembers as $member) {
-                $createdTasks->push($lockedRfc->releaseTasks()->create([
-                    'release_team_member_id' => $member->id,
-                    'assigned_by_id' => $actor->id,
-                    'instruction' => $instruction,
-                    'scheduled_start' => null,
-                    'scheduled_end' => null,
-                    'execution_status' => 'pending',
-                    'executed_at' => null,
-                    'execution_notes' => null,
-                ]));
-            }
-
-            activity()
-                ->performedOn($lockedRfc)
-                ->causedBy($actor)
-                ->withProperties([
-                    'event' => 'release_disposition',
-                    'recipient_names' => array_map(
-                        fn (ReleaseTeamMember $member): string => $member->name,
-                        $eligibleMembers,
-                    ),
-                    'recipient_count' => count($eligibleMembers),
-                    'instruction' => $instruction,
-                    'release_task_ids' => $createdTasks->modelKeys(),
-                    'assigned_by_id' => $actor->id,
-                ])
-                ->log('Disposisi ke Tim Rilis');
-
-            return $createdTasks;
+            return $this->createDispositionTasks($lockedRfc, $actor, $normalizedMemberIds, $instruction);
         });
 
         // Pengiriman notifikasi tidak boleh membatalkan disposisi yang sudah
@@ -132,6 +57,102 @@ class RfcDispositionService
         app(RfcNotifier::class)->dispositionAssigned($rfc->fresh() ?? $rfc);
 
         return $tasks;
+    }
+
+    /**
+     * Inti pembuatan tugas disposisi tanpa membuka transaksi sendiri.
+     *
+     * Pemanggil wajib sudah berada di dalam transaksi dan mengunci RFC. Jalur
+     * lama tetap memeriksa status APPROVED sebelum memanggil method ini.
+     *
+     * @param  array<int, int|string>  $memberIds
+     * @return Collection<int, ReleaseTask>
+     */
+    public function createDispositionTasks(ChangeRequest $rfc, User $actor, array $memberIds, string $instruction): Collection
+    {
+        $instruction = $this->validateInstruction($instruction);
+        $normalizedMemberIds = $this->normalizeMemberIds($memberIds);
+        $this->assertSingleRecipient($normalizedMemberIds);
+
+        if ($rfc->releaseTasks()->exists()) {
+            throw new RfcDispositionException('RFC ini sudah pernah didisposisikan dan tidak dapat diubah.');
+        }
+
+        $members = ReleaseTeamMember::query()
+            ->with(['user.roles'])
+            ->whereKey($normalizedMemberIds)
+            ->get()
+            ->keyBy('id');
+
+        if ($members->count() !== count($normalizedMemberIds)) {
+            throw new RfcDispositionException('Sebagian penerima disposisi tidak ditemukan.');
+        }
+
+        $eligibleMembers = [];
+
+        foreach ($normalizedMemberIds as $memberId) {
+            $member = $members->get($memberId);
+
+            if (! $member instanceof ReleaseTeamMember || ! $member->isEligibleForAssignment()) {
+                throw new RfcDispositionException(
+                    'Penerima disposisi harus anggota aktif yang tertaut ke akun aktif dengan role Tim Rilis.'
+                );
+            }
+
+            $eligibleMembers[] = $member;
+        }
+
+        $createdTasks = new Collection;
+
+        foreach ($eligibleMembers as $member) {
+            $createdTasks->push($rfc->releaseTasks()->create([
+                'release_team_member_id' => $member->id,
+                'assigned_by_id' => $actor->id,
+                'instruction' => $instruction,
+                'scheduled_start' => null,
+                'scheduled_end' => null,
+                'execution_status' => 'pending',
+                'executed_at' => null,
+                'execution_notes' => null,
+            ]));
+        }
+
+        activity()
+            ->performedOn($rfc)
+            ->causedBy($actor)
+            ->withProperties([
+                'event' => 'release_disposition',
+                'recipient_names' => array_map(
+                    fn (ReleaseTeamMember $member): string => $member->name,
+                    $eligibleMembers,
+                ),
+                'recipient_count' => count($eligibleMembers),
+                'instruction' => $instruction,
+                'release_task_ids' => $createdTasks->modelKeys(),
+                'assigned_by_id' => $actor->id,
+            ])
+            ->log('Disposisi ke Tim Rilis');
+
+        return $createdTasks;
+    }
+
+    private function validateInstruction(string $instruction): string
+    {
+        $instruction = trim($instruction);
+
+        if (mb_strlen($instruction) < self::MIN_INSTRUCTION_LENGTH) {
+            throw new RfcDispositionException(
+                'Instruksi minimal '.self::MIN_INSTRUCTION_LENGTH.' karakter.'
+            );
+        }
+
+        if (mb_strlen($instruction) > self::MAX_INSTRUCTION_LENGTH) {
+            throw new RfcDispositionException(
+                'Instruksi maksimal '.self::MAX_INSTRUCTION_LENGTH.' karakter.'
+            );
+        }
+
+        return $instruction;
     }
 
     /**
@@ -155,5 +176,15 @@ class RfcDispositionService
         }
 
         return array_values(array_unique($normalized));
+    }
+
+    /**
+     * @param  array<int, int>  $normalizedMemberIds
+     */
+    private function assertSingleRecipient(array $normalizedMemberIds): void
+    {
+        if (count($normalizedMemberIds) !== 1) {
+            throw new RfcDispositionException('Pilih tepat satu anggota Tim Rilis sebagai penerima disposisi.');
+        }
     }
 }

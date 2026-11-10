@@ -387,17 +387,12 @@
 
                                     {{-- Aksi Change Manager --}}
                                     @if ($roleView === 'change_manager' && $statusVal === \App\Enums\RfcStatus::TICKET_CREATED)
-                                        @if ($rfc->riskAssessment)
-                                            <a href="{{ route('change-requests.record-decision', $rfc) }}"
-                                                class="whitespace-nowrap px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg text-xs transition">
-                                                Keputusan Change Manager
+                                        @can('recordDecision', $rfc)
+                                            <a href="{{ route('change-requests.cm-review', $rfc) }}"
+                                                class="whitespace-nowrap px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-xs transition">
+                                                Tinjau
                                             </a>
-                                        @else
-                                            <a href="{{ route('change-requests.assess-risk', $rfc) }}"
-                                                class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-xs transition">
-                                                Evaluasi
-                                            </a>
-                                        @endif
+                                        @endcan
                                     @endif
                                 </div>
                             </td>
