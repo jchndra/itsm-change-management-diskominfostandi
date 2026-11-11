@@ -291,12 +291,12 @@
             @endif
         </div>
 
-        <!-- Pernyataan Persetujuan Kepala Dinas -->
+        <!-- Pernyataan Persetujuan Pimpinan (Eselon II) -->
         <div>
             <label class="flex items-start text-sm font-medium text-slate-700 cursor-pointer">
                 <input type="checkbox" wire:model.live="head_of_department_approved"
                     class="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mr-2.5">
-                <span>Saya menyatakan bahwa perubahan ini telah disetujui oleh Kepala Dinas.</span>
+                <span>Saya menyatakan bahwa perubahan ini telah disetujui oleh Pimpinan (Eselon II).</span>
             </label>
             @error('head_of_department_approved')
                 <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>

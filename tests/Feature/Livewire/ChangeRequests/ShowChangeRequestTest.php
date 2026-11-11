@@ -10,6 +10,8 @@ use App\Models\Authority;
 use App\Models\ChangeRequest;
 use App\Models\Decision;
 use App\Models\Opd;
+use App\Models\ReleaseTask;
+use App\Models\ReleaseTeamMember;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -122,6 +124,75 @@ it('shows the edit button only for the owner with an editable status', function 
         ->assertForbidden();
 });
 
+it('menampilkan panel persetujuan pimpinan hanya untuk change manager', function () {
+    $rfc = ChangeRequest::factory()->create([
+        'status' => RfcStatus::TICKET_CREATED->value,
+        'head_of_department_approved' => true,
+        'head_of_department_approved_at' => now()->subDay(),
+    ]);
+
+    $manager = User::factory()->create();
+    $manager->assignRole('Change Manager');
+
+    $this->actingAs($manager);
+
+    Livewire::test(ShowChangeRequest::class, ['rfc' => $rfc])
+        ->assertOk()
+        ->assertSee('Persetujuan Pimpinan (Eselon II)')
+        ->assertSee('Disetujui Pimpinan (Eselon II)')
+        ->assertSee('Waktu Persetujuan');
+});
+
+it('menyembunyikan panel persetujuan pimpinan dari pemohon pemilik RFC', function () {
+    $requester = User::factory()->create();
+    $requester->assignRole('Pemohon');
+
+    $rfc = ChangeRequest::factory()->create([
+        'submitted_by_id' => $requester->id,
+        'status' => RfcStatus::TICKET_CREATED->value,
+        'head_of_department_approved' => true,
+        'head_of_department_approved_at' => now()->subDay(),
+    ]);
+
+    $this->actingAs($requester);
+
+    Livewire::test(ShowChangeRequest::class, ['rfc' => $rfc])
+        ->assertOk()
+        ->assertDontSee('Persetujuan Pimpinan (Eselon II)')
+        ->assertDontSee('Disetujui Pimpinan (Eselon II)')
+        ->assertDontSee('Waktu Persetujuan');
+});
+
+it('menyembunyikan panel persetujuan pimpinan dari tim rilis yang ditugaskan', function () {
+    $rfc = ChangeRequest::factory()->create([
+        'status' => RfcStatus::APPROVED->value,
+        'head_of_department_approved' => true,
+        'head_of_department_approved_at' => now()->subDay(),
+    ]);
+
+    $timRilis = User::factory()->create();
+    $timRilis->assignRole('Tim Rilis');
+
+    $member = ReleaseTeamMember::factory()->create([
+        'user_id' => $timRilis->id,
+        'is_active' => true,
+    ]);
+
+    ReleaseTask::factory()->create([
+        'change_request_id' => $rfc->id,
+        'release_team_member_id' => $member->id,
+        'execution_status' => 'pending',
+    ]);
+
+    $this->actingAs($timRilis);
+
+    Livewire::test(ShowChangeRequest::class, ['rfc' => $rfc])
+        ->assertOk()
+        ->assertSee('Progres Pengerjaan')
+        ->assertDontSee('Persetujuan Pimpinan (Eselon II)')
+        ->assertDontSee('Disetujui Pimpinan (Eselon II)');
+});
+
 it('allows change manager to bypass ownership check', function () {
     $requester = User::factory()->create();
     $requester->assignRole('Pemohon');
@@ -176,8 +247,7 @@ it('shows submitted request details and hides the old purpose section', function
         ->assertSee('Perlu migrasi ke server baru.')
         ->assertSee('Layanan surat berhenti sementara.')
         ->assertSee('Pengguna diberi notifikasi.')
-        ->assertSee('Disetujui')
-        ->assertSee('Persetujuan Kepala Dinas')
+        ->assertDontSee('Persetujuan Pimpinan (Eselon II)')
         ->assertDontSee('Tujuan Perubahan')
         ->assertDontSee('Deskripsi Lengkap');
 });

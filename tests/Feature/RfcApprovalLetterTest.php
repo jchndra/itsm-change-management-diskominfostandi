@@ -109,7 +109,7 @@ it('menyimpan draft tanpa nomor resmi dan tanpa pernyataan persetujuan', functio
         ->and($rfc->attachments()->count())->toBe(0);
 });
 
-it('menuntut pernyataan persetujuan Kepala Dinas dan minimal satu lampiran PDF saat pengajuan', function () {
+it('menuntut pernyataan persetujuan Pimpinan (Eselon II) dan minimal satu lampiran PDF saat pengajuan', function () {
     $newForm = fn () => Livewire::test(CreateChangeRequest::class)
         ->set(approvalLetterFormFields($this->application, 'Pengajuan Dengan Pernyataan'));
 
@@ -262,9 +262,9 @@ it('menampilkan arsip surat persetujuan lama pada halaman detail', function () {
         ->assertSee('Arsip Surat Persetujuan Bertanda Tangan')
         ->assertSee('Arsip')
         ->assertSee('surat-arsip.pdf')
-        // Panel persetujuan Kepala Dinas selalu tampil dengan status saat ini.
-        ->assertSee('Persetujuan Kepala Dinas')
-        ->assertSee('Belum ada pernyataan persetujuan');
+        // Panel persetujuan Pimpinan (Eselon II) tidak ditampilkan kepada Pemohon.
+        ->assertDontSee('Persetujuan Pimpinan (Eselon II)')
+        ->assertDontSee('Belum ada pernyataan persetujuan');
 });
 
 it('menolak perubahan nomor RFC yang sudah terbit', function () {

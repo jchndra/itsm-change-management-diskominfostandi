@@ -82,7 +82,7 @@ test('rejected RFC tidak menampilkan persetujuan dan tidak punya langkah mendata
         ->assertSee('Ditolak oleh Admin')
         ->assertSee('Ditolak karena dokumen tidak lengkap.')
         ->assertDontSee('Disetujui oleh Change Manager')
-        ->assertSee('Belum ada pernyataan persetujuan')
+        ->assertDontSee('Persetujuan Pimpinan (Eselon II)')
         ->assertDontSee('Langkah Berikutnya');
 });
 
@@ -117,7 +117,7 @@ test('keputusan returned_to_admin tidak menandai persetujuan', function () {
         ->assertSee('Sedang ditinjau')
         ->assertDontSee('Dikembalikan ke Admin')
         ->assertDontSee('Disetujui oleh Change Manager')
-        ->assertSee('Belum ada pernyataan persetujuan');
+        ->assertDontSee('Persetujuan Pimpinan (Eselon II)');
 });
 
 test('tampilan Pemohon menyembunyikan catatan internal CM', function () {

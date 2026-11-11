@@ -280,7 +280,7 @@ class EditChangeRequest extends Component
     }
 
     /**
-     * Waktu persetujuan Kepala Dinas hanya dimutakhirkan saat status perubahannya.
+     * Waktu persetujuan Pimpinan (Eselon II) hanya dimutakhirkan saat status perubahannya.
      * Persetujuan lama dipertahankan agar tidak ter-reset tiap kali Pemohon menyimpan revisi.
      */
     private function headOfDepartmentApprovedAt(): ?Carbon

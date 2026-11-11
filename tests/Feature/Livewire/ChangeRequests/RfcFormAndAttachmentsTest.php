@@ -143,8 +143,7 @@ it('menyimpan seluruh field baru dan lampiran dari form create lalu menampilkann
         ->assertSee('Normal')
         ->assertSee('surat-pengajuan.pdf')
         ->assertSee('surat-persetujuan.pdf')
-        ->assertSee('Persetujuan Kepala Dinas')
-        ->assertSee('Disetujui Kepala Dinas');
+        ->assertDontSee('Persetujuan Pimpinan (Eselon II)');
 
     $activity = Activity::query()
         ->where('subject_type', $rfc->getMorphClass())

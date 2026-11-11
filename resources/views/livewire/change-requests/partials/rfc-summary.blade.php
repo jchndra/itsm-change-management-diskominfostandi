@@ -58,21 +58,23 @@
                 </p>
             </div>
         @endif
-        <div>
-            <p class="text-slate-400">Persetujuan Kepala Dinas</p>
-            <p class="mt-0.5 font-semibold text-slate-800">
-                @if ($rfc->head_of_department_approved)
-                    Disetujui
-                    @if ($rfc->head_of_department_approved_at)
-                        <span class="block font-normal text-slate-600">
-                            {{ $rfc->head_of_department_approved_at->copy()->timezone(config('app.timezone'))->format('d M Y, H:i') }} WIB
-                        </span>
+        @can('viewLeadershipApproval', $rfc)
+            <div>
+                <p class="text-slate-400">Persetujuan Pimpinan (Eselon II)</p>
+                <p class="mt-0.5 font-semibold text-slate-800">
+                    @if ($rfc->head_of_department_approved)
+                        Disetujui
+                        @if ($rfc->head_of_department_approved_at)
+                            <span class="block font-normal text-slate-600">
+                                {{ $rfc->head_of_department_approved_at->copy()->timezone(config('app.timezone'))->format('d M Y, H:i') }} WIB
+                            </span>
+                        @endif
+                    @else
+                        Belum ada pernyataan persetujuan
                     @endif
-                @else
-                    Belum ada pernyataan persetujuan
-                @endif
-            </p>
-        </div>
+                </p>
+            </div>
+        @endcan
         @if ($rfc->is_physical_letter)
             <div>
                 <p class="text-slate-400">Nota Dinas</p>

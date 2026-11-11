@@ -4,8 +4,11 @@ namespace App\Services;
 
 use App\Enums\RfcStatus;
 use App\Models\ChangeRequest;
+use App\Models\ReleaseTask;
 use App\Models\ReleaseTeamMember;
 use App\Models\RfcSatisfaction;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -129,6 +132,150 @@ class DashboardMetricsService
             ]),
             'satisfaction' => $this->satisfactionOverview(),
         ];
+    }
+
+    /**
+     * Ringkasan tugas Tim Rilis untuk pengguna yang sedang masuk.
+     *
+     * @return array{
+     *     counts: array{pending: int, doing: int, late: int, done_this_month: int, needs_action: int},
+     *     tasks: array<int, array{
+     *         task_id: int,
+     *         rfc_id: int,
+     *         rfc_number: ?string,
+     *         title: string,
+     *         application_name: ?string,
+     *         requester_unit: ?string,
+     *         state: string,
+     *         estimated_days: ?int,
+     *         started_at: ?Carbon,
+     *         target_at: ?Carbon,
+     *         days_elapsed: int,
+     *         days_overdue: int,
+     *         assigned_days_ago: int,
+     *         has_estimate: bool,
+     *         primary_action: string
+     *     }>
+     * }
+     */
+    public function releaseTeamOverview(User $user, ?Carbon $now = null): array
+    {
+        $now = ($now ?? now())->copy()->timezone(config('app.timezone'));
+        $today = $now->copy()->startOfDay();
+        $monthStart = $now->copy()->startOfMonth();
+        $monthEnd = $monthStart->copy()->addMonthNoOverflow();
+
+        $tasks = ReleaseTask::query()
+            ->with(['changeRequest.application', 'changeRequest.submittedBy.opd'])
+            ->whereHas('releaseTeamMember', function (Builder $member) use ($user): void {
+                $member->where('user_id', $user->id)
+                    ->where('is_active', true);
+            })
+            ->whereHas('changeRequest')
+            ->where(function (Builder $query) use ($monthStart, $monthEnd): void {
+                $query->whereIn('execution_status', ['pending', 'in_progress'])
+                    ->orWhere(function (Builder $done) use ($monthStart, $monthEnd): void {
+                        $done->whereIn('execution_status', ['successful', 'rolled_back'])
+                            ->where('executed_at', '>=', $monthStart)
+                            ->where('executed_at', '<', $monthEnd);
+                    });
+            })
+            ->get();
+
+        $active = $tasks
+            ->filter(fn (ReleaseTask $task): bool => in_array($task->execution_status, ['pending', 'in_progress'], true))
+            ->sort(function (ReleaseTask $left, ReleaseTask $right) use ($now): int {
+                $order = ['late' => 0, 'doing' => 1, 'pending' => 2];
+                $leftState = $this->releaseTaskState($left, $now);
+                $rightState = $this->releaseTaskState($right, $now);
+
+                if ($order[$leftState] !== $order[$rightState]) {
+                    return $order[$leftState] <=> $order[$rightState];
+                }
+
+                if ($leftState === 'pending') {
+                    return $left->created_at <=> $right->created_at;
+                }
+
+                return ($left->scheduled_end?->getTimestamp() ?? PHP_INT_MAX)
+                    <=> ($right->scheduled_end?->getTimestamp() ?? PHP_INT_MAX);
+            })
+            ->values();
+
+        $late = $active->filter(fn (ReleaseTask $task): bool => $this->releaseTaskState($task, $now) === 'late')->count();
+        $doing = $active->filter(fn (ReleaseTask $task): bool => $this->releaseTaskState($task, $now) === 'doing')->count();
+        $pending = $active->filter(fn (ReleaseTask $task): bool => $this->releaseTaskState($task, $now) === 'pending')->count();
+        $doneThisMonth = $tasks
+            ->filter(fn (ReleaseTask $task): bool => in_array($task->execution_status, ['successful', 'rolled_back'], true)
+                && $task->executed_at !== null
+                && $task->executed_at->copy()->timezone(config('app.timezone'))->isSameMonth($now))
+            ->count();
+
+        $items = $active->map(function (ReleaseTask $task) use ($now, $today): array {
+            $rfc = $task->changeRequest;
+            $state = $this->releaseTaskState($task, $now);
+            $startedAt = $task->scheduled_start?->copy()->timezone(config('app.timezone'));
+            $targetAt = $task->scheduled_end?->copy()->timezone(config('app.timezone'));
+            $hasEstimate = $task->estimated_days !== null;
+            $daysElapsed = $startedAt === null
+                ? 0
+                : max(0, (int) $startedAt->copy()->startOfDay()->diffInDays($today, false));
+            $daysOverdue = $state === 'late' && $targetAt !== null
+                ? max(1, (int) $targetAt->copy()->startOfDay()->diffInDays($today, false))
+                : 0;
+            $assignedDaysAgo = max(
+                0,
+                (int) $task->created_at->copy()->timezone(config('app.timezone'))->startOfDay()->diffInDays($today, false),
+            );
+
+            return [
+                'task_id' => (int) $task->id,
+                'rfc_id' => (int) $task->change_request_id,
+                'rfc_number' => $rfc?->rfc_number,
+                'title' => (string) $rfc?->title,
+                'application_name' => $rfc?->application?->name,
+                'requester_unit' => $rfc?->submittedBy?->opd?->name,
+                'state' => $state,
+                'estimated_days' => $task->estimated_days,
+                'started_at' => $startedAt,
+                'target_at' => $targetAt,
+                'days_elapsed' => $daysElapsed,
+                'days_overdue' => $daysOverdue,
+                'assigned_days_ago' => $assignedDaysAgo,
+                'has_estimate' => $hasEstimate,
+                'primary_action' => match (true) {
+                    $state === 'late' => 'finish',
+                    $state === 'doing' => 'open',
+                    $hasEstimate => 'start',
+                    default => 'set_estimate',
+                },
+            ];
+        })->all();
+
+        return [
+            'counts' => [
+                'pending' => $pending,
+                'doing' => $doing,
+                'late' => $late,
+                'done_this_month' => $doneThisMonth,
+                'needs_action' => $late + $pending,
+            ],
+            'tasks' => $items,
+        ];
+    }
+
+    /**
+     * Status tampilan tugas aktif: terlambat, sedang dikerjakan, atau belum dimulai.
+     */
+    private function releaseTaskState(ReleaseTask $task, Carbon $now): string
+    {
+        if ($task->execution_status === 'pending') {
+            return 'pending';
+        }
+
+        return $task->scheduled_end !== null && $now->greaterThan($task->scheduled_end)
+            ? 'late'
+            : 'doing';
     }
 
     /**

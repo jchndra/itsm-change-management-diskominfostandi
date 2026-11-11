@@ -45,7 +45,7 @@ trait ValidatesChangeRequest
             'legal_basis.required' => 'Dasar hukum wajib diisi.',
             'change_risk.required' => 'Risiko perubahan wajib diisi.',
             'risk_event.Illuminate\Validation\Rules\Enum' => 'Register risiko tidak valid.',
-            'head_of_department_approved.accepted' => 'Pernyataan persetujuan Kepala Dinas wajib dikonfirmasi sebelum mengajukan RFC.',
+            'head_of_department_approved.accepted' => 'Pernyataan persetujuan Pimpinan (Eselon II) wajib dikonfirmasi sebelum mengajukan RFC.',
             'attachments.max' => 'Maksimal 5 lampiran per RFC.',
             'attachments.*.mimes' => 'Lampiran harus berformat PDF.',
             'attachments.*.max' => 'Setiap lampiran maksimal 5 MB.',

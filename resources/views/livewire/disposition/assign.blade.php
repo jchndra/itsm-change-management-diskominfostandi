@@ -62,21 +62,23 @@
                     </p>
                 </div>
             @endif
-            <div>
-                <span class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Persetujuan Kepala Dinas</span>
-                <p class="font-medium text-slate-800">
-                    @if ($rfc->head_of_department_approved)
-                        Disetujui
-                        @if ($rfc->head_of_department_approved_at)
-                            <span class="block text-xs text-slate-500">
-                                {{ $rfc->head_of_department_approved_at->copy()->locale('id')->translatedFormat('d M Y, H:i') }}
-                            </span>
+            @can('viewLeadershipApproval', $rfc)
+                <div>
+                    <span class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Persetujuan Pimpinan (Eselon II)</span>
+                    <p class="font-medium text-slate-800">
+                        @if ($rfc->head_of_department_approved)
+                            Disetujui
+                            @if ($rfc->head_of_department_approved_at)
+                                <span class="block text-xs text-slate-500">
+                                    {{ $rfc->head_of_department_approved_at->copy()->locale('id')->translatedFormat('d M Y, H:i') }}
+                                </span>
+                            @endif
+                        @else
+                            Belum ada pernyataan persetujuan
                         @endif
-                    @else
-                        Belum ada pernyataan persetujuan
-                    @endif
-                </p>
-            </div>
+                    </p>
+                </div>
+            @endcan
             <div class="md:col-span-2">
                 <span class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Detail Perubahan</span>
                 <p class="whitespace-pre-wrap text-slate-700">{{ $rfc->description ?: '-' }}</p>
