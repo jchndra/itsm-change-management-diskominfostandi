@@ -171,7 +171,7 @@ class ListChangeRequests extends Component
             'applications' => Application::orderBy('name')->get(['id', 'name']),
             'opds' => Opd::orderBy('name')->get(['id', 'name']),
             'statuses' => collect(RfcStatus::cases())->mapWithKeys(
-                fn (RfcStatus $status) => [$status->value => $status->label()]
+                fn (RfcStatus $status) => [$status->value => $status->filterLabel()]
             ),
             'changeTypes' => [
                 'standard' => 'Standard',

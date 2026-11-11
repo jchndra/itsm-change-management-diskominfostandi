@@ -126,6 +126,20 @@ it('memfilter daftar RFC berdasarkan pencarian, status, jenis, aplikasi, unit ke
         ->assertSee($rfcTiga->rfc_number);
 });
 
+it('menampilkan label status yang unik pada filter daftar RFC', function () {
+    $admin = penggunaFilter('Admin');
+
+    $this->actingAs($admin);
+
+    $statuses = Livewire::test(ListChangeRequests::class)
+        ->assertOk()
+        ->viewData('statuses');
+
+    expect($statuses[RfcStatus::TICKET_CREATED->value])->toBe('Sedang Ditinjau')
+        ->and($statuses[RfcStatus::RETURNED_TO_ADMIN->value])->toBe('Dikembalikan ke Admin')
+        ->and($statuses->values()->unique()->count())->toBe(count(RfcStatus::cases()));
+});
+
 it('mencari draft menggunakan identitas tampilan Draft #<id>', function () {
     $admin = penggunaFilter('Admin');
     $pemohon = penggunaFilter('Pemohon');

@@ -44,6 +44,18 @@ enum RfcStatus: string
         };
     }
 
+    /**
+     * Label untuk opsi filter agar status yang berbagi label badge
+     * (sedang ditinjau dan dikembalikan ke Admin) tetap dapat dibedakan.
+     */
+    public function filterLabel(): string
+    {
+        return match ($this) {
+            self::RETURNED_TO_ADMIN => 'Dikembalikan ke Admin',
+            default => $this->label(),
+        };
+    }
+
     public function badgeClasses(): string
     {
         return match ($this) {

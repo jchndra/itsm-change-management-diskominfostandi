@@ -152,7 +152,7 @@ class DeletionHistory extends Component
             'deletedRfcs' => $deletedRfcs,
             'selectedRfc' => $selectedRfc,
             'statuses' => collect(RfcStatus::cases())->mapWithKeys(
-                fn (RfcStatus $status) => [$status->value => $status->label()]
+                fn (RfcStatus $status) => [$status->value => $status->filterLabel()]
             ),
             'isStaff' => $user->can('rfc.view_all'),
         ])->title('Riwayat Penghapusan');
