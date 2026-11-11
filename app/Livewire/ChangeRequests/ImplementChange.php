@@ -92,7 +92,7 @@ class ImplementChange extends Component
         'files.*.file' => 'Berkas bukti tidak valid.',
         'files.*.max' => 'Ukuran setiap berkas bukti maksimal 5 MB.',
         'files.*.mimetypes' => 'Berkas bukti harus berformat PDF.',
-        'confirmed.accepted' => 'Konfirmasi pemeriksaan data dan bukti wajib dicentang.',
+        'confirmed.accepted' => 'Persetujuan penyelesaian wajib dicentang.',
     ];
 
     public function mount(ChangeRequest $rfc): void
@@ -169,6 +169,11 @@ class ImplementChange extends Component
 
     public function render(): View
     {
-        return view('livewire.change-requests.implement-change');
+        /** @var User $user */
+        $user = Auth::user();
+
+        return view('livewire.change-requests.implement-change', [
+            'releaseTask' => $this->rfc->releaseTaskFor($user),
+        ]);
     }
 }
