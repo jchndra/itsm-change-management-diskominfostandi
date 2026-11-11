@@ -315,27 +315,27 @@
                             <input type="search" name="q" value="{{ request('q') }}"
                                 placeholder="Cari RFC, nomor tiket, atau kata kunci..."
                                 class="h-11 w-full rounded-full border border-slate-200 bg-slate-100/70 pl-11 pr-12 text-sm text-slate-700 placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-100">
-                            <button type="submit"
+                            <!-- <button type="submit"
                                 class="absolute right-2.5 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full text-slate-400 transition hover:bg-white hover:text-blue-600"
                                 aria-label="Cari">
                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="m21 21-4.35-4.35M17 10.5a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" />
                                 </svg>
-                            </button>
+                            </button> -->
                         </div>
                     </form>
 
                     <div class="ml-auto flex items-center gap-1.5 sm:gap-3">
                         {{-- Pencarian mobile --}}
-                        <button type="button" x-on:click="mobileSearch = !mobileSearch"
+                        <!-- <button type="button" x-on:click="mobileSearch = !mobileSearch"
                             class="grid h-10 w-10 place-items-center rounded-full text-slate-500 hover:bg-slate-100 md:hidden"
                             aria-label="Cari">
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="m21 21-4.35-4.35M17 10.5a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" />
                             </svg>
-                        </button>
+                        </button> -->
 
                         {{-- Notifikasi --}}
                         <div class="relative"
