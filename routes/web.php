@@ -9,6 +9,7 @@ use App\Livewire\Admin\ReleaseTeamAccounts;
 use App\Livewire\Admin\Users;
 use App\Livewire\Auth\Login;
 use App\Livewire\Auth\Register;
+use App\Livewire\Calendar\ReleaseCalendar;
 use App\Livewire\ChangeRequests\AssessRisk;
 use App\Livewire\ChangeRequests\CloseRfc;
 use App\Livewire\ChangeRequests\CreateChangeRequest;
@@ -74,6 +75,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/release-team/dashboard', ReleaseTeamDashboard::class)
         ->middleware('can:rfc.view_assigned')
         ->name('release-team.dashboard');
+
+    Route::get('/kalender', ReleaseCalendar::class)->name('release-calendar.index');
 
     Route::get('/admin/release-team-accounts', ReleaseTeamAccounts::class)
         ->middleware('can:viewAny,App\Models\ReleaseTeamMember')

@@ -4,6 +4,7 @@ use App\Enums\RfcStatus;
 use App\Exceptions\ReleaseTaskProgressException;
 use App\Livewire\ChangeRequests\ImplementChange;
 use App\Livewire\ChangeRequests\ShowChangeRequest;
+use App\Models\Application;
 use App\Models\ChangeRequest;
 use App\Models\ReleaseTask;
 use App\Models\ReleaseTeamMember;
@@ -323,4 +324,161 @@ it('mengisi hasil implementasi dari parameter kueri hasil', function () {
         ->withQueryParams(['hasil' => 'rolled_back'])
         ->test(ImplementChange::class, ['rfc' => $rfc])
         ->assertSet('implementation_result', 'rolled_back');
+});
+
+it('menyimpan rencana mulai pada estimasi', function () {
+    [$user, $rfc, $task] = releaseTaskProgressSetup();
+
+    $plannedStart = now('Asia/Jakarta')->startOfDay()->addDays(3);
+
+    app(ReleaseTaskProgressService::class)->setEstimate($task, $user, 5, $plannedStart);
+
+    expect($task->fresh()->planned_start_on->toDateString())->toBe($plannedStart->toDateString());
+});
+
+it('menolak rencana mulai yang sudah lewat', function () {
+    [$user, $rfc, $task] = releaseTaskProgressSetup();
+
+    expect(fn () => app(ReleaseTaskProgressService::class)
+        ->setEstimate($task, $user, 5, now('Asia/Jakarta')->startOfDay()->subDay()))
+        ->toThrow(ReleaseTaskProgressException::class);
+
+    expect($task->fresh()->planned_start_on)->toBeNull();
+});
+
+it('menolak rencana mulai lebih dari 60 hari ke depan', function () {
+    [$user, $rfc, $task] = releaseTaskProgressSetup();
+
+    expect(fn () => app(ReleaseTaskProgressService::class)
+        ->setEstimate($task, $user, 5, now('Asia/Jakarta')->startOfDay()->addDays(61)))
+        ->toThrow(ReleaseTaskProgressException::class);
+
+    expect($task->fresh()->planned_start_on)->toBeNull();
+});
+
+it('menghitung jendela jadwal sesuai status tugas', function () {
+    Carbon::setTestNow(Carbon::parse('2026-11-11 10:00:00', 'Asia/Jakarta'));
+
+    $withoutEstimate = ReleaseTask::factory()->make([
+        'execution_status' => 'pending',
+        'estimated_days' => null,
+        'planned_start_on' => null,
+    ]);
+    expect($withoutEstimate->scheduleWindow())->toBeNull();
+
+    $planned = ReleaseTask::factory()->make([
+        'execution_status' => 'pending',
+        'estimated_days' => 3,
+        'planned_start_on' => '2026-11-12',
+    ]);
+    [$plannedStart, $plannedEnd] = $planned->scheduleWindow();
+    expect($plannedStart->toDateString())->toBe('2026-11-12')
+        ->and($plannedEnd->toDateString())->toBe('2026-11-15');
+
+    $todayStart = ReleaseTask::factory()->make([
+        'execution_status' => 'pending',
+        'estimated_days' => 2,
+        'planned_start_on' => null,
+    ]);
+    [$todayStartDate, $todayEndDate] = $todayStart->scheduleWindow();
+    expect($todayStartDate->toDateString())->toBe('2026-11-11')
+        ->and($todayEndDate->toDateString())->toBe('2026-11-13');
+
+    $running = ReleaseTask::factory()->make([
+        'execution_status' => 'in_progress',
+        'scheduled_start' => '2026-11-10 08:00:00',
+        'scheduled_end' => '2026-11-12 08:00:00',
+    ]);
+    [$runningStart, $runningEnd] = $running->scheduleWindow();
+    expect($runningStart->format('Y-m-d H:i'))->toBe('2026-11-10 08:00')
+        ->and($runningEnd->format('Y-m-d H:i'))->toBe('2026-11-12 08:00');
+
+    $finished = ReleaseTask::factory()->make([
+        'execution_status' => 'successful',
+        'scheduled_start' => '2026-11-10 08:00:00',
+        'scheduled_end' => '2026-11-12 08:00:00',
+    ]);
+    expect($finished->scheduleWindow())->toBeNull();
+});
+
+it('mendeteksi bentrok jadwal pada aplikasi yang sama', function () {
+    [$user, $rfc, $task] = releaseTaskProgressSetup();
+
+    $application = Application::factory()->create();
+    $rfc->update(['application_id' => $application->id]);
+
+    $otherRfc = ChangeRequest::factory()->create(['application_id' => $application->id]);
+    $otherMember = ReleaseTeamMember::factory()->create(['is_active' => true]);
+
+    ReleaseTask::factory()->create([
+        'change_request_id' => $otherRfc->id,
+        'release_team_member_id' => $otherMember->id,
+        'execution_status' => 'pending',
+        'estimated_days' => 5,
+        'planned_start_on' => '2026-11-12',
+    ]);
+
+    $conflicts = app(ReleaseTaskProgressService::class)->conflictsFor(
+        $task->fresh(['changeRequest']),
+        Carbon::parse('2026-11-10'),
+        Carbon::parse('2026-11-14'),
+    );
+
+    expect($conflicts)->toHaveCount(1)
+        ->and($conflicts->first()->change_request_id)->toBe($otherRfc->id);
+});
+
+it('mengabaikan jadwal pada aplikasi berbeda saat mendeteksi bentrok', function () {
+    [$user, $rfc, $task] = releaseTaskProgressSetup();
+
+    $rfc->update(['application_id' => Application::factory()->create()->id]);
+
+    $otherRfc = ChangeRequest::factory()->create([
+        'application_id' => Application::factory()->create()->id,
+    ]);
+    $otherMember = ReleaseTeamMember::factory()->create(['is_active' => true]);
+
+    ReleaseTask::factory()->create([
+        'change_request_id' => $otherRfc->id,
+        'release_team_member_id' => $otherMember->id,
+        'execution_status' => 'pending',
+        'estimated_days' => 5,
+        'planned_start_on' => '2026-11-12',
+    ]);
+
+    $conflicts = app(ReleaseTaskProgressService::class)->conflictsFor(
+        $task->fresh(['changeRequest']),
+        Carbon::parse('2026-11-10'),
+        Carbon::parse('2026-11-14'),
+    );
+
+    expect($conflicts)->toBeEmpty();
+});
+
+it('mengabaikan RFC terhapus saat mendeteksi bentrok', function () {
+    [$user, $rfc, $task] = releaseTaskProgressSetup();
+
+    $application = Application::factory()->create();
+    $rfc->update(['application_id' => $application->id]);
+
+    $otherRfc = ChangeRequest::factory()->create(['application_id' => $application->id]);
+    $otherMember = ReleaseTeamMember::factory()->create(['is_active' => true]);
+
+    ReleaseTask::factory()->create([
+        'change_request_id' => $otherRfc->id,
+        'release_team_member_id' => $otherMember->id,
+        'execution_status' => 'pending',
+        'estimated_days' => 5,
+        'planned_start_on' => '2026-11-12',
+    ]);
+
+    $otherRfc->delete();
+
+    $conflicts = app(ReleaseTaskProgressService::class)->conflictsFor(
+        $task->fresh(['changeRequest']),
+        Carbon::parse('2026-11-10'),
+        Carbon::parse('2026-11-14'),
+    );
+
+    expect($conflicts)->toBeEmpty();
 });

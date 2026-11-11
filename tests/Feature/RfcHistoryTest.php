@@ -2,6 +2,7 @@
 
 use App\Enums\DecisionStatus;
 use App\Enums\RfcStatus;
+use App\Livewire\ChangeRequests\ProcessHistoryTimeline;
 use App\Livewire\ChangeRequests\ReviewCompleteness;
 use App\Livewire\ChangeRequests\ShowChangeRequest;
 use App\Livewire\Requester\Dashboard;
@@ -215,12 +216,12 @@ test('riwayat proses pemohon mengikuti aksi Admin dan Change Manager tanpa muat 
 
     $this->actingAs($this->pemohon);
 
-    $component = Livewire::test(ShowChangeRequest::class, ['rfc' => $rfc->fresh()])
+    $component = Livewire::test(ProcessHistoryTimeline::class, ['rfc' => $rfc->fresh()])
         ->assertOk()
         ->assertSee('RFC diajukan')
         ->assertDontSee('Diverifikasi Admin dan diteruskan ke Change Manager');
 
-    expect($component->html())->toContain('wire:poll.30s="refreshProcessHistory"');
+    expect($component->html())->toContain('wire:poll.30s.visible="refreshProcessHistory"');
 
     RfcStatusTransition::transitionTo($rfc->fresh(), RfcStatus::TICKET_CREATED, $this->admin);
 

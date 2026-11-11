@@ -9,6 +9,8 @@ use App\Models\ReleaseTask;
 use App\Models\ReleaseTaskUpdate;
 use App\Models\User;
 use App\StateMachines\RfcStatusTransition;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class ReleaseTaskProgressService
@@ -16,6 +18,8 @@ class ReleaseTaskProgressService
     public const MIN_DAYS = 1;
 
     public const MAX_DAYS = 90;
+
+    public const MAX_PLANNED_START_DAYS = 60;
 
     public const MIN_REASON_LENGTH = 10;
 
@@ -25,18 +29,24 @@ class ReleaseTaskProgressService
 
     public const MAX_NOTE_LENGTH = 1000;
 
-    public function setEstimate(ReleaseTask $task, User $actor, int $days): ReleaseTaskUpdate
+    public function setEstimate(ReleaseTask $task, User $actor, int $days, ?Carbon $plannedStart = null): ReleaseTaskUpdate
     {
         $this->validateDays($days);
+        $this->validatePlannedStart($plannedStart);
 
-        $update = DB::transaction(function () use ($task, $actor, $days): ReleaseTaskUpdate {
+        $plannedStartOn = $plannedStart?->copy()->timezone('Asia/Jakarta')->toDateString();
+
+        $update = DB::transaction(function () use ($task, $actor, $days, $plannedStartOn): ReleaseTaskUpdate {
             [$lockedTask, $rfc] = $this->lockTask($task, $actor);
 
             if ($lockedTask->estimated_days !== null) {
                 throw new ReleaseTaskProgressException('Estimasi sudah ditetapkan dan hanya dapat direvisi.');
             }
 
-            $lockedTask->update(['estimated_days' => $days]);
+            $lockedTask->update([
+                'estimated_days' => $days,
+                'planned_start_on' => $plannedStartOn,
+            ]);
 
             $update = $lockedTask->updates()->create([
                 'change_request_id' => $rfc->id,
@@ -49,6 +59,7 @@ class ReleaseTaskProgressService
             $this->logActivity($rfc, $actor, $lockedTask, 'release_progress_estimate_set', 'Estimasi pengerjaan ditetapkan', [
                 'old_estimated_days' => null,
                 'new_estimated_days' => $days,
+                'planned_start_on' => $plannedStartOn,
             ]);
 
             return $update;
@@ -57,6 +68,45 @@ class ReleaseTaskProgressService
         $this->notifyReleaseProgress($update);
 
         return $update;
+    }
+
+    /**
+     * Cari tugas RFC lain pada aplikasi yang sama dengan jendela jadwal beririsan.
+     *
+     * Bentrok tidak memblokir aksi; hasilnya dipakai sebagai peringatan.
+     *
+     * @return Collection<int, ReleaseTask>
+     */
+    public function conflictsFor(ReleaseTask $task, Carbon $start, Carbon $end): Collection
+    {
+        $rfc = $task->changeRequest;
+
+        if ($rfc === null || $rfc->application_id === null) {
+            return new Collection;
+        }
+
+        return ReleaseTask::query()
+            ->with('changeRequest')
+            ->whereKeyNot($task->getKey())
+            ->where('change_request_id', '!=', $task->change_request_id)
+            ->whereIn('execution_status', ['pending', 'in_progress'])
+            ->whereHas('changeRequest', function ($query) use ($rfc): void {
+                $query->where('application_id', $rfc->application_id)
+                    ->whereNull('deleted_at');
+            })
+            ->get()
+            ->filter(function (ReleaseTask $other) use ($start, $end): bool {
+                $window = $other->scheduleWindow();
+
+                if ($window === null) {
+                    return false;
+                }
+
+                [$otherStart, $otherEnd] = $window;
+
+                return $otherStart->lt($end) && $otherEnd->gt($start);
+            })
+            ->values();
     }
 
     public function reviseEstimate(ReleaseTask $task, User $actor, int $newDays, string $reason): ReleaseTaskUpdate
@@ -277,6 +327,26 @@ class ReleaseTaskProgressService
         if ($days < self::MIN_DAYS || $days > self::MAX_DAYS) {
             throw new ReleaseTaskProgressException(
                 'Estimasi harus antara '.self::MIN_DAYS.' dan '.self::MAX_DAYS.' hari.'
+            );
+        }
+    }
+
+    private function validatePlannedStart(?Carbon $plannedStart): void
+    {
+        if ($plannedStart === null) {
+            return;
+        }
+
+        $today = now('Asia/Jakarta')->startOfDay();
+        $planned = $plannedStart->copy()->timezone('Asia/Jakarta')->startOfDay();
+
+        if ($planned->lt($today)) {
+            throw new ReleaseTaskProgressException('Rencana mulai tidak boleh di masa lalu.');
+        }
+
+        if ($planned->gt($today->copy()->addDays(self::MAX_PLANNED_START_DAYS))) {
+            throw new ReleaseTaskProgressException(
+                'Rencana mulai maksimal '.self::MAX_PLANNED_START_DAYS.' hari ke depan.'
             );
         }
     }

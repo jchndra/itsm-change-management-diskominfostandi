@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 class ReleaseTask extends Model
 {
@@ -17,6 +18,7 @@ class ReleaseTask extends Model
         'assigned_by_id',
         'instruction',
         'estimated_days',
+        'planned_start_on',
         'scheduled_start',
         'scheduled_end',
         'execution_status',
@@ -28,6 +30,7 @@ class ReleaseTask extends Model
     {
         return [
             'estimated_days' => 'integer',
+            'planned_start_on' => 'date',
             'scheduled_start' => 'datetime',
             'scheduled_end' => 'datetime',
             'executed_at' => 'datetime',
@@ -52,5 +55,29 @@ class ReleaseTask extends Model
     public function updates(): HasMany
     {
         return $this->hasMany(ReleaseTaskUpdate::class)->orderByDesc('created_at');
+    }
+
+    /**
+     * Jendela jadwal tugas untuk deteksi bentrok.
+     *
+     * @return array{0: Carbon, 1: Carbon}|null
+     */
+    public function scheduleWindow(): ?array
+    {
+        if ($this->execution_status === 'in_progress') {
+            if ($this->scheduled_start === null || $this->scheduled_end === null) {
+                return null;
+            }
+
+            return [$this->scheduled_start->copy(), $this->scheduled_end->copy()];
+        }
+
+        if ($this->execution_status === 'pending' && $this->estimated_days !== null) {
+            $start = $this->planned_start_on?->copy() ?? today();
+
+            return [$start, $start->copy()->addDays($this->estimated_days)];
+        }
+
+        return null;
     }
 }
