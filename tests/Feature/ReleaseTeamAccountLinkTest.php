@@ -226,9 +226,15 @@ it('menyemai tiga akun Tim Rilis dummy secara idempoten', function () {
         ->and($members->pluck('user_id')->unique())->toHaveCount(3)
         ->and($members->pluck('name')->sort()->values()->all())->toBe([
             'Tim Rilis Aplikasi',
-            'Tim Rilis Database',
             'Tim Rilis Infrastruktur Jaringan',
-        ]);
+            'Tim Rilis Pusat Data',
+        ])
+        ->and($members->pluck('role_title')->sort()->values()->all())->toBe([
+            'Data Center Engineer',
+            'DevOps Engineer',
+            'System Administrator',
+        ])
+        ->and($members->every(fn (ReleaseTeamMember $member): bool => ! str_contains($member->role_title, 'Sample')))->toBeTrue();
 
     foreach ($members as $member) {
         $user = $member->user;

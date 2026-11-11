@@ -24,7 +24,7 @@ class ReleaseTeamMemberFactory extends Factory
             'nip_or_nik' => fake()->numerify('################'),
             'role_title' => fake()->randomElement([
                 'DevOps Engineer',
-                'Database Administrator',
+                'Data Center Engineer',
                 'Application Support',
             ]),
             'phone_number' => fake()->numerify('08##########'),

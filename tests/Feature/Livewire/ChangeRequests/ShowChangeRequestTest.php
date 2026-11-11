@@ -124,7 +124,7 @@ it('shows the edit button only for the owner with an editable status', function 
         ->assertForbidden();
 });
 
-it('menampilkan panel persetujuan pimpinan hanya untuk change manager', function () {
+it('tidak menampilkan panel persetujuan pimpinan pada detail RFC', function () {
     $rfc = ChangeRequest::factory()->create([
         'status' => RfcStatus::TICKET_CREATED->value,
         'head_of_department_approved' => true,
@@ -138,9 +138,9 @@ it('menampilkan panel persetujuan pimpinan hanya untuk change manager', function
 
     Livewire::test(ShowChangeRequest::class, ['rfc' => $rfc])
         ->assertOk()
-        ->assertSee('Persetujuan Pimpinan (Eselon II)')
-        ->assertSee('Disetujui Pimpinan (Eselon II)')
-        ->assertSee('Waktu Persetujuan');
+        ->assertDontSee('Persetujuan Pimpinan (Eselon II)')
+        ->assertDontSee('Disetujui Pimpinan (Eselon II)')
+        ->assertDontSee('Waktu Persetujuan');
 });
 
 it('menyembunyikan panel persetujuan pimpinan dari pemohon pemilik RFC', function () {

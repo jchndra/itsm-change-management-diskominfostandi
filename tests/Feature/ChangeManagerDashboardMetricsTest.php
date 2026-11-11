@@ -125,7 +125,7 @@ it('menyemai sepuluh RFC contoh secara idempoten untuk dashboard change manager'
     User::factory()->create(['email' => 'cm@example.com']);
     Application::factory()->count(2)->create();
 
-    foreach (['Tim Rilis Aplikasi', 'Tim Rilis Database', 'Tim Rilis Infrastruktur Jaringan'] as $name) {
+    foreach (['Tim Rilis Aplikasi', 'Tim Rilis Pusat Data', 'Tim Rilis Infrastruktur Jaringan'] as $name) {
         ReleaseTeamMember::factory()->create([
             'name' => $name,
             'is_active' => true,

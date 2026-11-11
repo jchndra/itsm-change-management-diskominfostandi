@@ -25,7 +25,7 @@ class SampleRfcSeeder extends Seeder
      */
     private const RELEASE_TEAM_NAMES = [
         'Tim Rilis Aplikasi',
-        'Tim Rilis Database',
+        'Tim Rilis Pusat Data',
         'Tim Rilis Infrastruktur Jaringan',
     ];
 
@@ -282,7 +282,7 @@ class SampleRfcSeeder extends Seeder
                 'change_risk' => 'Pembuatan indeks dapat meningkatkan beban tulis sementara.',
                 'impact_description' => 'Laporan persediaan melambat selama proses optimasi berlangsung.',
                 'task' => [
-                    'member' => 'Tim Rilis Database',
+                    'member' => 'Tim Rilis Pusat Data',
                     'execution_status' => 'in_progress',
                     'instruction' => 'Buat indeks baru dan perbarui statistik tabel persediaan.',
                     'scheduled_start' => now()->subDay(),
@@ -348,7 +348,7 @@ class SampleRfcSeeder extends Seeder
                 'change_risk' => 'Migrasi skema dapat gagal apabila data lama tidak konsisten.',
                 'impact_description' => 'Layanan publik berisiko mengalami galat saat migrasi skema.',
                 'task' => [
-                    'member' => 'Tim Rilis Database',
+                    'member' => 'Tim Rilis Pusat Data',
                     'execution_status' => 'rolled_back',
                     'instruction' => 'Jalankan migrasi skema dan lakukan verifikasi integritas data.',
                     'scheduled_start' => now()->subDays(12),

@@ -623,40 +623,40 @@ test('tombol catat implementasi hanya untuk Tim Rilis yang ditugaskan dan CM mem
 
     Livewire::test(ShowChangeRequest::class, ['rfc' => $approved])
         ->assertOk()
-        ->assertSee('Catat Implementasi')
+        ->assertSee('Selesaikan Pekerjaan')
         ->assertSee(route('change-requests.implement', $approved));
 
     $this->actingAs($implementedTeam);
 
     Livewire::test(ShowChangeRequest::class, ['rfc' => $implemented])
         ->assertOk()
-        ->assertDontSee('Catat Implementasi');
+        ->assertDontSee('Selesaikan Pekerjaan');
 
     $this->actingAs($cm);
 
     Livewire::test(ShowChangeRequest::class, ['rfc' => $unassignedApproved])
         ->assertOk()
         ->assertSee('Disposisi')
-        ->assertDontSee('Catat Implementasi')
+        ->assertDontSee('Selesaikan Pekerjaan')
         ->assertDontSee(route('change-requests.implement', $unassignedApproved));
 
     Livewire::test(ShowChangeRequest::class, ['rfc' => $approved])
         ->assertOk()
         ->assertSee('Pantau Pelaksanaan')
-        ->assertDontSee('Catat Implementasi')
+        ->assertDontSee('Selesaikan Pekerjaan')
         ->assertDontSee(route('change-requests.implement', $approved));
 
     $this->actingAs($admin);
 
     Livewire::test(ShowChangeRequest::class, ['rfc' => $approved])
         ->assertOk()
-        ->assertDontSee('Catat Implementasi');
+        ->assertDontSee('Selesaikan Pekerjaan');
 
     $this->actingAs($requester);
 
     Livewire::test(ShowChangeRequest::class, ['rfc' => $approved])
         ->assertOk()
-        ->assertDontSee('Catat Implementasi');
+        ->assertDontSee('Selesaikan Pekerjaan');
 });
 
 test('RFC lama tanpa data implementasi tetap tampil tanpa error', function () {

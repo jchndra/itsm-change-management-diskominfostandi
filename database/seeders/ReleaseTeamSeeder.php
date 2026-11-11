@@ -32,17 +32,17 @@ class ReleaseTeamSeeder extends Seeder
             [
                 'name' => 'Tim Rilis Aplikasi',
                 'email' => 'aplikasi@gmail.com',
-                'role_title' => 'DevOps Engineer Sample',
+                'role_title' => 'DevOps Engineer',
             ],
             [
-                'name' => 'Tim Rilis Database',
+                'name' => 'Tim Rilis Pusat Data',
                 'email' => 'database@gmail.com',
-                'role_title' => 'Database Administrator Sample',
+                'role_title' => 'Data Center Engineer',
             ],
             [
                 'name' => 'Tim Rilis Infrastruktur Jaringan',
                 'email' => 'jaringan@gmail.com',
-                'role_title' => 'System Administrator Sample',
+                'role_title' => 'System Administrator',
             ],
         ];
 
