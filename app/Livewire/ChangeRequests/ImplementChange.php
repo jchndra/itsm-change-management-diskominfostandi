@@ -26,10 +26,6 @@ class ImplementChange extends Component
 
     public string $implementation_result = '';
 
-    public string $started_at = '';
-
-    public string $finished_at = '';
-
     public string $executor_name = '';
 
     public string $report_source = '';
@@ -58,8 +54,6 @@ class ImplementChange extends Component
 
         return [
             'implementation_result' => ['required', Rule::in(ImplementationResult::values())],
-            'started_at' => ['required', 'date', 'before_or_equal:now'],
-            'finished_at' => ['required', 'date', 'after_or_equal:started_at', 'before_or_equal:now'],
             'executor_name' => ['required', 'string', 'max:255'],
             'report_source' => ['required', 'string', 'max:255'],
             'summary' => ['required', 'string'],
@@ -74,7 +68,7 @@ class ImplementChange extends Component
                 'string',
             ],
             'files' => ['required', 'array', 'min:1', 'max:'.RfcImplementationService::MAX_FILES],
-            'files.*' => ['file', 'max:5120', 'mimetypes:application/pdf,image/png,image/jpeg,image/jpg'],
+            'files.*' => ['file', 'max:5120', 'mimetypes:application/pdf'],
             'confirmed' => ['accepted'],
         ];
     }
@@ -82,13 +76,6 @@ class ImplementChange extends Component
     protected array $messages = [
         'implementation_result.required' => 'Hasil implementasi wajib dipilih.',
         'implementation_result.in' => 'Hasil implementasi tidak dikenali.',
-        'started_at.required' => 'Waktu mulai pelaksanaan wajib diisi.',
-        'started_at.date' => 'Waktu mulai pelaksanaan tidak valid.',
-        'started_at.before_or_equal' => 'Waktu mulai pelaksanaan tidak boleh di masa depan.',
-        'finished_at.required' => 'Waktu selesai pelaksanaan wajib diisi.',
-        'finished_at.date' => 'Waktu selesai pelaksanaan tidak valid.',
-        'finished_at.after_or_equal' => 'Waktu selesai tidak boleh lebih awal dari waktu mulai.',
-        'finished_at.before_or_equal' => 'Waktu selesai pelaksanaan tidak boleh di masa depan.',
         'executor_name.required' => 'Pelaksana perubahan wajib diisi.',
         'executor_name.max' => 'Nama pelaksana perubahan maksimal 255 karakter.',
         'report_source.required' => 'Sumber laporan wajib diisi.',
@@ -104,7 +91,7 @@ class ImplementChange extends Component
         'files.max' => 'Jumlah berkas bukti maksimal 5 file.',
         'files.*.file' => 'Berkas bukti tidak valid.',
         'files.*.max' => 'Ukuran setiap berkas bukti maksimal 5 MB.',
-        'files.*.mimetypes' => 'Berkas bukti harus berformat PDF, PNG, JPG, atau JPEG.',
+        'files.*.mimetypes' => 'Berkas bukti harus berformat PDF.',
         'confirmed.accepted' => 'Konfirmasi pemeriksaan data dan bukti wajib dicentang.',
     ];
 
@@ -155,8 +142,6 @@ class ImplementChange extends Component
 
         $data = [
             'implementation_result' => $this->implementation_result,
-            'started_at' => $this->started_at,
-            'finished_at' => $this->finished_at,
             'executor_name' => $this->executor_name,
             'report_source' => $this->report_source,
             'summary' => $this->summary,

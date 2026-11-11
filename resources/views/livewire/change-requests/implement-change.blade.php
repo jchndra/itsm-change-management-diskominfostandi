@@ -43,24 +43,6 @@
 
         <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>
-                <label for="started_at" class="mb-1 block text-sm font-semibold text-slate-700">Waktu Mulai *</label>
-                <input id="started_at" type="datetime-local" wire:model="started_at"
-                    class="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500">
-                @error('started_at')
-                    <span class="mt-1 block text-xs text-rose-500">{{ $message }}</span>
-                @enderror
-            </div>
-
-            <div>
-                <label for="finished_at" class="mb-1 block text-sm font-semibold text-slate-700">Waktu Selesai *</label>
-                <input id="finished_at" type="datetime-local" wire:model="finished_at"
-                    class="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500">
-                @error('finished_at')
-                    <span class="mt-1 block text-xs text-rose-500">{{ $message }}</span>
-                @enderror
-            </div>
-
-            <div>
                 <label for="executor_name" class="mb-1 block text-sm font-semibold text-slate-700">Pelaksana Perubahan *</label>
                 <input id="executor_name" type="text" wire:model="executor_name"
                     placeholder="Contoh: Tim Rilis Diskominfostandi"
@@ -137,8 +119,8 @@
 
         <div class="space-y-3">
             <div>
-                <label for="files" class="mb-1 block text-sm font-semibold text-slate-700">Bukti Pendukung (PDF, PNG, JPG, JPEG - Maks. 5 file, 5 MB per file) *</label>
-                <input id="files" type="file" wire:model="files" multiple accept=".pdf,.png,.jpg,.jpeg"
+                <label for="files" class="mb-1 block text-sm font-semibold text-slate-700">Bukti Pendukung (PDF - Maks. 5 file, 5 MB per file) *</label>
+                <input id="files" type="file" wire:model="files" multiple accept=".pdf"
                     class="w-full rounded-lg border border-slate-300 px-3.5 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500">
                 <div wire:loading wire:target="files" class="mt-1 text-xs text-indigo-600">Mengunggah file...</div>
                 @error('files')

@@ -12,7 +12,6 @@ use App\Models\Evidence;
 use App\Models\User;
 use App\StateMachines\RfcStatusTransition;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -29,9 +28,6 @@ class RfcImplementationService
      */
     private const MIME_EXTENSIONS = [
         'application/pdf' => 'pdf',
-        'image/png' => 'png',
-        'image/jpeg' => 'jpg',
-        'image/jpg' => 'jpg',
     ];
 
     /**
@@ -49,17 +45,6 @@ class RfcImplementationService
 
         if (! $result) {
             throw new RfcImplementationException('Hasil implementasi wajib dipilih dengan benar.');
-        }
-
-        $startedAt = $this->parseDate($data['started_at'] ?? null, 'Waktu mulai');
-        $finishedAt = $this->parseDate($data['finished_at'] ?? null, 'Waktu selesai');
-
-        if ($startedAt->greaterThan(now()) || $finishedAt->greaterThan(now())) {
-            throw new RfcImplementationException('Waktu pelaksanaan tidak boleh melewati waktu saat ini.');
-        }
-
-        if ($finishedAt->lessThan($startedAt)) {
-            throw new RfcImplementationException('Waktu selesai tidak boleh lebih awal dari waktu mulai.');
         }
 
         $executorName = trim((string) ($data['executor_name'] ?? ''));
@@ -112,8 +97,6 @@ class RfcImplementationService
                 $rfc,
                 $actor,
                 $result,
-                $startedAt,
-                $finishedAt,
                 $executorName,
                 $reportSource,
                 $summary,
@@ -150,10 +133,31 @@ class RfcImplementationService
 
                 $releaseTask = $lockedRfc->releaseTaskFor($actor);
 
+                $releaseTask = $releaseTask
+                    ? $lockedRfc->releaseTasks()->whereKey($releaseTask->getKey())->lockForUpdate()->first()
+                    : null;
+
                 if ($releaseTask === null || $releaseTask->execution_status !== 'in_progress') {
                     throw new RfcImplementationException(
                         'Mulai pengerjaan dan isi estimasi terlebih dahulu sebelum mencatat hasil implementasi.'
                     );
+                }
+
+                $finishedAt = now()->timezone(config('app.timezone'));
+                $startedAt = $releaseTask->scheduled_start?->copy();
+
+                if ($startedAt === null) {
+                    $startedAt = $releaseTask->updates()
+                        ->where('type', 'started')
+                        ->latest('created_at')
+                        ->first()
+                        ?->created_at?->copy();
+                }
+
+                $startedAt ??= $finishedAt->copy();
+
+                if ($startedAt->greaterThan($finishedAt)) {
+                    $startedAt = $finishedAt->copy();
                 }
 
                 // Policy yang sama tetap ditegakkan di service agar pemanggilan
@@ -300,21 +304,8 @@ class RfcImplementationService
             $mimeType = strtolower((string) $file->getMimeType());
 
             if (! isset(self::MIME_EXTENSIONS[$mimeType])) {
-                throw new RfcImplementationException('Berkas bukti harus berformat PDF, PNG, JPG, atau JPEG.');
+                throw new RfcImplementationException('Berkas bukti harus berformat PDF.');
             }
-        }
-    }
-
-    private function parseDate(mixed $value, string $label): Carbon
-    {
-        if (blank($value)) {
-            throw new RfcImplementationException($label.' wajib diisi.');
-        }
-
-        try {
-            return Carbon::parse($value)->setTimezone(config('app.timezone'));
-        } catch (Throwable) {
-            throw new RfcImplementationException($label.' tidak valid.');
         }
     }
 

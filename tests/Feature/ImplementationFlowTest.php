@@ -14,6 +14,7 @@ use App\Models\ChangeRequest;
 use App\Models\ChangeRequestImplementation;
 use App\Models\Evidence;
 use App\Models\ReleaseTask;
+use App\Models\ReleaseTaskUpdate;
 use App\Models\ReleaseTeamMember;
 use App\Models\User;
 use App\Services\RfcClosureService;
@@ -63,8 +64,6 @@ function validImplementationFields(array $overrides = []): array
 {
     return array_merge([
         'implementation_result' => ImplementationResult::SUCCESS->value,
-        'started_at' => now()->subHour()->format('Y-m-d\TH:i'),
-        'finished_at' => now()->format('Y-m-d\TH:i'),
         'executor_name' => 'Tim Rilis Diskominfostandi',
         'report_source' => 'Laporan tertulis Tim Rilis',
         'summary' => 'Perubahan berhasil diterapkan pada server produksi.',
@@ -289,27 +288,92 @@ test('validasi menolak isian wajib kosong tanpa bukti dan tanpa konfirmasi', fun
         ->and(Evidence::count())->toBe(0);
 });
 
-test('validasi menolak waktu masa depan dan waktu selesai sebelum waktu mulai', function () {
+test('waktu mulai implementasi memakai jadwal tugas rilis dan waktu selesai memakai saat pencatatan', function () {
+    $this->travelTo(now()->startOfSecond());
+
+    $rfc = implementationRfc(RfcStatus::APPROVED);
+    $scheduledStart = now()->subHours(2);
+    $team = implementationReleaseTeamActor($rfc, [
+        'scheduled_start' => $scheduledStart,
+        'scheduled_end' => $scheduledStart->copy()->addDays(5),
+    ]);
+
+    $this->actingAs($team);
+
+    Livewire::test(ImplementChange::class, ['rfc' => $rfc])
+        ->set(validImplementationFields())
+        ->set('files', [implementationPdf()])
+        ->call('saveImplementation')
+        ->assertHasNoErrors();
+    $implementation = ChangeRequestImplementation::where('change_request_id', $rfc->id)->sole();
+
+    expect($implementation->started_at->equalTo($scheduledStart))->toBeTrue()
+        ->and($implementation->finished_at->equalTo(now()))->toBeTrue();
+});
+
+test('waktu mulai implementasi jatuh ke riwayat mulai tugas saat jadwal rilis kosong', function () {
+    $this->travelTo(now()->startOfSecond());
+
+    $rfc = implementationRfc(RfcStatus::APPROVED);
+    $team = implementationReleaseTeamActor($rfc, [
+        'scheduled_start' => null,
+        'scheduled_end' => null,
+    ]);
+
+    $startedLoggedAt = now()->subHours(3);
+    $task = $rfc->releaseTasks()->sole();
+
+    ReleaseTaskUpdate::factory()->create([
+        'release_task_id' => $task->id,
+        'change_request_id' => $rfc->id,
+        'user_id' => $team->id,
+        'type' => 'started',
+        'created_at' => $startedLoggedAt,
+        'updated_at' => $startedLoggedAt,
+    ]);
+
+    $this->actingAs($team);
+
+    Livewire::test(ImplementChange::class, ['rfc' => $rfc])
+        ->set(validImplementationFields())
+        ->set('files', [implementationPdf()])
+        ->call('saveImplementation')
+        ->assertHasNoErrors();
+
+    $implementation = ChangeRequestImplementation::where('change_request_id', $rfc->id)->sole();
+
+    expect($implementation->started_at->equalTo($startedLoggedAt))->toBeTrue()
+        ->and($implementation->started_at->lessThanOrEqualTo($implementation->finished_at))->toBeTrue()
+        ->and($implementation->finished_at->equalTo(now()))->toBeTrue();
+});
+
+test('unggahan bukti hanya menerima berkas PDF', function () {
     $rfc = implementationRfc(RfcStatus::APPROVED);
     $team = implementationReleaseTeamActor($rfc);
 
     $this->actingAs($team);
 
-    $component = Livewire::test(ImplementChange::class, ['rfc' => $rfc])
-        ->set(validImplementationFields([
-            'started_at' => now()->addHours(2)->format('Y-m-d\TH:i'),
-            'finished_at' => now()->addHours(3)->format('Y-m-d\TH:i'),
-        ]))
-        ->set('files', [implementationPdf()]);
-
-    $component->call('saveImplementation')
-        ->assertHasErrors(['started_at', 'finished_at']);
-
-    $component
-        ->set('started_at', now()->subHour()->format('Y-m-d\TH:i'))
-        ->set('finished_at', now()->subHours(2)->format('Y-m-d\TH:i'))
+    Livewire::test(ImplementChange::class, ['rfc' => $rfc])
+        ->set(validImplementationFields())
+        ->set('files', [UploadedFile::fake()->create('bukti.png', 100, 'image/png')])
         ->call('saveImplementation')
-        ->assertHasErrors(['finished_at']);
+        ->assertHasErrors(['files.0']);
+
+    Livewire::test(ImplementChange::class, ['rfc' => $rfc])
+        ->set(validImplementationFields())
+        ->set('files', [UploadedFile::fake()->create('bukti.jpg', 100, 'image/jpeg')])
+        ->call('saveImplementation')
+        ->assertHasErrors(['files.0']);
+
+    expect(Evidence::count())->toBe(0);
+
+    Livewire::test(ImplementChange::class, ['rfc' => $rfc])
+        ->set(validImplementationFields())
+        ->set('files', [implementationPdf()])
+        ->call('saveImplementation')
+        ->assertHasNoErrors();
+
+    expect(Evidence::count())->toBe(1);
 });
 
 test('validasi menolak ZIP mime palsu dan berkas lebih dari 5 MB', function () {
