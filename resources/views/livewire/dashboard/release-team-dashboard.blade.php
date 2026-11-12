@@ -5,8 +5,21 @@
         role-label="Tim Rilis" :description="$teamName.' · Antrean pengerjaan RFC yang ditugaskan kepadamu.'"
         :show-greeting="false" :show-meta="false" />
 
-    {{-- Kartu ringkasan --}}
-    <section aria-labelledby="metrik-tim-rilis" class="dashboard-rise dashboard-rise-1">
+    {{-- Tab tampilan --}}
+    <div class="dashboard-rise dashboard-rise-1 inline-flex rounded-full border border-slate-200 bg-white p-1 shadow-sm"
+        role="tablist" aria-label="Tampilan dashboard Tim Rilis">
+        @foreach (['active' => 'Tugas Aktif', 'history' => 'Riwayat'] as $tabKey => $tabLabel)
+            <button type="button" role="tab" wire:click="$set('tab', '{{ $tabKey }}')" wire:loading.attr="disabled"
+                @if ($tab === $tabKey) aria-selected="true" @else aria-selected="false" @endif
+                class="rounded-full px-4 py-1.5 text-xs font-bold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 disabled:cursor-wait {{ $tab === $tabKey ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:text-blue-700' }}">
+                {{ $tabLabel }}
+            </button>
+        @endforeach
+    </div>
+
+    @if ($tab === 'active')
+        {{-- Kartu ringkasan --}}
+        <section aria-labelledby="metrik-tim-rilis" class="dashboard-rise dashboard-rise-1">
         <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
             <div class="flex items-start gap-3">
                 <span class="mt-0.5 h-10 w-1 rounded-full bg-gradient-to-b from-blue-500 via-sky-400 to-amber-300"
@@ -72,30 +85,47 @@
         </div>
     </section>
 
-    {{-- Chip filter --}}
-    <div class="dashboard-rise dashboard-rise-2 flex flex-wrap items-center gap-2" role="group"
-        aria-label="Filter daftar tugas">
-        @foreach ([
-            'all' => ['label' => 'Semua', 'count' => $filterCounts['all']],
-            'late' => ['label' => 'Terlambat', 'count' => $filterCounts['late']],
-            'doing' => ['label' => 'Dikerjakan', 'count' => $filterCounts['doing']],
-            'pending' => ['label' => 'Belum dimulai', 'count' => $filterCounts['pending']],
-        ] as $key => $chip)
-            <button type="button" wire:click="$set('filter', '{{ $key }}')" wire:loading.attr="disabled"
-                @if ($filter === $key) aria-pressed="true" @else aria-pressed="false" @endif
-                class="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 disabled:cursor-wait {{ $filter === $key ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:text-blue-700' }}">
-                {{ $chip['label'] }}
-                <span
-                    class="inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] tabular-nums {{ $filter === $key ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500' }}">
-                    {{ number_format($chip['count'], 0, ',', '.') }}
-                </span>
-            </button>
-        @endforeach
+    {{-- Pencarian dan chip filter --}}
+    <div class="dashboard-rise dashboard-rise-2 flex flex-wrap items-center gap-3">
+        <div class="relative min-w-0 flex-1 sm:max-w-xs">
+            <span class="pointer-events-none absolute inset-y-0 left-0 grid w-9 place-items-center text-slate-400"
+                aria-hidden="true">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="m21 21-4.35-4.35M17 10.5a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" />
+                </svg>
+            </span>
+            <input type="search" wire:model.live.debounce.300ms="search" placeholder="Cari RFC, judul, aplikasi, OPD…"
+                aria-label="Cari tugas Tim Rilis"
+                class="w-full rounded-full border border-slate-200 bg-white py-1.5 pl-9 pr-3 text-xs font-medium text-slate-700 shadow-sm transition placeholder:text-slate-400 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-100" />
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Filter daftar tugas">
+            @foreach ([
+                'all' => ['label' => 'Semua', 'count' => $filterCounts['all']],
+                'late' => ['label' => 'Terlambat', 'count' => $filterCounts['late']],
+                'doing' => ['label' => 'Dikerjakan', 'count' => $filterCounts['doing']],
+                'pending' => ['label' => 'Belum dimulai', 'count' => $filterCounts['pending']],
+            ] as $key => $chip)
+                <button type="button" wire:click="$set('filter', '{{ $key }}')" wire:loading.attr="disabled"
+                    @if ($filter === $key) aria-pressed="true" @else aria-pressed="false" @endif
+                    class="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 disabled:cursor-wait {{ $filter === $key ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:text-blue-700' }}">
+                    {{ $chip['label'] }}
+                    <span
+                        class="inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] tabular-nums {{ $filter === $key ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500' }}">
+                        {{ number_format($chip['count'], 0, ',', '.') }}
+                    </span>
+                </button>
+            @endforeach
+        </div>
     </div>
 
-    {{-- Daftar tugas --}}
-    <x-dashboard.panel class="dashboard-rise dashboard-rise-3" title="Daftar Tugas" id="daftar-tugas-tim-rilis"
-        description="Baris tugas aktif, diurutkan berdasarkan prioritas tindakan.">
+    @endif
+
+    @if ($tab === 'active')
+        {{-- Daftar tugas --}}
+        <x-dashboard.panel class="dashboard-rise dashboard-rise-3" title="Daftar Tugas" id="daftar-tugas-tim-rilis"
+            description="Baris tugas aktif, diurutkan berdasarkan prioritas tindakan.">
         <x-slot:actions>
             <a href="{{ route('release-calendar.index') }}" wire:navigate
                 class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 shadow-sm transition hover:border-blue-300 hover:bg-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
@@ -121,7 +151,10 @@
 
         @if ($visibleTasks === [])
             <div class="p-5">
-                @if ($overview['tasks'] === [])
+                @if ($searchKeyword !== '')
+                    <x-dashboard.empty-state title="Tidak ada tugas yang cocok"
+                        description="Coba kata kunci lain atau ubah filter status." />
+                @elseif ($overview['tasks'] === [])
                     <x-dashboard.empty-state title="Belum ada tugas"
                         description="Tugas baru dari Change Manager akan muncul di sini." />
                 @else
@@ -170,6 +203,21 @@
                                                 aria-hidden="true"></span>
                                             Sedang dikerjakan
                                         </span>
+                                        @if (($task['due_in_days'] ?? null) === 0)
+                                            <span
+                                                class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-800">
+                                                <span class="h-1.5 w-1.5 rounded-full bg-amber-500"
+                                                    aria-hidden="true"></span>
+                                                Jatuh tempo hari ini
+                                            </span>
+                                        @elseif (($task['due_in_days'] ?? null) === 1)
+                                            <span
+                                                class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-800">
+                                                <span class="h-1.5 w-1.5 rounded-full bg-amber-500"
+                                                    aria-hidden="true"></span>
+                                                Jatuh tempo besok
+                                            </span>
+                                        @endif
                                     @elseif (! $task['has_estimate'])
                                         <span
                                             class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-800">
@@ -269,4 +317,68 @@
             </a>
         </div>
     </x-dashboard.panel>
+    @else
+        {{-- Riwayat tugas --}}
+        <x-dashboard.panel class="dashboard-rise dashboard-rise-3" title="Riwayat Tugas" id="riwayat-tugas-tim-rilis"
+            description="Tugas yang sudah selesai atau di-rollback, terbaru lebih dulu.">
+            <x-slot:icon>
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                        d="M12 6v6l4 2m5-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
+            </x-slot:icon>
+
+            @if ($history === [])
+                <div class="p-5">
+                    <x-dashboard.empty-state title="Belum ada riwayat"
+                        description="Tugas yang selesai atau di-rollback akan muncul di sini." />
+                </div>
+            @else
+                <ul class="divide-y divide-slate-100/80">
+                    @foreach ($history as $item)
+                        @php
+                            $isSuccessful = $item['result'] === 'successful';
+                        @endphp
+
+                        <li wire:key="riwayat-tim-rilis-{{ $item['rfc_id'] }}"
+                            class="flex flex-col gap-3 p-5 transition-colors duration-200 hover:bg-blue-50/30 sm:flex-row sm:items-center sm:justify-between">
+                            <div class="min-w-0 flex-1 space-y-2">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span
+                                        class="inline-flex items-center rounded-lg border border-blue-100 bg-blue-50 px-2 py-1 text-[11px] font-bold text-blue-800">
+                                        {{ $item['rfc_number'] ?: 'RFC' }}
+                                    </span>
+                                    <span
+                                        class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold {{ $isSuccessful ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-rose-200 bg-rose-50 text-rose-700' }}">
+                                        <span class="h-1.5 w-1.5 rounded-full {{ $isSuccessful ? 'bg-emerald-500' : 'bg-rose-500' }}"
+                                            aria-hidden="true"></span>
+                                        {{ $isSuccessful ? 'Selesai' : 'Rollback' }}
+                                    </span>
+                                </div>
+
+                                <p class="line-clamp-2 text-sm font-semibold leading-snug text-slate-800">
+                                    {{ $item['title'] }}
+                                </p>
+
+                                <p class="truncate text-xs text-slate-500">
+                                    {{ $item['application_name'] ?: 'Aplikasi tidak tercatat' }}
+                                </p>
+                            </div>
+
+                            <div
+                                class="flex shrink-0 items-center justify-between gap-3 border-t border-slate-100 pt-3 sm:flex-col sm:items-end sm:border-t-0 sm:pt-0">
+                                <p class="text-[11px] font-medium text-slate-500">
+                                    {{ $item['executed_at']?->locale('id')->translatedFormat('j M Y') ?? 'Tanggal tidak tercatat' }}
+                                </p>
+                                <a href="{{ route('change-requests.show', ['rfc' => $item['rfc_id']]) }}" wire:navigate
+                                    class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-200">
+                                    Lihat detail
+                                </a>
+                            </div>
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
+        </x-dashboard.panel>
+    @endif
 </div>

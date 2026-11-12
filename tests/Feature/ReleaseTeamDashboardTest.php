@@ -313,3 +313,115 @@ it('menolak pemohon dan change manager membuka dashboard Tim Rilis', function ()
         ->get(route('release-team.dashboard'))
         ->assertForbidden();
 });
+
+it('menghitung due_in_days dari awal hari ini', function () {
+    Carbon::setTestNow(Carbon::create(2026, 11, 9, 10, 0, 0, 'Asia/Jakarta'));
+
+    [$user, $member] = releaseTeamDashboardUser();
+
+    $dueToday = releaseTeamDashboardTask(releaseTeamDashboardRfc(), $member, [
+        'execution_status' => 'in_progress',
+        'estimated_days' => 3,
+        'scheduled_start' => now()->subDay(),
+        'scheduled_end' => now()->setTime(23, 0),
+    ]);
+    $dueTomorrow = releaseTeamDashboardTask(releaseTeamDashboardRfc(), $member, [
+        'execution_status' => 'in_progress',
+        'estimated_days' => 3,
+        'scheduled_start' => now()->subDay(),
+        'scheduled_end' => now()->addDay()->setTime(9, 0),
+    ]);
+    $withoutTarget = releaseTeamDashboardTask(releaseTeamDashboardRfc(), $member);
+
+    $tasks = collect(app(DashboardMetricsService::class)->releaseTeamOverview($user)['tasks'])
+        ->keyBy('task_id');
+
+    expect($tasks[$dueToday->id]['due_in_days'])->toBe(0)
+        ->and($tasks[$dueTomorrow->id]['due_in_days'])->toBe(1)
+        ->and($tasks[$withoutTarget->id]['due_in_days'])->toBeNull();
+});
+
+it('menyaring daftar tugas berdasarkan kata kunci pencarian', function () {
+    Carbon::setTestNow(Carbon::create(2026, 11, 9, 10, 0, 0, 'Asia/Jakarta'));
+
+    [$user, $member] = releaseTeamDashboardUser();
+
+    releaseTeamDashboardTask(releaseTeamDashboardRfc(['title' => 'Perbaikan Jaringan Kantor']), $member);
+    releaseTeamDashboardTask(releaseTeamDashboardRfc(['title' => 'Pembaruan Basis Data']), $member);
+
+    Livewire::actingAs($user)
+        ->test(ReleaseTeamDashboard::class)
+        ->assertSee('Perbaikan Jaringan Kantor')
+        ->assertSee('Pembaruan Basis Data')
+        ->set('search', 'jaringan')
+        ->assertSet('search', 'jaringan')
+        ->assertSee('Perbaikan Jaringan Kantor')
+        ->assertDontSee('Pembaruan Basis Data')
+        ->set('search', 'tidak ditemukan')
+        ->assertSee('Tidak ada tugas yang cocok')
+        ->assertDontSee('Belum ada tugas')
+        ->assertDontSee('Tidak ada tugas pada filter ini');
+});
+
+it('membatasi riwayat pada tugas selesai atau rollback milik sendiri maksimal 30', function () {
+    Carbon::setTestNow(Carbon::create(2026, 11, 9, 10, 0, 0, 'Asia/Jakarta'));
+
+    [$user, $member] = releaseTeamDashboardUser();
+    [, $otherMember] = releaseTeamDashboardUser();
+
+    collect(range(1, 32))->each(function (int $index) use ($member): void {
+        releaseTeamDashboardTask(releaseTeamDashboardRfc(['title' => 'Tugas selesai '.$index]), $member, [
+            'execution_status' => $index % 2 === 0 ? 'rolled_back' : 'successful',
+            'executed_at' => now()->subDays($index),
+        ]);
+    });
+
+    releaseTeamDashboardTask(releaseTeamDashboardRfc(['title' => 'Tugas berjalan']), $member, [
+        'execution_status' => 'in_progress',
+        'estimated_days' => 2,
+        'scheduled_start' => now()->subDay(),
+        'scheduled_end' => now()->addDay(),
+    ]);
+    releaseTeamDashboardTask(releaseTeamDashboardRfc(['title' => 'Tugas anggota lain']), $otherMember, [
+        'execution_status' => 'successful',
+        'executed_at' => now()->subDay(),
+    ]);
+
+    $history = app(DashboardMetricsService::class)->releaseTeamHistory($user);
+    $titles = collect($history)->pluck('title');
+
+    expect($history)->toHaveCount(30)
+        ->and(collect($history)->pluck('result')->unique()->sort()->values()->all())
+        ->toBe(['rolled_back', 'successful'])
+        ->and($history[0]['executed_at']->greaterThan($history[29]['executed_at']))->toBeTrue()
+        ->and($titles)->not->toContain('Tugas berjalan')
+        ->and($titles)->not->toContain('Tugas anggota lain');
+
+    Livewire::actingAs($user)
+        ->test(ReleaseTeamDashboard::class)
+        ->set('tab', 'history')
+        ->assertSet('tab', 'history')
+        ->assertSee('Riwayat Tugas')
+        ->assertSee('Tugas selesai 1')
+        ->assertSee('Lihat detail')
+        ->assertDontSee('Menunggu dimulai');
+});
+
+it('menampilkan pesan belum ada riwayat saat tab riwayat kosong', function () {
+    Carbon::setTestNow(Carbon::create(2026, 11, 9, 10, 0, 0, 'Asia/Jakarta'));
+
+    [$user, $member] = releaseTeamDashboardUser();
+
+    releaseTeamDashboardTask(releaseTeamDashboardRfc(), $member, [
+        'execution_status' => 'in_progress',
+        'estimated_days' => 2,
+        'scheduled_start' => now()->subDay(),
+        'scheduled_end' => now()->addDay(),
+    ]);
+
+    Livewire::actingAs($user)
+        ->withQueryParams(['tab' => 'history'])
+        ->test(ReleaseTeamDashboard::class)
+        ->assertSet('tab', 'history')
+        ->assertSee('Belum ada riwayat');
+});

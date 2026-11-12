@@ -20,6 +20,12 @@ class ReleaseTeamDashboard extends Component
     #[Url(as: 'filter')]
     public string $filter = 'all';
 
+    #[Url(as: 'q')]
+    public string $search = '';
+
+    #[Url]
+    public string $tab = 'active';
+
     public string $actionError = '';
 
     /**
@@ -32,6 +38,16 @@ class ReleaseTeamDashboard extends Component
         abort_unless(Auth::user()?->isReleaseTeam() === true, 403);
     }
 
+    /**
+     * Jaga nilai tab dari URL tetap pada pilihan yang dikenal.
+     */
+    public function mount(): void
+    {
+        if (! in_array($this->tab, ['active', 'history'], true)) {
+            $this->tab = 'active';
+        }
+    }
+
     public function render(): View
     {
         /** @var User $user */
@@ -40,11 +56,26 @@ class ReleaseTeamDashboard extends Component
         $overview = app(DashboardMetricsService::class)->releaseTeamOverview($user);
         $tasks = $overview['tasks'];
 
+        $keyword = trim($this->search);
+        $matchingTasks = $keyword === ''
+            ? $tasks
+            : array_values(array_filter($tasks, function (array $task) use ($keyword): bool {
+                foreach (['rfc_number', 'title', 'application_name', 'requester_unit'] as $field) {
+                    $value = (string) ($task[$field] ?? '');
+
+                    if ($value !== '' && mb_stripos($value, $keyword) !== false) {
+                        return true;
+                    }
+                }
+
+                return false;
+            }));
+
         $visibleTasks = match ($this->filter) {
-            'late' => array_values(array_filter($tasks, fn (array $task): bool => $task['state'] === 'late')),
-            'doing' => array_values(array_filter($tasks, fn (array $task): bool => $task['state'] === 'doing')),
-            'pending' => array_values(array_filter($tasks, fn (array $task): bool => $task['state'] === 'pending')),
-            default => $tasks,
+            'late' => array_values(array_filter($matchingTasks, fn (array $task): bool => $task['state'] === 'late')),
+            'doing' => array_values(array_filter($matchingTasks, fn (array $task): bool => $task['state'] === 'doing')),
+            'pending' => array_values(array_filter($matchingTasks, fn (array $task): bool => $task['state'] === 'pending')),
+            default => $matchingTasks,
         };
 
         return view('livewire.dashboard.release-team-dashboard', [
@@ -53,6 +84,10 @@ class ReleaseTeamDashboard extends Component
             'dateTime' => now()->timezone(config('app.timezone'))->locale('id')->translatedFormat('l, j F Y'),
             'overview' => $overview,
             'visibleTasks' => $visibleTasks,
+            'searchKeyword' => $keyword,
+            'history' => $this->tab === 'history'
+                ? app(DashboardMetricsService::class)->releaseTeamHistory($user)
+                : [],
             'filterCounts' => [
                 'all' => count($tasks),
                 'late' => $overview['counts']['late'],

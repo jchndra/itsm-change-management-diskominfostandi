@@ -153,6 +153,7 @@ class DashboardMetricsService
      *         days_elapsed: int,
      *         days_overdue: int,
      *         assigned_days_ago: int,
+     *         due_in_days: ?int,
      *         has_estimate: bool,
      *         primary_action: string
      *     }>
@@ -227,6 +228,9 @@ class DashboardMetricsService
                 0,
                 (int) $task->created_at->copy()->timezone(config('app.timezone'))->startOfDay()->diffInDays($today, false),
             );
+            $dueInDays = $targetAt === null
+                ? null
+                : (int) $today->copy()->diffInDays($targetAt->copy()->startOfDay(), false);
 
             return [
                 'task_id' => (int) $task->id,
@@ -242,6 +246,7 @@ class DashboardMetricsService
                 'days_elapsed' => $daysElapsed,
                 'days_overdue' => $daysOverdue,
                 'assigned_days_ago' => $assignedDaysAgo,
+                'due_in_days' => $dueInDays,
                 'has_estimate' => $hasEstimate,
                 'primary_action' => match (true) {
                     $state === 'late' => 'finish',
@@ -262,6 +267,45 @@ class DashboardMetricsService
             ],
             'tasks' => $items,
         ];
+    }
+
+    /**
+     * Riwayat tugas selesai atau di-rollback milik anggota aktif pengguna,
+     * diurutkan dari eksekusi terbaru.
+     *
+     * @return array<int, array{
+     *     rfc_id: int,
+     *     rfc_number: ?string,
+     *     title: string,
+     *     application_name: ?string,
+     *     result: string,
+     *     executed_at: ?Carbon
+     * }>
+     */
+    public function releaseTeamHistory(User $user, int $limit = 30): array
+    {
+        return ReleaseTask::query()
+            ->with(['changeRequest.application'])
+            ->whereHas('releaseTeamMember', function (Builder $member) use ($user): void {
+                $member->where('user_id', $user->id)
+                    ->where('is_active', true);
+            })
+            ->whereHas('changeRequest')
+            ->whereIn('execution_status', ['successful', 'rolled_back'])
+            ->whereNotNull('executed_at')
+            ->orderByDesc('executed_at')
+            ->orderByDesc('id')
+            ->limit($limit)
+            ->get()
+            ->map(fn (ReleaseTask $task): array => [
+                'rfc_id' => (int) $task->change_request_id,
+                'rfc_number' => $task->changeRequest?->rfc_number,
+                'title' => (string) $task->changeRequest?->title,
+                'application_name' => $task->changeRequest?->application?->name,
+                'result' => (string) $task->execution_status,
+                'executed_at' => $task->executed_at?->copy()->timezone(config('app.timezone')),
+            ])
+            ->all();
     }
 
     /**
