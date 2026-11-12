@@ -10,6 +10,7 @@ use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
@@ -292,4 +293,60 @@ it('melabeli tugas rolled_back sebagai Rollback dan successful sebagai Selesai',
         ->assertSee($successful->changeRequest->displayIdentifier())
         ->assertSee('• Rollback')
         ->assertSee('• Selesai');
+});
+
+it('mengubah label bulan saat navigasi bulan', function () {
+    [$user] = calendarTeamMember();
+
+    Livewire::actingAs($user)
+        ->test(ReleaseCalendar::class)
+        ->set('month', '2026-11')
+        ->assertSee('Kalender November 2026')
+        ->assertSeeHtml('aria-live="polite"')
+        ->call('nextMonth')
+        ->assertSet('month', '2026-12')
+        ->assertSee('Kalender Desember 2026')
+        ->call('previousMonth')
+        ->assertSee('Kalender November 2026')
+        ->call('currentMonth')
+        ->assertSet('month', '2026-11')
+        ->assertSee('Kalender November 2026');
+});
+
+it('menampilkan tugas yang tersembunyi melalui tombol tambah lagi', function () {
+    [$user, $member] = calendarTeamMember();
+
+    $tasks = collect(range(1, 4))->map(fn (): ReleaseTask => calendarTask($member, [], [
+        'estimated_days' => 1,
+        'planned_start_on' => '2026-11-12',
+    ]));
+
+    $component = Livewire::actingAs($user)
+        ->test(ReleaseCalendar::class)
+        ->set('month', '2026-11')
+        ->assertSee('+1 lagi');
+
+    $hiddenPanel = Str::betweenFirst($component->html(), 'data-calendar-hidden-tasks', '</ul>');
+
+    $identifiersInPanel = $tasks
+        ->map(fn (ReleaseTask $task): string => $task->changeRequest->displayIdentifier())
+        ->filter(fn (string $identifier): bool => str_contains($hiddenPanel, $identifier));
+
+    expect($identifiersInPanel)->toHaveCount(1);
+});
+
+it('tidak menampilkan tugas pending tanpa estimasi pada kalender', function () {
+    [$user, $member] = calendarTeamMember();
+
+    $task = calendarTask($member, [], [
+        'estimated_days' => null,
+        'planned_start_on' => '2026-11-12',
+    ]);
+
+    Livewire::actingAs($user)
+        ->test(ReleaseCalendar::class)
+        ->set('month', '2026-11')
+        ->assertOk()
+        ->assertSee('Belum ada jadwal')
+        ->assertDontSee($task->changeRequest->displayIdentifier());
 });

@@ -133,7 +133,7 @@ class ReleaseCalendar extends Component
         $monthEnd = $monthStart->copy()->addMonthNoOverflow();
 
         $tasks = ReleaseTask::query()
-            ->with(['changeRequest.application', 'releaseTeamMember.user'])
+            ->with('changeRequest')
             ->whereIn('execution_status', ['pending', 'in_progress', 'successful', 'rolled_back'])
             ->whereHas('changeRequest')
             ->when(! $isChangeManager, function (Builder $query) use ($user): void {
@@ -348,7 +348,7 @@ class ReleaseCalendar extends Component
 
             $laneOccupancy = [];
             $visible = [];
-            $hidden = 0;
+            $hiddenSegments = [];
 
             foreach ($segments as $segment) {
                 $placed = false;
@@ -373,7 +373,7 @@ class ReleaseCalendar extends Component
                 }
 
                 if (! $placed) {
-                    $hidden++;
+                    $hiddenSegments[] = $segment;
                 }
             }
 
@@ -381,7 +381,8 @@ class ReleaseCalendar extends Component
                 'start' => $weekStart,
                 'days' => $days,
                 'segments' => $visible,
-                'hidden' => $hidden,
+                'hidden' => count($hiddenSegments),
+                'hidden_segments' => $hiddenSegments,
             ];
 
             $cursor->addWeek();

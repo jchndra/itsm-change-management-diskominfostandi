@@ -1,4 +1,4 @@
-@props(['title', 'description' => null, 'id' => null])
+@props(['title', 'description' => null, 'id' => null, 'titleLive' => false])
 
 @php
     $headingId = $id ?: 'panel-' . md5($title);
@@ -21,7 +21,8 @@
             @endisset
 
             <div class="min-w-0">
-                <h2 id="{{ $headingId }}" class="text-[15px] font-bold tracking-tight text-slate-900">{{ $title }}
+                <h2 id="{{ $headingId }}" @if ($titleLive) aria-live="polite" @endif
+                    class="text-[15px] font-bold tracking-tight text-slate-900">{{ $title }}
                 </h2>
                 @if (filled($description))
                     <p class="mt-1 max-w-2xl text-xs leading-relaxed text-slate-500">{{ $description }}</p>
