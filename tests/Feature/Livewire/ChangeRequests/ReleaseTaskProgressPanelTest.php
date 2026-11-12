@@ -149,6 +149,31 @@ it('menyimpan rencana mulai dan menampilkan pratinjau selesai', function () {
     expect($task->fresh()->planned_start_on->toDateString())->toBe($plannedStart);
 });
 
+it('menampilkan estimasi pertama tanpa placeholder kosong', function () {
+    [$user, $rfc, $task] = releaseProgressPanelSetup();
+
+    app(ReleaseTaskProgressService::class)->setEstimate($task, $user, 1);
+
+    Livewire::actingAs($user)
+        ->test(ReleaseTaskProgressPanel::class, ['rfc' => $rfc])
+        ->assertOk()
+        ->assertSee('Estimasi: 1 hari')
+        ->assertDontSee('— hari');
+});
+
+it('menampilkan riwayat revisi estimasi dengan nilai lama dan baru', function () {
+    [$user, $rfc, $task] = releaseProgressPanelSetup();
+
+    $service = app(ReleaseTaskProgressService::class);
+    $service->setEstimate($task, $user, 1);
+    $service->reviseEstimate($task, $user, 2, 'Tambahan pengujian integrasi antarsistem.');
+
+    Livewire::actingAs($user)
+        ->test(ReleaseTaskProgressPanel::class, ['rfc' => $rfc])
+        ->assertOk()
+        ->assertSeeHtml('1 hari &rarr; 2 hari');
+});
+
 it('menampilkan peringatan bentrok setelah estimasi disimpan', function () {
     [$user, $rfc] = releaseProgressPanelSetup();
 

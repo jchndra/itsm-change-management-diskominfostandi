@@ -189,16 +189,21 @@
                         </div>
 
                         <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                            <a href="{{ route('change-requests.implement', ['rfc' => $rfc, 'hasil' => 'success']) }}" wire:navigate
-                                class="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2">
-                                Selesaikan Pekerjaan
-                            </a>
-                            <a href="{{ route('change-requests.implement', ['rfc' => $rfc, 'hasil' => 'rolled_back']) }}" wire:navigate
-                                class="inline-flex items-center justify-center rounded-lg border border-rose-300 bg-white px-4 py-3 text-sm font-semibold text-rose-700 shadow-sm transition hover:border-rose-400 hover:bg-rose-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2">
-                                Rollback
-                            </a>
+                            <div class="flex flex-col gap-1.5">
+                                <a href="{{ route('change-requests.implement', ['rfc' => $rfc, 'hasil' => 'success']) }}" wire:navigate
+                                    class="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2">
+                                    Selesaikan Pekerjaan
+                                </a>
+                                <p class="text-xs text-slate-600">Isi laporan hasil pengerjaan.</p>
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                                <a href="{{ route('change-requests.implement', ['rfc' => $rfc, 'hasil' => 'rolled_back']) }}" wire:navigate
+                                    class="inline-flex items-center justify-center rounded-lg border border-rose-300 bg-white px-4 py-3 text-sm font-semibold text-rose-700 shadow-sm transition hover:border-rose-400 hover:bg-rose-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2">
+                                    Rollback
+                                </a>
+                                <p class="text-xs font-medium text-rose-700">Wajib menuliskan alasan rollback.</p>
+                            </div>
                         </div>
-                        <p class="mt-2 text-xs font-medium text-rose-700">Wajib menuliskan alasan rollback.</p>
                     </div>
                 @endcan
             @endif
@@ -532,9 +537,13 @@
                                     {{ $update->created_at?->copy()->timezone('Asia/Jakarta')->locale('id')->translatedFormat('d M Y, H:i') }} WIB
                                 </p>
                             </div>
-                            @if ($update->old_estimated_days !== null || $update->new_estimated_days !== null)
+                            @if ($update->new_estimated_days !== null)
                                 <p class="mt-1 text-xs font-medium text-slate-600">
-                                    {{ $update->old_estimated_days ?? '—' }} hari &rarr; {{ $update->new_estimated_days ?? '—' }} hari
+                                    @if ($update->old_estimated_days !== null)
+                                        {{ $update->old_estimated_days }} hari &rarr; {{ $update->new_estimated_days }} hari
+                                    @else
+                                        Estimasi: {{ $update->new_estimated_days }} hari
+                                    @endif
                                 </p>
                             @endif
                             @if (filled($update->reason))

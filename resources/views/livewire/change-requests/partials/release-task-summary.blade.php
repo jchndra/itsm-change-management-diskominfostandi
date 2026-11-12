@@ -84,9 +84,13 @@
                                                             {{ $update->created_at?->copy()->timezone('Asia/Jakarta')->locale('id')->translatedFormat('d M Y, H:i') }} WIB
                                                         </p>
                                                     </div>
-                                                    @if ($update->old_estimated_days !== null || $update->new_estimated_days !== null)
+                                                    @if ($update->new_estimated_days !== null)
                                                         <p class="mt-1">
-                                                            {{ $update->old_estimated_days ?? '—' }} hari &rarr; {{ $update->new_estimated_days ?? '—' }} hari
+                                                            @if ($update->old_estimated_days !== null)
+                                                                {{ $update->old_estimated_days }} hari &rarr; {{ $update->new_estimated_days }} hari
+                                                            @else
+                                                                Estimasi: {{ $update->new_estimated_days }} hari
+                                                            @endif
                                                         </p>
                                                     @endif
                                                     @if (filled($update->reason))
