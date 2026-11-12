@@ -43,10 +43,13 @@ Keputusan sementara: memakai dompdf; view pdf/rfc-result.blade.php dapat dipakai
 ## Urutan kerja
 
 0 tutup kebocoran daftar RFC (viewAny) | 1 register Pemohon | 2 dashboard Pemohon dan dua unduhan PDF | 3 role Tim Rilis dan disposisi CM |
-4 alur kerja Tim Rilis | 5 PDF hasil RFC | 6 penilaian kepuasan | 7 perapian Admin, Super Admin, label. Dashboard Admin 
+
+
+4 alur kerja Tim Rilis | 5 PDF hasil RFC | 6 penilaian kepuasan | 7 perapian Admin, Super Admin, label. Dashboard Admin
 dijeda.
 
 ENTRI LAIN
+
 1. Waktu mulai dan waktu selesai pada Catat Implementasi tidak diinput manual. Waktu mulai diambil dari saat Tim Rilis menekan “Mulai Pengerjaan”; waktu selesai dicatat saat laporan disimpan.
 
 2\. Unggahan bukti implementasi baru hanya berformat PDF (maks. 5 berkas, 5 MB). Bukti lama berformat gambar tetap dapat dibuka.

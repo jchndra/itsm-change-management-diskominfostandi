@@ -11,7 +11,7 @@
         @foreach (['active' => 'Tugas Aktif', 'history' => 'Riwayat'] as $tabKey => $tabLabel)
             <button type="button" role="tab" wire:click="$set('tab', '{{ $tabKey }}')" wire:loading.attr="disabled"
                 @if ($tab === $tabKey) aria-selected="true" @else aria-selected="false" @endif
-                class="rounded-full px-4 py-1.5 text-xs font-bold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 disabled:cursor-wait {{ $tab === $tabKey ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:text-blue-700' }}">
+                class="inline-flex min-h-10 items-center justify-center rounded-full px-4 py-2 text-xs font-bold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 disabled:cursor-wait {{ $tab === $tabKey ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:text-blue-700' }}">
                 {{ $tabLabel }}
             </button>
         @endforeach
@@ -25,7 +25,7 @@
                 <span class="mt-0.5 h-10 w-1 rounded-full bg-gradient-to-b from-blue-500 via-sky-400 to-amber-300"
                     aria-hidden="true"></span>
                 <div>
-                    <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-600">Ikhtisar Tugas</p>
+                    <p class="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">Ikhtisar Tugas</p>
                     <h2 id="metrik-tim-rilis" class="mt-0.5 text-lg font-bold tracking-tight text-slate-900">
                         Ringkasan Pengerjaan
                     </h2>
@@ -97,7 +97,7 @@
             </span>
             <input type="search" wire:model.live.debounce.300ms="search" placeholder="Cari RFC, judul, aplikasi, OPD…"
                 aria-label="Cari tugas Tim Rilis"
-                class="w-full rounded-full border border-slate-200 bg-white py-1.5 pl-9 pr-3 text-xs font-medium text-slate-700 shadow-sm transition placeholder:text-slate-400 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-100" />
+                class="min-h-10 w-full rounded-full border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-xs font-medium text-slate-700 shadow-sm transition placeholder:text-slate-400 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-100" />
         </div>
 
         <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Filter daftar tugas">
@@ -109,10 +109,10 @@
             ] as $key => $chip)
                 <button type="button" wire:click="$set('filter', '{{ $key }}')" wire:loading.attr="disabled"
                     @if ($filter === $key) aria-pressed="true" @else aria-pressed="false" @endif
-                    class="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 disabled:cursor-wait {{ $filter === $key ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:text-blue-700' }}">
+                    class="inline-flex min-h-10 items-center gap-2 rounded-full border px-3 py-2 text-xs font-bold shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 disabled:cursor-wait {{ $filter === $key ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:text-blue-700' }}">
                     {{ $chip['label'] }}
                     <span
-                        class="inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] tabular-nums {{ $filter === $key ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500' }}">
+                        class="inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-xs tabular-nums {{ $filter === $key ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500' }}">
                         {{ number_format($chip['count'], 0, ',', '.') }}
                     </span>
                 </button>
@@ -128,7 +128,7 @@
             description="Baris tugas aktif, diurutkan berdasarkan prioritas tindakan.">
         <x-slot:actions>
             <a href="{{ route('release-calendar.index') }}" wire:navigate
-                class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 shadow-sm transition hover:border-blue-300 hover:bg-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+                class="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 shadow-sm transition hover:border-blue-300 hover:bg-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
                         d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
@@ -191,34 +191,34 @@
                             <div class="min-w-0 flex-1 space-y-2">
                                 <div class="flex flex-wrap items-center gap-2">
                                     <span
-                                        class="inline-flex items-center rounded-lg border border-blue-100 bg-blue-50 px-2 py-1 text-[11px] font-bold text-blue-800">
+                                        class="inline-flex items-center rounded-lg border border-blue-100 bg-blue-50 px-2 py-1 text-xs font-bold text-blue-800">
                                         {{ $task['rfc_number'] ?: 'RFC' }}
                                     </span>
 
                                     @if ($state === 'late')
                                         <span
-                                            class="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10px] font-bold text-rose-700">
+                                            class="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700">
                                             <span class="h-1.5 w-1.5 rounded-full bg-rose-500"
                                                 aria-hidden="true"></span>
                                             Terlambat {{ $task['days_overdue'] }} hari
                                         </span>
                                     @elseif ($state === 'doing')
                                         <span
-                                            class="inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[10px] font-bold text-indigo-700">
+                                            class="inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700">
                                             <span class="h-1.5 w-1.5 rounded-full bg-indigo-500"
                                                 aria-hidden="true"></span>
                                             Sedang dikerjakan
                                         </span>
                                         @if (($task['due_in_days'] ?? null) === 0)
                                             <span
-                                                class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-800">
+                                                class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800">
                                                 <span class="h-1.5 w-1.5 rounded-full bg-amber-500"
                                                     aria-hidden="true"></span>
                                                 Jatuh tempo hari ini
                                             </span>
                                         @elseif (($task['due_in_days'] ?? null) === 1)
                                             <span
-                                                class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-800">
+                                                class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800">
                                                 <span class="h-1.5 w-1.5 rounded-full bg-amber-500"
                                                     aria-hidden="true"></span>
                                                 Jatuh tempo besok
@@ -226,14 +226,14 @@
                                         @endif
                                     @elseif (! $task['has_estimate'])
                                         <span
-                                            class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-800">
+                                            class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800">
                                             <span class="h-1.5 w-1.5 rounded-full bg-amber-500"
                                                 aria-hidden="true"></span>
                                             Estimasi belum diisi
                                         </span>
                                     @else
                                         <span
-                                            class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-bold text-slate-600">
+                                            class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-bold text-slate-600">
                                             <span class="h-1.5 w-1.5 rounded-full bg-slate-400"
                                                 aria-hidden="true"></span>
                                             Siap dimulai
@@ -252,7 +252,7 @@
                                 </p>
 
                                 <div class="space-y-1.5">
-                                    <div class="flex items-center justify-between gap-3 text-[11px] font-medium">
+                                    <div class="flex items-center justify-between gap-3 text-xs font-medium">
                                         <span class="{{ $state === 'late' ? 'text-rose-700' : 'text-slate-500' }}">
                                             {{ $progressLabel }}
                                         </span>
@@ -271,7 +271,7 @@
 
                             <div
                                 class="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3 lg:w-56 lg:flex-col lg:items-end lg:border-t-0 lg:pt-0">
-                                <p class="text-[11px] font-medium text-slate-500">
+                                <p class="text-xs font-medium text-slate-500">
                                     @if ($task['target_at'] !== null)
                                         target {{ $task['target_at']->copy()->locale('id')->translatedFormat('j M') }}
                                     @else
@@ -283,26 +283,26 @@
                                     @if ($task['primary_action'] === 'finish')
                                         <a href="{{ route('change-requests.implement', ['rfc' => $task['rfc_id'], 'hasil' => 'success']) }}"
                                             wire:navigate
-                                            class="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-rose-600 to-orange-500 px-3 py-1.5 text-xs font-bold text-white shadow-sm shadow-rose-500/20 transition duration-200 hover:-translate-y-0.5 hover:from-rose-700 hover:to-orange-600 focus:outline-none focus-visible:ring-4 focus-visible:ring-rose-200">
+                                            class="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-rose-600 to-orange-500 min-h-10 px-3 py-2 text-xs font-bold text-white shadow-sm shadow-rose-500/20 transition duration-200 hover:-translate-y-0.5 hover:from-rose-700 hover:to-orange-600 focus:outline-none focus-visible:ring-4 focus-visible:ring-rose-200">
                                             Selesaikan
                                         </a>
                                     @elseif ($task['primary_action'] === 'open')
                                         <a href="{{ route('change-requests.show', ['rfc' => $task['rfc_id']]) }}#progres-pengerjaan"
                                             wire:navigate
-                                            class="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-sky-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm shadow-blue-500/20 transition duration-200 hover:-translate-y-0.5 hover:from-blue-700 hover:to-sky-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-200">
+                                            class="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-sky-600 min-h-10 px-3 py-2 text-xs font-bold text-white shadow-sm shadow-blue-500/20 transition duration-200 hover:-translate-y-0.5 hover:from-blue-700 hover:to-sky-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-200">
                                             Buka
                                         </a>
                                     @elseif ($task['primary_action'] === 'set_estimate')
                                         <button type="button"
                                             wire:click="openQuick({{ $task['task_id'] }}, 'estimate')"
                                             wire:loading.attr="disabled"
-                                            class="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-amber-300 hover:bg-amber-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-200 disabled:cursor-wait">
+                                            class="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 min-h-10 px-3 py-2 text-xs font-bold text-amber-800 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-amber-300 hover:bg-amber-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-200 disabled:cursor-wait">
                                             Isi estimasi
                                         </button>
                                     @else
                                         <button type="button" wire:click="startTask({{ $task['task_id'] }})"
                                             wire:confirm="Mulai pengerjaan RFC {{ $task['rfc_number'] }}? Status RFC akan menjadi Sedang Dikerjakan."
-                                            class="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-500 px-3 py-1.5 text-xs font-bold text-white shadow-sm shadow-emerald-500/20 transition duration-200 hover:-translate-y-0.5 hover:from-emerald-700 hover:to-teal-600 focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200">
+                                            class="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-500 min-h-10 px-3 py-2 text-xs font-bold text-white shadow-sm shadow-emerald-500/20 transition duration-200 hover:-translate-y-0.5 hover:from-emerald-700 hover:to-teal-600 focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200">
                                             Mulai
                                         </button>
                                     @endif
@@ -311,7 +311,7 @@
                                         <button type="button"
                                             wire:click="openQuick({{ $task['task_id'] }}, 'note')"
                                             wire:loading.attr="disabled"
-                                            class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-bold text-blue-700 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-200 disabled:cursor-wait">
+                                            class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-white min-h-10 px-3 py-2 text-xs font-bold text-blue-700 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-200 disabled:cursor-wait">
                                             Catat kegiatan
                                         </button>
                                     @endif
@@ -319,7 +319,7 @@
 
                                 <a href="{{ route('change-requests.show', ['rfc' => $task['rfc_id']]) }}#progres-pengerjaan"
                                     wire:navigate
-                                    class="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 transition hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+                                    class="inline-flex min-h-10 items-center gap-1 rounded-lg px-2 py-2 text-xs font-semibold text-slate-500 transition hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                                     Buka detail
                                 </a>
                             </div>
@@ -396,9 +396,9 @@
 
         <div
             class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 bg-slate-50/60 px-5 py-3">
-            <p class="text-[11px] text-slate-500">Diurutkan: terlambat, sedang dikerjakan, lalu belum dimulai.</p>
+            <p class="text-xs text-slate-500">Diurutkan: terlambat, sedang dikerjakan, lalu belum dimulai.</p>
             <a href="{{ route('change-requests.index') }}" wire:navigate
-                class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-blue-600 transition hover:text-blue-700">
+                class="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2 py-2 text-xs font-semibold text-blue-600 transition hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                 Lihat riwayat tugas
                 <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 5 7 7-7 7" />
@@ -434,11 +434,11 @@
                             <div class="min-w-0 flex-1 space-y-2">
                                 <div class="flex flex-wrap items-center gap-2">
                                     <span
-                                        class="inline-flex items-center rounded-lg border border-blue-100 bg-blue-50 px-2 py-1 text-[11px] font-bold text-blue-800">
+                                        class="inline-flex items-center rounded-lg border border-blue-100 bg-blue-50 px-2 py-1 text-xs font-bold text-blue-800">
                                         {{ $item['rfc_number'] ?: 'RFC' }}
                                     </span>
                                     <span
-                                        class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold {{ $isSuccessful ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-rose-200 bg-rose-50 text-rose-700' }}">
+                                        class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold {{ $isSuccessful ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-rose-200 bg-rose-50 text-rose-700' }}">
                                         <span class="h-1.5 w-1.5 rounded-full {{ $isSuccessful ? 'bg-emerald-500' : 'bg-rose-500' }}"
                                             aria-hidden="true"></span>
                                         {{ $isSuccessful ? 'Selesai' : 'Rollback' }}
@@ -456,11 +456,11 @@
 
                             <div
                                 class="flex shrink-0 items-center justify-between gap-3 border-t border-slate-100 pt-3 sm:flex-col sm:items-end sm:border-t-0 sm:pt-0">
-                                <p class="text-[11px] font-medium text-slate-500">
+                                <p class="text-xs font-medium text-slate-500">
                                     {{ $item['executed_at']?->locale('id')->translatedFormat('j M Y') ?? 'Tanggal tidak tercatat' }}
                                 </p>
                                 <a href="{{ route('change-requests.show', ['rfc' => $item['rfc_id']]) }}" wire:navigate
-                                    class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-200">
+                                    class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 min-h-10 px-3 py-2 text-xs font-bold text-blue-700 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-200">
                                     Lihat detail
                                 </a>
                             </div>

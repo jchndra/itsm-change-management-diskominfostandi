@@ -31,7 +31,7 @@
     <div class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 pb-4">
         <div class="flex min-w-0 items-start gap-3">
             <a href="{{ route('change-requests.show', $rfc->id) }}" wire:navigate
-                class="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-emerald-300 hover:text-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+                class="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-emerald-300 hover:text-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
                 aria-label="Kembali ke detail RFC">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"
                     aria-hidden="true">
@@ -79,17 +79,17 @@
 
         <div class="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
             <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-                <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Status</p>
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Status</p>
                 <p class="mt-1 font-semibold text-slate-800">{{ $taskStatusBadge['label'] }}</p>
             </div>
             <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-                <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Estimasi</p>
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Estimasi</p>
                 <p class="mt-1 font-semibold text-slate-800">
                     {{ $task?->estimated_days ? $task->estimated_days.' hari' : 'Belum ditetapkan' }}
                 </p>
             </div>
             <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-                <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Mulai (WIB)</p>
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Mulai (WIB)</p>
                 <p class="mt-1 font-semibold text-slate-800">
                     {{ $task?->scheduled_start
                         ? $task->scheduled_start->copy()->timezone('Asia/Jakarta')->locale('id')->translatedFormat('d M Y, H:i')
@@ -97,7 +97,7 @@
                 </p>
             </div>
             <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-                <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Target selesai (WIB)</p>
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Target selesai (WIB)</p>
                 <p class="mt-1 font-semibold text-slate-800">
                     {{ $task?->scheduled_end
                         ? $task->scheduled_end->copy()->timezone('Asia/Jakarta')->locale('id')->translatedFormat('d M Y, H:i')
@@ -147,7 +147,7 @@
                         @endif
                     </span>
                     <span
-                        class="relative z-10 mt-2 bg-white px-1 text-[11px] font-semibold leading-tight sm:text-xs {{ $stepLabelClasses }}">
+                        class="relative z-10 mt-2 bg-white px-1 text-xs font-semibold leading-tight {{ $stepLabelClasses }}">
                         {{ $step['label'] }}
                     </span>
                 </li>
@@ -388,7 +388,7 @@
                 </label>
 
                 <div wire:loading wire:target="files"
-                    class="flex items-center gap-2 text-xs font-medium text-emerald-700">
+                    class="flex items-center gap-2 text-xs font-medium text-emerald-700" role="status" aria-live="polite">
                     <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
                             stroke-width="4"></circle>
@@ -434,7 +434,8 @@
                                         </div>
                                     </div>
                                     <button type="button" wire:click="removeFile({{ $index }})"
-                                        class="rounded-md px-2.5 py-1 text-xs font-semibold text-rose-600 transition hover:bg-rose-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2">
+                                        aria-label="Hapus berkas {{ $file->getClientOriginalName() }}"
+                                        class="inline-flex min-h-10 items-center justify-center rounded-md px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2">
                                         Hapus
                                     </button>
                                 </li>

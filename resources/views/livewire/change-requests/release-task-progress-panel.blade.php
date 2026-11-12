@@ -85,17 +85,17 @@
 
     <div class="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
         <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Status</p>
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Status</p>
             <p class="mt-1 font-semibold text-slate-800">{{ $progressStatusLabel }}</p>
         </div>
         <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Estimasi</p>
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Estimasi</p>
             <p class="mt-1 font-semibold text-slate-800">
                 {{ $progressTask->estimated_days ? $progressTask->estimated_days.' hari' : 'Belum ditetapkan' }}
             </p>
         </div>
         <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Mulai (WIB)</p>
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Mulai (WIB)</p>
             <p class="mt-1 font-semibold text-slate-800">
                 {{ $progressTask->scheduled_start
                     ? $progressTask->scheduled_start->copy()->timezone('Asia/Jakarta')->locale('id')->translatedFormat('d M Y, H:i')
@@ -103,14 +103,14 @@
             </p>
         </div>
         <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Target selesai (WIB)</p>
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Target selesai (WIB)</p>
             <p class="mt-1 font-semibold text-slate-800">
                 {{ $progressTask->scheduled_end
                     ? $progressTask->scheduled_end->copy()->timezone('Asia/Jakarta')->locale('id')->translatedFormat('d M Y, H:i')
                     : '—' }}
             </p>
             @if ($progressCountdown !== null)
-                <span class="mt-2 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset {{ $progressCountdown['classes'] }}">
+                <span class="mt-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset {{ $progressCountdown['classes'] }}">
                     {{ $progressCountdown['label'] }}
                 </span>
             @endif
@@ -144,7 +144,7 @@
                         <span class="text-xs font-bold">{{ $loop->iteration }}</span>
                     @endif
                 </span>
-                <span class="relative z-10 mt-2 bg-white px-1 text-[11px] font-semibold leading-tight sm:text-xs {{ $stepLabelClasses }}">
+                <span class="relative z-10 mt-2 bg-white px-1 text-xs font-semibold leading-tight {{ $stepLabelClasses }}">
                     {{ $step['label'] }}
                 </span>
             </li>
@@ -152,13 +152,13 @@
     </ol>
 
     @if (filled($progressMessage))
-        <p class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
+        <p class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800" role="status" aria-live="polite">
             {{ $progressMessage }}
         </p>
     @endif
 
     @error('progress')
-        <p class="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-800">
+        <p class="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-800" role="alert">
             {{ $message }}
         </p>
     @enderror
@@ -251,7 +251,7 @@
                             <div class="mt-2 flex flex-wrap gap-1.5">
                                 @foreach ([1, 3, 5, 7, 14] as $quickDays)
                                     <button type="button" x-on:click="setDays({{ $quickDays }})"
-                                        class="rounded-full border border-emerald-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-emerald-700 transition hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
+                                        class="inline-flex min-h-10 items-center justify-center rounded-full border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2">
                                         {{ $quickDays }} hari
                                     </button>
                                 @endforeach
@@ -305,7 +305,7 @@
                                 @endif
                             </p>
                         </div>
-                        <span class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                        <span class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200">
                             Tersimpan
                         </span>
                     </div>
@@ -533,7 +533,7 @@
                         <div class="min-w-0 flex-1 rounded-lg border border-slate-100 bg-slate-50/70 px-3 py-2 text-sm">
                             <div class="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
                                 <p class="font-semibold text-slate-800">{{ $updateMeta['label'] }}</p>
-                                <p class="text-[11px] text-slate-500">
+                                <p class="text-xs text-slate-500">
                                     {{ $update->created_at?->copy()->timezone('Asia/Jakarta')->locale('id')->translatedFormat('d M Y, H:i') }} WIB
                                 </p>
                             </div>
@@ -552,7 +552,7 @@
                             @if (filled($update->note))
                                 <p class="mt-1 whitespace-pre-wrap break-words text-sm text-slate-700">{{ $update->note }}</p>
                             @endif
-                            <p class="mt-1 text-[11px] text-slate-500">{{ $update->user?->name ?? 'Tim Rilis' }}</p>
+                            <p class="mt-1 text-xs text-slate-500">{{ $update->user?->name ?? 'Tim Rilis' }}</p>
                         </div>
                     </li>
                 @endforeach

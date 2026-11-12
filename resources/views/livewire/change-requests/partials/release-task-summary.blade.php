@@ -34,18 +34,18 @@
                                         </div>
                                         <div class="flex flex-wrap items-center gap-1.5">
                                             <span
-                                                class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold {{ $taskStatus['classes'] }}">
+                                                class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold {{ $taskStatus['classes'] }}">
                                                 {{ $taskStatus['label'] }}
                                             </span>
                                             @if ($hasRevision)
                                                 <span
-                                                    class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-800">
+                                                    class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
                                                     Estimasi direvisi
                                                 </span>
                                             @endif
                                             @if ($isOverdue)
                                                 <span
-                                                    class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-1 text-[11px] font-semibold text-red-800">
+                                                    class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-800">
                                                     Melewati estimasi
                                                 </span>
                                             @endif
@@ -80,7 +80,7 @@
                                                         <p class="font-semibold text-slate-700">
                                                             {{ $task->releaseTeamMember?->name ?? 'Tim Rilis' }} &middot; {{ $updateLabel }}
                                                         </p>
-                                                        <p class="text-[11px] text-slate-400">
+                                                        <p class="text-xs text-slate-500">
                                                             {{ $update->created_at?->copy()->timezone('Asia/Jakarta')->locale('id')->translatedFormat('d M Y, H:i') }} WIB
                                                         </p>
                                                     </div>
