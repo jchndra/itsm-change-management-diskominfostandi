@@ -6,6 +6,7 @@ use App\Models\ReleaseTask;
 use App\Models\ReleaseTeamMember;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Url;
@@ -19,17 +20,23 @@ class ReleaseCalendar extends Component
     #[Url(as: 'tim')]
     public string $team = '';
 
-    public function mount(): void
+    /**
+     * Periksa otorisasi pada setiap request Livewire, termasuk request lanjutan.
+     */
+    public function boot(): void
     {
         $user = $this->currentUser();
 
         abort_unless($this->canAccess($user), 403);
 
-        $this->month = $this->normalizeMonth($this->month);
-
         if (! $this->isChangeManager($user)) {
             $this->team = '';
         }
+    }
+
+    public function mount(): void
+    {
+        $this->month = $this->normalizeMonth($this->month);
     }
 
     public function updatedMonth(): void
@@ -116,9 +123,9 @@ class ReleaseCalendar extends Component
      */
     private function calendarItems(User $user, bool $isChangeManager): Collection
     {
-        $memberId = $user->releaseTeamMember?->id;
+        $member = $user->releaseTeamMember;
 
-        if (! $isChangeManager && $memberId === null) {
+        if (! $isChangeManager && ($member === null || ! $member->is_active)) {
             return collect();
         }
 
@@ -129,7 +136,12 @@ class ReleaseCalendar extends Component
             ->with(['changeRequest.application', 'releaseTeamMember.user'])
             ->whereIn('execution_status', ['pending', 'in_progress', 'successful', 'rolled_back'])
             ->whereHas('changeRequest')
-            ->when(! $isChangeManager, fn ($query) => $query->where('release_team_member_id', $memberId))
+            ->when(! $isChangeManager, function (Builder $query) use ($user): void {
+                $query->whereHas('releaseTeamMember', function (Builder $member) use ($user): void {
+                    $member->where('user_id', $user->id)
+                        ->where('is_active', true);
+                });
+            })
             ->when($isChangeManager && $this->team !== '', fn ($query) => $query->where('release_team_member_id', (int) $this->team))
             ->get();
 
@@ -178,10 +190,14 @@ class ReleaseCalendar extends Component
             return $window;
         }
 
-        if (in_array($task->execution_status, ['successful', 'rolled_back'], true)
-            && $task->scheduled_start !== null
-            && $task->scheduled_end !== null) {
-            return [$task->scheduled_start->copy(), $task->scheduled_end->copy()];
+        if (in_array($task->execution_status, ['successful', 'rolled_back'], true)) {
+            if ($task->scheduled_start !== null && $task->scheduled_end !== null) {
+                return [$task->scheduled_start->copy(), $task->scheduled_end->copy()];
+            }
+
+            if ($task->executed_at !== null) {
+                return [$task->executed_at->copy(), $task->executed_at->copy()->addDay()];
+            }
         }
 
         return null;
@@ -233,7 +249,16 @@ class ReleaseCalendar extends Component
      */
     private function statusMeta(ReleaseTask $task): array
     {
-        if (in_array($task->execution_status, ['successful', 'rolled_back'], true)) {
+        if ($task->execution_status === 'rolled_back') {
+            return [
+                'key' => 'rollback',
+                'label' => 'Rollback',
+                'bar' => 'bg-rose-500 text-white hover:bg-rose-600',
+                'dot' => 'bg-rose-500',
+            ];
+        }
+
+        if ($task->execution_status === 'successful') {
             return [
                 'key' => 'done',
                 'label' => 'Selesai',

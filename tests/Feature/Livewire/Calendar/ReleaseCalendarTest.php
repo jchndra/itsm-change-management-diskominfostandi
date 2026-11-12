@@ -183,3 +183,113 @@ it('mengabaikan parameter bulan yang tidak valid dan kembali ke bulan berjalan',
         ->assertSet('month', '2026-11')
         ->assertSee('November 2026');
 });
+
+it('menolak Admin dan Super Admin dengan 403', function () {
+    foreach (['Admin', 'Super Admin'] as $role) {
+        $user = User::factory()->create(['is_active' => true]);
+        $user->assignRole($role);
+
+        $this->actingAs($user)
+            ->get(route('release-calendar.index'))
+            ->assertForbidden();
+
+        Livewire::actingAs($user)
+            ->test(ReleaseCalendar::class)
+            ->assertForbidden();
+    }
+});
+
+it('mengabaikan filter tim dari Tim Rilis pada URL dan aksi Livewire', function () {
+    [$userA, $memberA] = calendarTeamMember();
+    [, $memberB] = calendarTeamMember();
+
+    $taskA = calendarTask($memberA);
+    $taskB = calendarTask($memberB);
+
+    Livewire::actingAs($userA)
+        ->withQueryParams(['tim' => (string) $memberB->id])
+        ->test(ReleaseCalendar::class)
+        ->set('month', '2026-11')
+        ->assertSet('team', '')
+        ->set('team', (string) $memberB->id)
+        ->assertSet('team', '')
+        ->assertSee($taskA->changeRequest->displayIdentifier())
+        ->assertDontSee($taskB->changeRequest->displayIdentifier());
+});
+
+it('menampilkan kalender kosong untuk anggota Tim Rilis yang nonaktif', function () {
+    $user = User::factory()->create(['is_active' => true]);
+    $user->assignRole('Tim Rilis');
+
+    $member = ReleaseTeamMember::factory()->create([
+        'user_id' => $user->id,
+        'is_active' => false,
+    ]);
+
+    $task = calendarTask($member);
+
+    Livewire::actingAs($user)
+        ->test(ReleaseCalendar::class)
+        ->set('month', '2026-11')
+        ->assertOk()
+        ->assertSee('Belum ada jadwal')
+        ->assertDontSee($task->changeRequest->displayIdentifier());
+});
+
+it('memeriksa ulang otorisasi pada request Livewire lanjutan', function () {
+    [$user] = calendarTeamMember();
+
+    $component = Livewire::actingAs($user)
+        ->test(ReleaseCalendar::class)
+        ->set('month', '2026-11')
+        ->assertOk();
+
+    $user->removeRole('Tim Rilis');
+
+    $component
+        ->call('nextMonth')
+        ->assertForbidden();
+});
+
+it('menampilkan tugas selesai tanpa jadwal pada hari executed_at', function () {
+    [$user, $member] = calendarTeamMember();
+
+    $task = calendarTask($member, [], [
+        'execution_status' => 'successful',
+        'estimated_days' => null,
+        'planned_start_on' => null,
+        'scheduled_start' => null,
+        'scheduled_end' => null,
+        'executed_at' => '2026-11-15 09:00:00',
+    ]);
+
+    Livewire::actingAs($user)
+        ->withQueryParams(['bulan' => '2026-11'])
+        ->test(ReleaseCalendar::class)
+        ->assertSee($task->changeRequest->displayIdentifier())
+        ->assertSee('15 Nov 2026');
+});
+
+it('melabeli tugas rolled_back sebagai Rollback dan successful sebagai Selesai', function () {
+    [$user, $member] = calendarTeamMember();
+
+    $rolledBack = calendarTask($member, [], [
+        'execution_status' => 'rolled_back',
+        'scheduled_start' => '2026-11-12 08:00:00',
+        'scheduled_end' => '2026-11-12 12:00:00',
+    ]);
+
+    $successful = calendarTask($member, [], [
+        'execution_status' => 'successful',
+        'scheduled_start' => '2026-11-13 08:00:00',
+        'scheduled_end' => '2026-11-13 12:00:00',
+    ]);
+
+    Livewire::actingAs($user)
+        ->withQueryParams(['bulan' => '2026-11'])
+        ->test(ReleaseCalendar::class)
+        ->assertSee($rolledBack->changeRequest->displayIdentifier())
+        ->assertSee($successful->changeRequest->displayIdentifier())
+        ->assertSee('• Rollback')
+        ->assertSee('• Selesai');
+});

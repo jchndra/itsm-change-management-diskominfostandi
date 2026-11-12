@@ -36,6 +36,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use Spatie\Permission\Middleware\RoleMiddleware;
 
 // Modifikasi rute root (/) agar otomatis mengarahkan user sesuai perannya
 Route::get('/', function () {
@@ -76,7 +77,9 @@ Route::middleware('auth')->group(function () {
         ->middleware('can:rfc.view_assigned')
         ->name('release-team.dashboard');
 
-    Route::get('/kalender', ReleaseCalendar::class)->name('release-calendar.index');
+    Route::get('/kalender', ReleaseCalendar::class)
+        ->middleware(RoleMiddleware::class.':Tim Rilis|Change Manager')
+        ->name('release-calendar.index');
 
     Route::get('/admin/release-team-accounts', ReleaseTeamAccounts::class)
         ->middleware('can:viewAny,App\Models\ReleaseTeamMember')
