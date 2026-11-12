@@ -336,6 +336,16 @@ it('menyimpan rencana mulai pada estimasi', function () {
     expect($task->fresh()->planned_start_on->toDateString())->toBe($plannedStart->toDateString());
 });
 
+it('menyimpan tanggal hari ini bila rencana mulai tidak diisi', function () {
+    Carbon::setTestNow(Carbon::create(2026, 11, 12, 10, 0, 0, 'Asia/Jakarta'));
+
+    [$user, $rfc, $task] = releaseTaskProgressSetup();
+
+    app(ReleaseTaskProgressService::class)->setEstimate($task, $user, 5);
+
+    expect($task->fresh()->planned_start_on->toDateString())->toBe('2026-11-12');
+});
+
 it('menolak rencana mulai yang sudah lewat', function () {
     [$user, $rfc, $task] = releaseTaskProgressSetup();
 

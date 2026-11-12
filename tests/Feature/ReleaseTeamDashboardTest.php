@@ -456,6 +456,58 @@ it('menyimpan estimasi langsung dari dashboard', function () {
     ]);
 });
 
+it('menyimpan rencana mulai hari ini bila default aksi cepat tidak diubah', function () {
+    Carbon::setTestNow(Carbon::create(2026, 11, 9, 10, 0, 0, 'Asia/Jakarta'));
+
+    [$user, $member] = releaseTeamDashboardUser();
+    $task = releaseTeamDashboardTask(releaseTeamDashboardRfc(), $member);
+
+    Livewire::actingAs($user)
+        ->test(ReleaseTeamDashboard::class)
+        ->call('openQuick', $task->id, 'estimate')
+        ->assertSet('plannedStartOn', '2026-11-09')
+        ->set('estimatedDays', '4')
+        ->call('saveEstimate')
+        ->assertHasNoErrors();
+
+    expect($task->fresh()->planned_start_on->toDateString())->toBe('2026-11-09');
+});
+
+it('menyimpan rencana mulai valid dari aksi cepat dashboard', function () {
+    Carbon::setTestNow(Carbon::create(2026, 11, 9, 10, 0, 0, 'Asia/Jakarta'));
+
+    [$user, $member] = releaseTeamDashboardUser();
+    $task = releaseTeamDashboardTask(releaseTeamDashboardRfc(), $member);
+
+    Livewire::actingAs($user)
+        ->test(ReleaseTeamDashboard::class)
+        ->call('openQuick', $task->id, 'estimate')
+        ->set('estimatedDays', '4')
+        ->set('plannedStartOn', '2026-11-15')
+        ->call('saveEstimate')
+        ->assertHasNoErrors();
+
+    expect($task->fresh()->planned_start_on->toDateString())->toBe('2026-11-15');
+});
+
+it('menolak rencana mulai tidak valid pada aksi cepat dashboard seperti panel', function () {
+    Carbon::setTestNow(Carbon::create(2026, 11, 9, 10, 0, 0, 'Asia/Jakarta'));
+
+    [$user, $member] = releaseTeamDashboardUser();
+    $task = releaseTeamDashboardTask(releaseTeamDashboardRfc(), $member);
+
+    Livewire::actingAs($user)
+        ->test(ReleaseTeamDashboard::class)
+        ->call('openQuick', $task->id, 'estimate')
+        ->set('estimatedDays', '4')
+        ->set('plannedStartOn', 'bukan-tanggal')
+        ->call('saveEstimate')
+        ->assertHasErrors(['quick']);
+
+    expect($task->fresh()->estimated_days)->toBeNull()
+        ->and($task->fresh()->planned_start_on)->toBeNull();
+});
+
 it('menyimpan catatan kegiatan langsung dari dashboard', function () {
     Carbon::setTestNow(Carbon::create(2026, 11, 9, 10, 0, 0, 'Asia/Jakarta'));
 

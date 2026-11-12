@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\DashboardMetricsService;
 use App\Services\ReleaseTaskProgressService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
@@ -34,6 +35,8 @@ class ReleaseTeamDashboard extends Component
     public string $quickMode = 'estimate';
 
     public string $estimatedDays = '';
+
+    public string $plannedStartOn = '';
 
     public string $progressNote = '';
 
@@ -141,6 +144,7 @@ class ReleaseTeamDashboard extends Component
         $this->quickTaskId = $task->id;
         $this->quickMode = $mode;
         $this->estimatedDays = '';
+        $this->plannedStartOn = now('Asia/Jakarta')->toDateString();
         $this->progressNote = '';
         $this->progressBlocked = false;
         $this->resetValidation('quick');
@@ -151,6 +155,7 @@ class ReleaseTeamDashboard extends Component
         $this->quickTaskId = null;
         $this->quickMode = 'estimate';
         $this->estimatedDays = '';
+        $this->plannedStartOn = '';
         $this->progressNote = '';
         $this->progressBlocked = false;
         $this->resetValidation('quick');
@@ -173,9 +178,21 @@ class ReleaseTeamDashboard extends Component
 
         abort_if($task === null, 403);
 
+        $plannedStart = null;
+
+        if (filled($this->plannedStartOn)) {
+            try {
+                $plannedStart = Carbon::createFromFormat('Y-m-d', $this->plannedStartOn, 'Asia/Jakarta')->startOfDay();
+            } catch (\Throwable) {
+                $this->addError('quick', 'Format rencana mulai tidak valid.');
+
+                return;
+            }
+        }
+
         try {
             app(ReleaseTaskProgressService::class)
-                ->setEstimate($task, $user, (int) $this->estimatedDays);
+                ->setEstimate($task, $user, (int) $this->estimatedDays, $plannedStart);
         } catch (ReleaseTaskProgressException|InvalidRfcStatusTransitionException $exception) {
             $this->addError('quick', $exception->getMessage());
 

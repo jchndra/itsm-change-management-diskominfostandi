@@ -34,7 +34,8 @@ class ReleaseTaskProgressService
         $this->validateDays($days);
         $this->validatePlannedStart($plannedStart);
 
-        $plannedStartOn = $plannedStart?->copy()->timezone('Asia/Jakarta')->toDateString();
+        $plannedStartOn = $plannedStart?->copy()->timezone('Asia/Jakarta')->toDateString()
+            ?? now('Asia/Jakarta')->toDateString();
 
         $update = DB::transaction(function () use ($task, $actor, $days, $plannedStartOn): ReleaseTaskUpdate {
             [$lockedTask, $rfc] = $this->lockTask($task, $actor);

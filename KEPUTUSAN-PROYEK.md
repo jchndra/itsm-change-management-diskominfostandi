@@ -17,8 +17,8 @@ Pemohon register -> membuat RFC (satu nomor RFC sejak diajukan) -> langsung ke a
 ## Keputusan yang sudah diambil
 
 * Nomor tiket CHG tidak dipakai lagi pada alur baru (kolom lama dibiarkan untuk data lama). Satu nomor RFC.
-* Tanpa status baru jika memungkinkan; nilai status lama (mis. `returned\\\_to\\\_admin`) TIDAK di-rename, cukup label tampilan.
-* Penugasan (CM) dan pelaksanaan (Tim Rilis) adalah dua kewenangan berbeda; Tim Rilis tidak boleh memiliki `rfc.view\\\_all`.
+* Tanpa status baru jika memungkinkan; nilai status lama (mis. `returned\\\\\\\\\\\\\\\_to\\\\\\\\\\\\\\\_admin`) TIDAK di-rename, cukup label tampilan.
+* Penugasan (CM) dan pelaksanaan (Tim Rilis) adalah dua kewenangan berbeda; Tim Rilis tidak boleh memiliki `rfc.view\\\\\\\\\\\\\\\_all`.
 * Penjagaan status dan duplikasi berada di service, bukan hanya policy.
 * Histori, activity log, bukti, akun lama, dan data soft delete dipertahankan.
 * Tanpa dependensi baru kecuali disetujui. Zona waktu Asia/Jakarta.
@@ -26,6 +26,8 @@ Pemohon register -> membuat RFC (satu nomor RFC sejak diajukan) -> langsung ke a
 * Catat Implementasi, waktu: waktu mulai dan waktu selesai tidak diinput manual. Waktu mulai diambil dari saat Tim Rilis menekan "Mulai Pengerjaan"; waktu selesai dicatat saat laporan disimpan. Kolom waktu pada data implementasi tetap dipakai, nilainya ditentukan oleh service.
 * Catat Implementasi, bukti: unggahan bukti baru hanya berformat PDF (maks. 5 berkas, 5 MB per berkas). Bukti lama berformat gambar tetap dapat dibuka.
 * Catat Implementasi, konfirmasi: centang konfirmasi bermakna persetujuan Tim Rilis atas laporan, yaitu pekerjaan selesai (hasil Berhasil) atau pelaksanaan dihentikan (hasil Gagal atau Rollback). Setelah disimpan, laporan dan bukti tidak dapat diubah dan RFC masuk review Change Manager.
+* Kalender (/kalender): hanya untuk Tim Rilis (anggota aktif, tugasnya sendiri) dan Change Manager (semua tugas). Pemohon, Admin, dan Super Admin tidak mendapat akses. Otorisasi diperiksa di route dan di setiap request Livewire.
+* Menetapkan estimasi selalu menyimpan tanggal rencana mulai. Bila Tim Rilis tidak memilih tanggal, sistem memakai tanggal penetapan estimasi (WIB) agar jadwal di Kalender tidak bergeser.
 
 ## Menunggu konfirmasi mentor
 
