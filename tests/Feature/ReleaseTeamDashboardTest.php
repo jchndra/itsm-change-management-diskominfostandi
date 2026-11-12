@@ -425,3 +425,147 @@ it('menampilkan pesan belum ada riwayat saat tab riwayat kosong', function () {
         ->assertSet('tab', 'history')
         ->assertSee('Belum ada riwayat');
 });
+
+it('menyimpan estimasi langsung dari dashboard', function () {
+    Carbon::setTestNow(Carbon::create(2026, 11, 9, 10, 0, 0, 'Asia/Jakarta'));
+
+    [$user, $member] = releaseTeamDashboardUser();
+    $task = releaseTeamDashboardTask(releaseTeamDashboardRfc(), $member);
+
+    Livewire::actingAs($user)
+        ->test(ReleaseTeamDashboard::class)
+        ->call('openQuick', $task->id, 'estimate')
+        ->assertSet('quickTaskId', $task->id)
+        ->assertSet('quickMode', 'estimate')
+        ->assertSee('Simpan estimasi')
+        ->set('estimatedDays', '4')
+        ->call('saveEstimate')
+        ->assertHasNoErrors()
+        ->assertSet('quickTaskId', null)
+        ->assertSet('estimatedDays', '')
+        ->assertSet('quickMessage', 'Estimasi pengerjaan berhasil disimpan.')
+        ->assertSee('Estimasi pengerjaan berhasil disimpan.');
+
+    expect($task->fresh()->estimated_days)->toBe(4);
+
+    $this->assertDatabaseHas('release_task_updates', [
+        'release_task_id' => $task->id,
+        'user_id' => $user->id,
+        'type' => 'estimate_set',
+        'new_estimated_days' => 4,
+    ]);
+});
+
+it('menyimpan catatan kegiatan langsung dari dashboard', function () {
+    Carbon::setTestNow(Carbon::create(2026, 11, 9, 10, 0, 0, 'Asia/Jakarta'));
+
+    [$user, $member] = releaseTeamDashboardUser();
+    $task = releaseTeamDashboardTask(releaseTeamDashboardRfc(), $member, [
+        'execution_status' => 'in_progress',
+        'estimated_days' => 3,
+        'scheduled_start' => now()->subDay(),
+        'scheduled_end' => now()->addDays(2),
+    ]);
+
+    Livewire::actingAs($user)
+        ->test(ReleaseTeamDashboard::class)
+        ->call('openQuick', $task->id, 'note')
+        ->assertSet('quickMode', 'note')
+        ->assertSee('Terkendala')
+        ->set('progressNote', 'Server produksi sudah dipindahkan.')
+        ->set('progressBlocked', true)
+        ->call('saveNote')
+        ->assertHasNoErrors()
+        ->assertSet('quickTaskId', null)
+        ->assertSet('progressNote', '')
+        ->assertSet('progressBlocked', false)
+        ->assertSet('quickMessage', 'Catatan kegiatan berhasil ditambahkan.');
+
+    $this->assertDatabaseHas('release_task_updates', [
+        'release_task_id' => $task->id,
+        'user_id' => $user->id,
+        'type' => 'blocked',
+        'note' => 'Server produksi sudah dipindahkan.',
+    ]);
+});
+
+it('menolak catatan kegiatan yang terlalu pendek dari dashboard', function () {
+    Carbon::setTestNow(Carbon::create(2026, 11, 9, 10, 0, 0, 'Asia/Jakarta'));
+
+    [$user, $member] = releaseTeamDashboardUser();
+    $task = releaseTeamDashboardTask(releaseTeamDashboardRfc(), $member, [
+        'execution_status' => 'in_progress',
+        'estimated_days' => 3,
+        'scheduled_start' => now()->subDay(),
+        'scheduled_end' => now()->addDays(2),
+    ]);
+
+    Livewire::actingAs($user)
+        ->test(ReleaseTeamDashboard::class)
+        ->call('openQuick', $task->id, 'note')
+        ->set('progressNote', 'ok')
+        ->call('saveNote')
+        ->assertHasErrors(['quick'])
+        ->assertSet('quickTaskId', $task->id)
+        ->assertSet('progressNote', 'ok');
+
+    expect($task->updates()->count())->toBe(0);
+});
+
+it('menolak catatan kegiatan pada tugas yang masih pending', function () {
+    Carbon::setTestNow(Carbon::create(2026, 11, 9, 10, 0, 0, 'Asia/Jakarta'));
+
+    [$user, $member] = releaseTeamDashboardUser();
+    $task = releaseTeamDashboardTask(releaseTeamDashboardRfc(), $member, ['estimated_days' => 3]);
+
+    Livewire::actingAs($user)
+        ->test(ReleaseTeamDashboard::class)
+        ->call('openQuick', $task->id, 'note')
+        ->set('progressNote', 'Catatan saat tugas masih pending.')
+        ->call('saveNote')
+        ->assertHasErrors(['quick'])
+        ->assertSet('quickTaskId', $task->id);
+
+    expect($task->updates()->count())->toBe(0);
+});
+
+it('menolak aksi cepat dashboard untuk tugas milik anggota lain, pemohon, dan change manager', function () {
+    Carbon::setTestNow(Carbon::create(2026, 11, 9, 10, 0, 0, 'Asia/Jakarta'));
+
+    [$owner, $member] = releaseTeamDashboardUser();
+    $task = releaseTeamDashboardTask(releaseTeamDashboardRfc(), $member, ['estimated_days' => 3]);
+
+    [$otherMemberUser] = releaseTeamDashboardUser();
+    $pemohon = User::factory()->create(['is_active' => true]);
+    $pemohon->assignRole('Pemohon');
+    $manager = User::factory()->create(['is_active' => true]);
+    $manager->assignRole('Change Manager');
+
+    $dashboard = Livewire::actingAs($otherMemberUser)->test(ReleaseTeamDashboard::class);
+    $dashboard->set('quickTaskId', $task->id)->set('estimatedDays', '5');
+
+    try {
+        $dashboard->instance()->saveEstimate();
+        $this->fail('Anggota Tim Rilis lain seharusnya ditolak.');
+    } catch (HttpException $exception) {
+        expect($exception->getStatusCode())->toBe(403);
+    }
+
+    try {
+        $dashboard->instance()->openQuick($task->id, 'note');
+        $this->fail('Anggota Tim Rilis lain seharusnya tidak dapat membuka aksi cepat.');
+    } catch (HttpException $exception) {
+        expect($exception->getStatusCode())->toBe(403);
+    }
+
+    Livewire::actingAs($pemohon)
+        ->test(ReleaseTeamDashboard::class)
+        ->assertForbidden();
+
+    Livewire::actingAs($manager)
+        ->test(ReleaseTeamDashboard::class)
+        ->assertForbidden();
+
+    expect($task->fresh()->estimated_days)->toBe(3)
+        ->and($task->updates()->count())->toBe(0);
+});

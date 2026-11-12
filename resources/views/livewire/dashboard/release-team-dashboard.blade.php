@@ -149,6 +149,12 @@
             </div>
         @endif
 
+        @if (filled($quickMessage))
+            <div class="border-b border-emerald-100 bg-emerald-50 px-5 py-3" role="status">
+                <p class="text-xs font-semibold text-emerald-700">{{ $quickMessage }}</p>
+            </div>
+        @endif
+
         @if ($visibleTasks === [])
             <div class="p-5">
                 @if ($searchKeyword !== '')
@@ -264,7 +270,7 @@
                             </div>
 
                             <div
-                                class="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3 lg:w-44 lg:flex-col lg:items-end lg:border-t-0 lg:pt-0">
+                                class="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3 lg:w-56 lg:flex-col lg:items-end lg:border-t-0 lg:pt-0">
                                 <p class="text-[11px] font-medium text-slate-500">
                                     @if ($task['target_at'] !== null)
                                         target {{ $task['target_at']->copy()->locale('id')->translatedFormat('j M') }}
@@ -273,33 +279,116 @@
                                     @endif
                                 </p>
 
-                                @if ($task['primary_action'] === 'finish')
-                                    <a href="{{ route('change-requests.implement', ['rfc' => $task['rfc_id'], 'hasil' => 'success']) }}"
-                                        wire:navigate
-                                        class="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-rose-600 to-orange-500 px-3 py-1.5 text-xs font-bold text-white shadow-sm shadow-rose-500/20 transition duration-200 hover:-translate-y-0.5 hover:from-rose-700 hover:to-orange-600 focus:outline-none focus-visible:ring-4 focus-visible:ring-rose-200">
-                                        Selesaikan
-                                    </a>
-                                @elseif ($task['primary_action'] === 'open')
-                                    <a href="{{ route('change-requests.show', ['rfc' => $task['rfc_id']]) }}#progres-pengerjaan"
-                                        wire:navigate
-                                        class="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-sky-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm shadow-blue-500/20 transition duration-200 hover:-translate-y-0.5 hover:from-blue-700 hover:to-sky-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-200">
-                                        Buka
-                                    </a>
-                                @elseif ($task['primary_action'] === 'set_estimate')
-                                    <a href="{{ route('change-requests.show', ['rfc' => $task['rfc_id']]) }}#progres-pengerjaan"
-                                        wire:navigate
-                                        class="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-amber-300 hover:bg-amber-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-200">
-                                        Isi estimasi
-                                    </a>
-                                @else
-                                    <button type="button" wire:click="startTask({{ $task['task_id'] }})"
-                                        wire:confirm="Mulai pengerjaan RFC {{ $task['rfc_number'] }}? Status RFC akan menjadi Sedang Dikerjakan."
-                                        class="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-500 px-3 py-1.5 text-xs font-bold text-white shadow-sm shadow-emerald-500/20 transition duration-200 hover:-translate-y-0.5 hover:from-emerald-700 hover:to-teal-600 focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200">
-                                        Mulai
-                                    </button>
-                                @endif
+                                <div class="flex flex-wrap items-center justify-end gap-2">
+                                    @if ($task['primary_action'] === 'finish')
+                                        <a href="{{ route('change-requests.implement', ['rfc' => $task['rfc_id'], 'hasil' => 'success']) }}"
+                                            wire:navigate
+                                            class="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-rose-600 to-orange-500 px-3 py-1.5 text-xs font-bold text-white shadow-sm shadow-rose-500/20 transition duration-200 hover:-translate-y-0.5 hover:from-rose-700 hover:to-orange-600 focus:outline-none focus-visible:ring-4 focus-visible:ring-rose-200">
+                                            Selesaikan
+                                        </a>
+                                    @elseif ($task['primary_action'] === 'open')
+                                        <a href="{{ route('change-requests.show', ['rfc' => $task['rfc_id']]) }}#progres-pengerjaan"
+                                            wire:navigate
+                                            class="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-sky-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm shadow-blue-500/20 transition duration-200 hover:-translate-y-0.5 hover:from-blue-700 hover:to-sky-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-200">
+                                            Buka
+                                        </a>
+                                    @elseif ($task['primary_action'] === 'set_estimate')
+                                        <button type="button"
+                                            wire:click="openQuick({{ $task['task_id'] }}, 'estimate')"
+                                            wire:loading.attr="disabled"
+                                            class="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-amber-300 hover:bg-amber-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-200 disabled:cursor-wait">
+                                            Isi estimasi
+                                        </button>
+                                    @else
+                                        <button type="button" wire:click="startTask({{ $task['task_id'] }})"
+                                            wire:confirm="Mulai pengerjaan RFC {{ $task['rfc_number'] }}? Status RFC akan menjadi Sedang Dikerjakan."
+                                            class="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-500 px-3 py-1.5 text-xs font-bold text-white shadow-sm shadow-emerald-500/20 transition duration-200 hover:-translate-y-0.5 hover:from-emerald-700 hover:to-teal-600 focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200">
+                                            Mulai
+                                        </button>
+                                    @endif
+
+                                    @if (in_array($state, ['doing', 'late'], true))
+                                        <button type="button"
+                                            wire:click="openQuick({{ $task['task_id'] }}, 'note')"
+                                            wire:loading.attr="disabled"
+                                            class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-bold text-blue-700 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-200 disabled:cursor-wait">
+                                            Catat kegiatan
+                                        </button>
+                                    @endif
+                                </div>
+
+                                <a href="{{ route('change-requests.show', ['rfc' => $task['rfc_id']]) }}#progres-pengerjaan"
+                                    wire:navigate
+                                    class="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 transition hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+                                    Buka detail
+                                </a>
                             </div>
                         </div>
+
+                        @if ($quickTaskId === $task['task_id'] && $quickMode === 'estimate')
+                            <form wire:submit="saveEstimate" wire:key="quick-estimate-{{ $task['task_id'] }}"
+                                class="mt-4 rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+                                <div class="flex flex-wrap items-end gap-3">
+                                    <div class="min-w-40 flex-1">
+                                        <label for="quick-estimated-days-{{ $task['task_id'] }}"
+                                            class="block text-xs font-semibold text-slate-700">Estimasi pengerjaan (hari)</label>
+                                        <input id="quick-estimated-days-{{ $task['task_id'] }}" type="number" min="1"
+                                            max="90" wire:model="estimatedDays" required placeholder="Total hari"
+                                            class="mt-1 block w-full rounded-lg border-slate-300 bg-white text-sm shadow-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-500">
+                                        <p class="mt-1 text-xs text-slate-500">Rentang 1–90 hari.</p>
+                                    </div>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <button type="button" wire:click="closeQuick"
+                                            class="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 shadow-sm transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">
+                                            Batal
+                                        </button>
+                                        <button type="submit" wire:loading.attr="disabled" wire:target="saveEstimate"
+                                            class="inline-flex items-center justify-center rounded-lg bg-amber-600 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-amber-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 disabled:cursor-not-allowed disabled:bg-amber-400">
+                                            <span wire:loading.remove wire:target="saveEstimate">Simpan estimasi</span>
+                                            <span wire:loading wire:target="saveEstimate">Menyimpan...</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                @error('quick')
+                                    <p class="mt-2 text-xs font-semibold text-rose-600" role="alert">{{ $message }}</p>
+                                @enderror
+                            </form>
+                        @elseif ($quickTaskId === $task['task_id'] && $quickMode === 'note')
+                            <form wire:submit="saveNote" wire:key="quick-note-{{ $task['task_id'] }}"
+                                class="mt-4 space-y-3 rounded-xl border border-blue-200 bg-blue-50/60 p-4">
+                                <div>
+                                    <label for="quick-progress-note-{{ $task['task_id'] }}"
+                                        class="block text-xs font-semibold text-slate-700">Catatan kegiatan</label>
+                                    <textarea id="quick-progress-note-{{ $task['task_id'] }}" rows="3"
+                                        wire:model="progressNote" required minlength="5" maxlength="1000"
+                                        placeholder="Tulis kegiatan terbaru"
+                                        class="mt-1 block w-full resize-y rounded-lg border-slate-300 bg-white text-sm shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"></textarea>
+                                    <p class="mt-1 text-xs text-slate-500">Minimal 5 karakter, maksimal 1.000 karakter.</p>
+                                </div>
+
+                                <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                                    <input type="checkbox" wire:model="progressBlocked"
+                                        class="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500">
+                                    <span class="text-xs font-semibold text-amber-900">Terkendala</span>
+                                </label>
+
+                                @error('quick')
+                                    <p class="text-xs font-semibold text-rose-600" role="alert">{{ $message }}</p>
+                                @enderror
+
+                                <div class="flex flex-wrap items-center justify-end gap-2">
+                                    <button type="button" wire:click="closeQuick"
+                                        class="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 shadow-sm transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">
+                                        Batal
+                                    </button>
+                                    <button type="submit" wire:loading.attr="disabled" wire:target="saveNote"
+                                        class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400">
+                                        <span wire:loading.remove wire:target="saveNote">Simpan catatan</span>
+                                        <span wire:loading wire:target="saveNote">Menyimpan...</span>
+                                    </button>
+                                </div>
+                            </form>
+                        @endif
                     </li>
                 @endforeach
             </ul>

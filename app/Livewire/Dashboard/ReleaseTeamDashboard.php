@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Dashboard;
 
+use App\Exceptions\InvalidRfcStatusTransitionException;
 use App\Exceptions\ReleaseTaskProgressException;
 use App\Models\ReleaseTask;
 use App\Models\User;
@@ -27,6 +28,18 @@ class ReleaseTeamDashboard extends Component
     public string $tab = 'active';
 
     public string $actionError = '';
+
+    public ?int $quickTaskId = null;
+
+    public string $quickMode = 'estimate';
+
+    public string $estimatedDays = '';
+
+    public string $progressNote = '';
+
+    public bool $progressBlocked = false;
+
+    public string $quickMessage = '';
 
     /**
      * Periksa otorisasi pada setiap request Livewire, termasuk request lanjutan.
@@ -101,19 +114,8 @@ class ReleaseTeamDashboard extends Component
     {
         $this->actionError = '';
 
-        /** @var User|null $user */
-        $user = Auth::user();
-
-        abort_unless($user !== null && $user->isReleaseTeam() && $user->can('rfc.view_assigned'), 403);
-
-        $task = ReleaseTask::query()
-            ->whereKey($taskId)
-            ->whereHas('releaseTeamMember', function ($member) use ($user): void {
-                $member->where('user_id', $user->id)
-                    ->where('is_active', true);
-            })
-            ->whereHas('changeRequest')
-            ->first();
+        $user = $this->currentReleaseTeamUser();
+        $task = $this->ownedTask($taskId);
 
         abort_if($task === null, 403);
 
@@ -122,5 +124,124 @@ class ReleaseTeamDashboard extends Component
         } catch (ReleaseTaskProgressException $exception) {
             $this->actionError = $exception->getMessage();
         }
+    }
+
+    public function openQuick(int $taskId, string $mode): void
+    {
+        $this->actionError = '';
+        $this->quickMessage = '';
+
+        abort_unless(in_array($mode, ['estimate', 'note'], true), 403);
+
+        $this->currentReleaseTeamUser();
+        $task = $this->ownedTask($taskId);
+
+        abort_if($task === null, 403);
+
+        $this->quickTaskId = $task->id;
+        $this->quickMode = $mode;
+        $this->estimatedDays = '';
+        $this->progressNote = '';
+        $this->progressBlocked = false;
+        $this->resetValidation('quick');
+    }
+
+    public function closeQuick(): void
+    {
+        $this->quickTaskId = null;
+        $this->quickMode = 'estimate';
+        $this->estimatedDays = '';
+        $this->progressNote = '';
+        $this->progressBlocked = false;
+        $this->resetValidation('quick');
+    }
+
+    public function saveEstimate(): void
+    {
+        $this->actionError = '';
+        $this->resetValidation('quick');
+
+        $user = $this->currentReleaseTeamUser();
+
+        if ($this->quickTaskId === null) {
+            $this->addError('quick', 'Tugas Tim Rilis tidak ditemukan.');
+
+            return;
+        }
+
+        $task = $this->ownedTask($this->quickTaskId);
+
+        abort_if($task === null, 403);
+
+        try {
+            app(ReleaseTaskProgressService::class)
+                ->setEstimate($task, $user, (int) $this->estimatedDays);
+        } catch (ReleaseTaskProgressException|InvalidRfcStatusTransitionException $exception) {
+            $this->addError('quick', $exception->getMessage());
+
+            return;
+        }
+
+        $this->closeQuick();
+        $this->quickMessage = 'Estimasi pengerjaan berhasil disimpan.';
+    }
+
+    public function saveNote(): void
+    {
+        $this->actionError = '';
+        $this->resetValidation('quick');
+
+        $user = $this->currentReleaseTeamUser();
+
+        if ($this->quickTaskId === null) {
+            $this->addError('quick', 'Tugas Tim Rilis tidak ditemukan.');
+
+            return;
+        }
+
+        $task = $this->ownedTask($this->quickTaskId);
+
+        abort_if($task === null, 403);
+
+        try {
+            app(ReleaseTaskProgressService::class)
+                ->addNote($task, $user, $this->progressNote, $this->progressBlocked);
+        } catch (ReleaseTaskProgressException|InvalidRfcStatusTransitionException $exception) {
+            $this->addError('quick', $exception->getMessage());
+
+            return;
+        }
+
+        $this->closeQuick();
+        $this->quickMessage = 'Catatan kegiatan berhasil ditambahkan.';
+    }
+
+    private function currentReleaseTeamUser(): User
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        abort_unless($user !== null && $user->isReleaseTeam() && $user->can('rfc.view_assigned'), 403);
+
+        return $user;
+    }
+
+    private function ownedTask(int $taskId): ?ReleaseTask
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        if ($user === null) {
+            return null;
+        }
+
+        return ReleaseTask::query()
+            ->whereKey($taskId)
+            ->whereHas('releaseTeamMember', function ($member) use ($user): void {
+                $member->where('user_id', $user->id)
+                    ->where('is_active', true);
+            })
+            ->whereHas('changeRequest')
+            ->first();
     }
 }
