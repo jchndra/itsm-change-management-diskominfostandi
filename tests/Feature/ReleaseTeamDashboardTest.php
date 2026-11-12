@@ -267,15 +267,28 @@ it('menampilkan pesan Indonesia saat tugas belum memiliki estimasi', function ()
     expect($task->fresh()->execution_status)->toBe('pending');
 });
 
-it('menampilkan empty state saat belum ada tugas', function () {
+it('menampilkan banner sambutan tanpa tanggal dan tombol muat ulang', function () {
     Carbon::setTestNow(Carbon::create(2026, 11, 9, 10, 0, 0, 'Asia/Jakarta'));
 
-    [$user] = releaseTeamDashboardUser();
+    [$user, $member] = releaseTeamDashboardUser();
 
     $this->actingAs($user)
         ->get(route('release-team.dashboard'))
         ->assertOk()
-        ->assertSee('Tugas saya')
+        ->assertSee('Selamat datang, '.$member->name)
+        ->assertDontSee('Tugas saya')
+        ->assertDontSee('Muat ulang');
+});
+
+it('menampilkan empty state saat belum ada tugas', function () {
+    Carbon::setTestNow(Carbon::create(2026, 11, 9, 10, 0, 0, 'Asia/Jakarta'));
+
+    [$user, $member] = releaseTeamDashboardUser();
+
+    $this->actingAs($user)
+        ->get(route('release-team.dashboard'))
+        ->assertOk()
+        ->assertSee('Selamat datang, '.$member->name)
         ->assertSee('Belum ada tugas')
         ->assertSee('Tugas baru dari Change Manager akan muncul di sini.');
 });

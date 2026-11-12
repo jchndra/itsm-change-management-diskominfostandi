@@ -5,6 +5,7 @@
     'dateTime' => null,
     'roleLabel',
     'showMeta' => true,
+    'showGreeting' => true,
 ])
 
 @php
@@ -51,10 +52,12 @@
                 </span>
             </div>
 
-            <p class="mt-5 text-sm font-medium text-blue-100/80">Selamat datang, {{ $userName }}</p>
+            @if ($showGreeting)
+                <p class="mt-5 text-sm font-medium text-blue-100/80">Selamat datang, {{ $userName }}</p>
+            @endif
 
             <h1
-                class="mt-1.5 text-[30px] font-bold leading-[1.08] tracking-[-0.03em] text-white sm:text-[38px]">
+                class="{{ $showGreeting ? 'mt-1.5' : 'mt-5' }} text-[30px] font-bold leading-[1.08] tracking-[-0.03em] text-white sm:text-[38px]">
                 {{ $title }}
             </h1>
 

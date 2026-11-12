@@ -1,9 +1,9 @@
 <div class="space-y-5 sm:space-y-6" wire:poll.60s.visible>
 
     {{-- Header --}}
-    <x-dashboard.hero-banner class="dashboard-rise" title="Tugas saya" :user-name="$user->name"
+    <x-dashboard.hero-banner class="dashboard-rise" :title="'Selamat datang, '.$teamName" :user-name="$user->name"
         role-label="Tim Rilis" :description="$teamName.' · Antrean pengerjaan RFC yang ditugaskan kepadamu.'"
-        :date-time="$dateTime" />
+        :show-greeting="false" :show-meta="false" />
 
     {{-- Kartu ringkasan --}}
     <section aria-labelledby="metrik-tim-rilis" class="dashboard-rise dashboard-rise-1">
