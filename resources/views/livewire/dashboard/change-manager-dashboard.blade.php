@@ -162,7 +162,7 @@
                     </div>
                 @endif
 
-                @if (filled($periodError))
+                @if (filled($periodError) && (filled($dateFrom) || filled($dateTo)))
                     <p role="alert" class="basis-full text-left text-[11px] font-medium text-rose-700">
                         {{ $periodError }}
                     </p>
