@@ -109,7 +109,9 @@
 
     {{-- Grafik --}}
     <div class="grid min-w-0 gap-5 xl:grid-cols-5">
-        <x-dashboard.chart-card class="dashboard-rise dashboard-rise-2 xl:col-span-3" title="Tren {{ $periodLabel }}"
+        <x-dashboard.chart-card 
+            :actions-full-width="true"
+            class="dashboard-rise dashboard-rise-2 xl:col-span-3" title="Tren {{ $periodLabel }}"
             description="Jumlah tiket masuk dan keputusan Change Manager (disetujui atau ditolak) {{ $overview['trend_granularity'] === 'week' ? 'per minggu' : 'setiap hari' }} pada zona waktu WIB.">
             <x-slot:icon>
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -119,54 +121,52 @@
             </x-slot:icon>
 
             <x-slot:actions>
-                <div class="flex flex-wrap items-center justify-end gap-2">
-                    <span
-                        class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-500 shadow-sm">
-                        <span class="h-1.5 w-1.5 rounded-full bg-blue-500" aria-hidden="true"></span>
-                        {{ $periodLabel }}
-                    </span>
+                <span
+                    class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-500 shadow-sm">
+                    <span class="h-1.5 w-1.5 rounded-full bg-blue-500" aria-hidden="true"></span>
+                    {{ $periodLabel }}
+                </span>
 
-                    @can('exportList', \App\Models\ChangeRequest::class)
-                        <a href="{{ route('change-requests.export', ['format' => 'xlsx', 'basis' => 'ticket', 'from' => \Illuminate\Support\Carbon::parse($overview['trend']['start'])->format('Y-m-d'), 'to' => \Illuminate\Support\Carbon::parse($overview['trend']['end'])->format('Y-m-d')]) }}"
-                            class="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-sm transition hover:bg-blue-700"
-                            title="Unduh laporan Excel untuk periode tren yang sedang dipilih">
-                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                                aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                                    d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                            </svg>
-                            Unduh laporan periode ini
-                        </a>
-                    @endcan
+                @can('exportList', \App\Models\ChangeRequest::class)
+                    <a href="{{ route('change-requests.export', ['format' => 'xlsx', 'basis' => 'ticket', 'from' => \Illuminate\Support\Carbon::parse($overview['trend']['start'])->format('Y-m-d'), 'to' => \Illuminate\Support\Carbon::parse($overview['trend']['end'])->format('Y-m-d')]) }}"
+                        class="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-sm transition hover:bg-blue-700"
+                        title="Unduh laporan Excel untuk periode tren yang sedang dipilih">
+                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                        </svg>
+                        Unduh laporan periode ini
+                    </a>
+                @endcan
 
-                    <select wire:model.live="period" aria-label="Pilih periode tren"
-                        class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-600 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                        <option value="7">7 Hari</option>
-                        <option value="30">30 Hari</option>
-                        <option value="90">90 Hari</option>
-                        <option value="this_month">Bulan Ini</option>
-                        <option value="last_month">Bulan Lalu</option>
-                        <option value="custom">Kustom</option>
-                    </select>
+                <select wire:model.live="period" aria-label="Pilih periode tren"
+                    class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-600 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    <option value="7">7 Hari</option>
+                    <option value="30">30 Hari</option>
+                    <option value="90">90 Hari</option>
+                    <option value="this_month">Bulan Ini</option>
+                    <option value="last_month">Bulan Lalu</option>
+                    <option value="custom">Kustom</option>
+                </select>
 
-                    @if ($period === 'custom')
-                        <div class="flex flex-wrap items-center gap-1">
-                            <input type="date" wire:model.live="dateFrom" max="{{ now()->format('Y-m-d') }}"
-                                aria-label="Tanggal mulai"
-                                class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
-                            <span class="text-xs text-slate-400">s.d.</span>
-                            <input type="date" wire:model.live="dateTo" max="{{ now()->format('Y-m-d') }}"
-                                aria-label="Tanggal akhir"
-                                class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
-                        </div>
-                    @endif
+                @if ($period === 'custom')
+                    <div class="flex flex-wrap items-center gap-1">
+                        <input type="date" wire:model.live="dateFrom" max="{{ now()->format('Y-m-d') }}"
+                            aria-label="Tanggal mulai"
+                            class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
+                        <span class="text-xs text-slate-400">s.d.</span>
+                        <input type="date" wire:model.live="dateTo" max="{{ now()->format('Y-m-d') }}"
+                            aria-label="Tanggal akhir"
+                            class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
+                    </div>
+                @endif
 
-                    @if (filled($periodError))
-                        <p role="alert" class="basis-full text-right text-[11px] font-medium text-rose-700">
-                            {{ $periodError }}
-                        </p>
-                    @endif
-                </div>
+                @if (filled($periodError))
+                    <p role="alert" class="basis-full text-left text-[11px] font-medium text-rose-700">
+                        {{ $periodError }}
+                    </p>
+                @endif
             </x-slot:actions>
 
             <p class="mb-4 text-[11px] text-slate-500">

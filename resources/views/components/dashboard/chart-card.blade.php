@@ -1,4 +1,8 @@
-@props(['title', 'description' => null])
+@props([
+    'title',
+    'description' => null,
+    'actionsFullWidth' => false,
+])
 
 @php
     $headingId = 'chart-card-' . md5($title);
@@ -10,7 +14,11 @@
     <span class="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-300/70 to-transparent"
         aria-hidden="true"></span>
 
-    <div class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100/90 px-5 py-4">
+    <div @class([
+        'flex gap-3 border-b border-slate-100/90 px-5 py-4',
+        'flex-col items-start' => $actionsFullWidth,
+        'flex-wrap items-start justify-between' => ! $actionsFullWidth,
+    ])>
         <div class="flex min-w-0 items-start gap-3">
             @isset($icon)
                 <span
@@ -29,7 +37,10 @@
         </div>
 
         @isset($actions)
-            <div class="flex shrink-0 flex-wrap items-center gap-2">
+            <div @class([
+                'flex w-full min-w-0 flex-wrap items-center justify-start gap-2',
+                'shrink-0' => ! $actionsFullWidth,
+            ])>
                 {{ $actions }}
             </div>
         @endisset
