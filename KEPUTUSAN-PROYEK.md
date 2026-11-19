@@ -42,6 +42,8 @@ Pemohon register -> membuat RFC (satu nomor RFC sejak diajukan) -> langsung ke a
 * Penolakan saat pekerjaan berjalan membatalkan tugas Tim Rilis aktif dengan status baru `release_tasks.execution_status = cancelled` ("Dibatalkan"), bukan `rolled_back`. Tugas yang sudah selesai (`successful`/`rolled_back`) tidak diubah.
 * Tim Rilis yang ditugaskan pada RFC yang ditolak mendapat notifikasi penolakan.
 * Grup `not_successful` ("Belum Berhasil") kini tampil sebagai kartu statistik amber di dashboard Pemohon dan daftar RFC Pemohon, Change Manager, dan Admin (hint: "Pelaksanaan belum berhasil" / "Menunggu evaluasi atau penutupan" untuk CM). Definisi angka tetap memakai `scopeInStatusGroup('not_successful')`; "Ditolak" tetap khusus `rejected`. Tim Rilis tidak diberi kartu baru karena "Menunggu Evaluasi" sudah mencakup `failed`.
+* Kartu "Belum Berhasil" dapat diklik untuk memfilter daftar RFC ke grup `not_successful`. Daftar RFC memiliki filter "Grup Status" eksplisit (dipasangkan dengan filter Status yang sudah ada), parameter query `?grup=not_successful`, dan ekspor Excel/CSV mengikuti filter grup lewat `status_group`.
+* Tugas Tim Rilis yang `cancelled` (dibatalkan karena penolakan) kini tampil di tab Riwayat dashboard Tim Rilis dengan label "Dibatalkan" dan waktu pembatalan (`updated_at`), bukan hilang dari daftar; tugas selesai/belum berhasil tetap diurutkan berdasarkan `executed_at` (COALESCE).
 
 ## Menunggu konfirmasi mentor
 

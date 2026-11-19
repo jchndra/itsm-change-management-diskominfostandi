@@ -25,6 +25,8 @@ class ListChangeRequests extends Component
 
     public string $statusFilter = '';
 
+    public string $statusGroupFilter = '';
+
     public string $categoryFilter = '';
 
     public string $applicationFilter = '';
@@ -55,6 +57,11 @@ class ListChangeRequests extends Component
     public function updatedStatusFilter(): void
     {
         $this->queueFilter = '';
+        $this->resetPage();
+    }
+
+    public function updatedStatusGroupFilter(): void
+    {
         $this->resetPage();
     }
 
@@ -90,6 +97,7 @@ class ListChangeRequests extends Component
         $this->reset(
             'search',
             'statusFilter',
+            'statusGroupFilter',
             'categoryFilter',
             'applicationFilter',
             'opdFilter',
@@ -114,6 +122,7 @@ class ListChangeRequests extends Component
             'basis' => 'created',
             'q' => $this->search,
             'status' => $this->statusFilter,
+            'status_group' => $this->statusGroupFilter,
             'change_type' => $this->categoryFilter,
             'application_id' => $this->applicationFilter,
             'opd_id' => $this->opdFilter,
@@ -127,6 +136,12 @@ class ListChangeRequests extends Component
         $this->authorize('viewAny', ChangeRequest::class);
 
         $this->search = (string) request()->query('q', '');
+
+        $group = (string) request()->query('grup', '');
+
+        if ($group !== '' && array_key_exists($group, RfcStatus::groups())) {
+            $this->statusGroupFilter = $group;
+        }
 
         if (request()->query('queue') === 'incoming'
             && (Auth::user()?->can('rfc.review_completeness') ?? false)) {
@@ -172,6 +187,9 @@ class ListChangeRequests extends Component
             'opds' => Opd::orderBy('name')->get(['id', 'name']),
             'statuses' => collect(RfcStatus::cases())->mapWithKeys(
                 fn (RfcStatus $status) => [$status->value => $status->filterLabel()]
+            ),
+            'groups' => collect(RfcStatus::groups())->mapWithKeys(
+                fn (array $group, string $key) => [$key => $group['label']]
             ),
             'changeTypes' => [
                 'standard' => 'Standard',
@@ -329,6 +347,7 @@ class ListChangeRequests extends Component
                 });
             })
             ->when($this->statusFilter !== '', fn (Builder $q) => $q->where('status', $this->statusFilter))
+            ->when($this->statusGroupFilter !== '', fn (Builder $q) => $q->inStatusGroup($this->statusGroupFilter))
             ->when($this->categoryFilter !== '', fn (Builder $q) => $q->where('change_type', $this->categoryFilter))
             ->when($this->applicationFilter !== '', fn (Builder $q) => $q->where('application_id', $this->applicationFilter))
             ->when($includeOpdFilter && $this->opdFilter !== '', fn (Builder $q) => $q->whereHas(

@@ -40,6 +40,7 @@ class RfcExportService
                 });
             })
             ->when($filters['status'] !== '', fn (Builder $query) => $query->where('status', $filters['status']))
+            ->when($filters['status_group'] !== '', fn (Builder $query) => $query->inStatusGroup($filters['status_group']))
             ->when($filters['change_type'] !== '', fn (Builder $query) => $query->where('change_type', $filters['change_type']))
             ->when($filters['application_id'] !== null, fn (Builder $query) => $query->where('application_id', $filters['application_id']))
             ->when($filters['opd_id'] !== null, fn (Builder $query) => $query->whereHas(
@@ -147,13 +148,14 @@ class RfcExportService
 
     /**
      * @param  array<string, mixed>  $filters
-     * @return array{q: string, status: string, change_type: string, application_id: int|null, opd_id: int|null, from: string, to: string, basis: string}
+     * @return array{q: string, status: string, status_group: string, change_type: string, application_id: int|null, opd_id: int|null, from: string, to: string, basis: string}
      */
     public function normalizeFilters(array $filters): array
     {
         $normalized = [
             'q' => trim((string) ($filters['q'] ?? '')),
             'status' => trim((string) ($filters['status'] ?? '')),
+            'status_group' => trim((string) ($filters['status_group'] ?? '')),
             'change_type' => trim((string) ($filters['change_type'] ?? '')),
             'application_id' => $filters['application_id'] ?? null,
             'opd_id' => $filters['opd_id'] ?? null,
@@ -164,6 +166,10 @@ class RfcExportService
 
         if ($normalized['status'] !== '' && RfcStatus::fromValue($normalized['status']) === null) {
             throw new InvalidArgumentException('Filter status tidak valid.');
+        }
+
+        if ($normalized['status_group'] !== '' && ! array_key_exists($normalized['status_group'], RfcStatus::groups())) {
+            throw new InvalidArgumentException('Filter grup status tidak valid.');
         }
 
         if ($normalized['change_type'] !== '' && ! in_array($normalized['change_type'], self::CHANGE_TYPES, true)) {

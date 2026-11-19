@@ -40,6 +40,7 @@ class RfcExportController extends Controller
             'basis' => ['nullable', 'in:created,ticket'],
             'q' => ['nullable', 'string', 'max:200'],
             'status' => ['nullable', 'string'],
+            'status_group' => ['nullable', 'string'],
             'change_type' => ['nullable', 'string'],
             'application_id' => ['nullable', 'integer', 'min:1'],
             'opd_id' => ['nullable', 'integer', 'min:1'],
@@ -49,7 +50,7 @@ class RfcExportController extends Controller
 
         $format = $validated['format'] ?? 'csv';
         $filters = array_intersect_key($validated, array_flip([
-            'basis', 'q', 'status', 'change_type', 'application_id', 'opd_id', 'from', 'to',
+            'basis', 'q', 'status', 'status_group', 'change_type', 'application_id', 'opd_id', 'from', 'to',
         ]));
 
         try {

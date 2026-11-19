@@ -123,6 +123,7 @@
         $cards = [
             [
                 'label' => \App\Enums\RfcStatus::groupLabel('draft'),
+                'url' => route('change-requests.index'),
                 'value' => $stats['draft'],
                 'hint' => 'RFC dalam draft',
                 'wrapper' => 'border-slate-200 bg-slate-50/70 hover:border-slate-300',
@@ -132,6 +133,7 @@
             ],
             [
                 'label' => \App\Enums\RfcStatus::groupLabel('in_process'),
+                'url' => route('change-requests.index'),
                 'value' => $stats['in_process'],
                 'hint' => 'Menunggu tindak lanjut',
                 'wrapper' => 'border-blue-200 bg-blue-50/70 hover:border-blue-300',
@@ -141,6 +143,7 @@
             ],
             [
                 'label' => \App\Enums\RfcStatus::groupLabel('needs_revision'),
+                'url' => route('change-requests.index'),
                 'value' => $stats['needs_revision'],
                 'hint' => 'Perlu diperbaiki pemohon',
                 'wrapper' => 'border-amber-200 bg-amber-50/70 hover:border-amber-300',
@@ -150,6 +153,7 @@
             ],
             [
                 'label' => \App\Enums\RfcStatus::groupLabel('approved'),
+                'url' => route('change-requests.index'),
                 'value' => $stats['approved'],
                 'hint' => 'Telah disetujui',
                 'wrapper' => 'border-emerald-200 bg-emerald-50/70 hover:border-emerald-300',
@@ -159,6 +163,7 @@
             ],
             [
                 'label' => \App\Enums\RfcStatus::groupLabel('not_successful'),
+                'url' => route('change-requests.index', ['grup' => 'not_successful']),
                 'value' => $stats['not_successful'],
                 'hint' => 'Pelaksanaan belum berhasil',
                 'wrapper' => 'border-amber-200 bg-amber-50/70 hover:border-amber-300',
@@ -168,6 +173,7 @@
             ],
             [
                 'label' => 'Ditolak',
+                'url' => route('change-requests.index'),
                 'value' => $stats['rejected'],
                 'hint' => 'Ditolak',
                 'wrapper' => 'border-rose-200 bg-rose-50/70 hover:border-rose-300',
@@ -180,7 +186,7 @@
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         @foreach ($cards as $card)
-            <a href="{{ route('change-requests.index') }}" wire:navigate
+            <a href="{{ $card['url'] }}" wire:navigate
                 class="group flex h-full min-h-[112px] items-center gap-4 rounded-2xl border p-5 shadow-sm transition {{ $card['wrapper'] }}">
                 <span class="grid h-12 w-12 shrink-0 place-items-center rounded-xl {{ $card['icon'] }}">
                     <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

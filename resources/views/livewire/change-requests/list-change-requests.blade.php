@@ -50,6 +50,9 @@
         };
 
         $filterChips = collect([
+            filled($statusGroupFilter)
+                ? ['property' => 'statusGroupFilter', 'label' => 'Grup', 'value' => $groups->get($statusGroupFilter, $statusGroupFilter)]
+                : null,
             filled($statusFilter)
                 ? ['property' => 'statusFilter', 'label' => 'Status', 'value' => $statuses->get($statusFilter, $statusFilter)]
                 : null,
@@ -158,15 +161,20 @@
                 </x-slot:icon>
             </x-dashboard.stat-card>
 
-            <x-dashboard.stat-card :label="\App\Enums\RfcStatus::groupLabel('not_successful')"
-                :value="$stats['not_successful']" hint="Pelaksanaan belum berhasil" tone="amber">
-                <x-slot:icon>
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                            d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
-                    </svg>
-                </x-slot:icon>
-            </x-dashboard.stat-card>
+            <button type="button" wire:click="$set('statusGroupFilter', 'not_successful')"
+                class="block h-full rounded-2xl text-left transition focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-200 {{ $statusGroupFilter === 'not_successful' ? 'ring-2 ring-amber-400' : '' }}"
+                title="Tampilkan hanya RFC Belum Berhasil" aria-pressed="{{ $statusGroupFilter === 'not_successful' ? 'true' : 'false' }}">
+                <x-dashboard.stat-card :label="\App\Enums\RfcStatus::groupLabel('not_successful')"
+                    :value="$stats['not_successful']" hint="Pelaksanaan belum berhasil" tone="amber"
+                    class="h-full">
+                    <x-slot:icon>
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                        </svg>
+                    </x-slot:icon>
+                </x-dashboard.stat-card>
+            </button>
 
             <x-dashboard.stat-card :label="\App\Enums\RfcStatus::groupLabel('rejected')" :value="$stats['rejected']"
                 hint="Ditolak" tone="rose">
@@ -213,15 +221,20 @@
                 </x-slot:icon>
             </x-dashboard.stat-card>
 
-            <x-dashboard.stat-card :label="\App\Enums\RfcStatus::groupLabel('not_successful')"
-                :value="$stats['not_successful']" hint="Pelaksanaan belum berhasil" tone="amber">
-                <x-slot:icon>
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                            d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
-                    </svg>
-                </x-slot:icon>
-            </x-dashboard.stat-card>
+            <button type="button" wire:click="$set('statusGroupFilter', 'not_successful')"
+                class="block h-full rounded-2xl text-left transition focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-200 {{ $statusGroupFilter === 'not_successful' ? 'ring-2 ring-amber-400' : '' }}"
+                title="Tampilkan hanya RFC Belum Berhasil" aria-pressed="{{ $statusGroupFilter === 'not_successful' ? 'true' : 'false' }}">
+                <x-dashboard.stat-card :label="\App\Enums\RfcStatus::groupLabel('not_successful')"
+                    :value="$stats['not_successful']" hint="Pelaksanaan belum berhasil" tone="amber"
+                    class="h-full">
+                    <x-slot:icon>
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                        </svg>
+                    </x-slot:icon>
+                </x-dashboard.stat-card>
+            </button>
 
             <x-dashboard.stat-card :label="\App\Enums\RfcStatus::groupLabel('rejected')" :value="$stats['rejected']"
                 hint="Ditolak" tone="rose">
@@ -310,16 +323,20 @@
                 </x-slot:icon>
             </x-dashboard.stat-card>
 
-            <x-dashboard.stat-card :label="\App\Enums\RfcStatus::groupLabel('not_successful')"
-                :value="$stats['not_successful']" :percent="$statusPercent($stats['not_successful'])"
-                hint="Menunggu evaluasi atau penutupan" tone="amber">
-                <x-slot:icon>
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                            d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
-                    </svg>
-                </x-slot:icon>
-            </x-dashboard.stat-card>
+            <button type="button" wire:click="$set('statusGroupFilter', 'not_successful')"
+                class="block h-full rounded-2xl text-left transition focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-200 {{ $statusGroupFilter === 'not_successful' ? 'ring-2 ring-amber-400' : '' }}"
+                title="Tampilkan hanya RFC Belum Berhasil" aria-pressed="{{ $statusGroupFilter === 'not_successful' ? 'true' : 'false' }}">
+                <x-dashboard.stat-card :label="\App\Enums\RfcStatus::groupLabel('not_successful')"
+                    :value="$stats['not_successful']" :percent="$statusPercent($stats['not_successful'])"
+                    hint="Menunggu evaluasi atau penutupan" tone="amber" class="h-full">
+                    <x-slot:icon>
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                        </svg>
+                    </x-slot:icon>
+                </x-dashboard.stat-card>
+            </button>
 
             <x-dashboard.stat-card :label="\App\Enums\RfcStatus::groupLabel('rejected')" :value="$stats['rejected']"
                 :percent="$statusPercent($stats['rejected'])" hint="Ditolak" tone="rose">
@@ -515,7 +532,20 @@
 
             <div x-show="filtersOpen" x-cloak x-transition.opacity.duration.150ms
                 class="border-t border-slate-100 px-5 py-4">
-                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7">
+                    <div>
+                        <label for="filter-status-group"
+                            class="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Grup
+                            Status</label>
+                        <select id="filter-status-group" wire:model.live="statusGroupFilter"
+                            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 focus:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-100">
+                            <option value="">Semua grup</option>
+                            @foreach ($groups as $value => $label)
+                                <option value="{{ $value }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
                     <div>
                         <label for="filter-status"
                             class="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Status</label>

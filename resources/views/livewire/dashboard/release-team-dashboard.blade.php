@@ -417,7 +417,7 @@
     @else
         {{-- Riwayat tugas --}}
         <x-dashboard.panel class="dashboard-rise dashboard-rise-3" title="Riwayat Tugas" id="riwayat-tugas-tim-rilis"
-            description="Tugas yang sudah selesai atau belum berhasil, terbaru lebih dulu.">
+            description="Tugas yang selesai, belum berhasil, atau dibatalkan, terbaru lebih dulu.">
             <x-slot:icon>
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
@@ -428,13 +428,17 @@
             @if ($history === [])
                 <div class="p-5">
                     <x-dashboard.empty-state title="Belum ada riwayat"
-                        description="Tugas yang selesai atau belum berhasil akan muncul di sini." />
+                        description="Tugas yang selesai, belum berhasil, atau dibatalkan akan muncul di sini." />
                 </div>
             @else
                 <ul class="divide-y divide-slate-100/80">
                     @foreach ($history as $item)
                         @php
-                            $isSuccessful = $item['result'] === 'successful';
+                            $historyBadge = match ($item['result']) {
+                                'successful' => ['label' => 'Selesai', 'classes' => 'border-emerald-200 bg-emerald-50 text-emerald-700', 'dot' => 'bg-emerald-500'],
+                                'cancelled' => ['label' => 'Dibatalkan', 'classes' => 'border-slate-200 bg-slate-100 text-slate-500', 'dot' => 'bg-slate-400'],
+                                default => ['label' => 'Belum Berhasil', 'classes' => 'border-amber-200 bg-amber-50 text-amber-800', 'dot' => 'bg-amber-500'],
+                            };
                         @endphp
 
                         <li wire:key="riwayat-tim-rilis-{{ $item['rfc_id'] }}"
@@ -446,10 +450,10 @@
                                         {{ $item['rfc_number'] ?: 'RFC' }}
                                     </span>
                                     <span
-                                        class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold {{ $isSuccessful ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-800' }}">
-                                        <span class="h-1.5 w-1.5 rounded-full {{ $isSuccessful ? 'bg-emerald-500' : 'bg-amber-500' }}"
+                                        class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold {{ $historyBadge['classes'] }}">
+                                        <span class="h-1.5 w-1.5 rounded-full {{ $historyBadge['dot'] }}"
                                             aria-hidden="true"></span>
-                                        {{ $isSuccessful ? 'Selesai' : 'Belum Berhasil' }}
+                                        {{ $historyBadge['label'] }}
                                     </span>
                                 </div>
 
@@ -465,7 +469,8 @@
                             <div
                                 class="flex shrink-0 items-center justify-between gap-3 border-t border-slate-100 pt-3 sm:flex-col sm:items-end sm:border-t-0 sm:pt-0">
                                 <p class="text-xs font-medium text-slate-500">
-                                    {{ $item['executed_at']?->locale('id')->translatedFormat('j M Y') ?? 'Tanggal tidak tercatat' }}
+                                    @if ($item['result'] === 'cancelled')
+                                        Dibatalkan pada&nbsp;@endif{{ $item['executed_at']?->locale('id')->translatedFormat('j M Y') ?? 'Tanggal tidak tercatat' }}
                                 </p>
                                 <a href="{{ route('change-requests.show', ['rfc' => $item['rfc_id']]) }}" wire:navigate
                                     class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 min-h-10 px-3 py-2 text-xs font-bold text-blue-700 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-200">

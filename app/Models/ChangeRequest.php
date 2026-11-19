@@ -385,7 +385,7 @@ class ChangeRequest extends Model
     /**
      * Filter berdasarkan kelompok status yang memperhitungkan hasil akhir:
      * closed berhasil (atau RFC lama tanpa data implementasi) masuk grup
-     * approved, sedangkan closed gagal/rollback masuk grup rejected.
+     * approved, sedangkan closed gagal/rollback masuk grup not_successful.
      */
     public function scopeInStatusGroup(Builder $query, string $group): Builder
     {

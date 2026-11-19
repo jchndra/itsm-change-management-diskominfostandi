@@ -270,8 +270,10 @@ class DashboardMetricsService
     }
 
     /**
-     * Riwayat tugas selesai atau belum berhasil milik anggota aktif pengguna,
-     * diurutkan dari eksekusi terbaru.
+     * Riwayat tugas selesai, belum berhasil, atau dibatalkan milik anggota
+     * aktif pengguna, diurutkan dari eksekusi terbaru. Tugas dibatalkan
+     * tidak melalui tahap pelaksanaan, sehingga waktu pembatalannya yang
+     * dipakai sebagai waktu riwayat.
      *
      * @return array<int, array{
      *     rfc_id: int,
@@ -291,9 +293,13 @@ class DashboardMetricsService
                     ->where('is_active', true);
             })
             ->whereHas('changeRequest')
-            ->whereIn('execution_status', ['successful', 'rolled_back'])
-            ->whereNotNull('executed_at')
-            ->orderByDesc('executed_at')
+            ->where(function (Builder $query): void {
+                $query->where(function (Builder $completed): void {
+                    $completed->whereIn('execution_status', ['successful', 'rolled_back'])
+                        ->whereNotNull('executed_at');
+                })->orWhere('execution_status', 'cancelled');
+            })
+            ->orderByRaw('COALESCE(executed_at, updated_at) DESC')
             ->orderByDesc('id')
             ->limit($limit)
             ->get()
@@ -303,7 +309,7 @@ class DashboardMetricsService
                 'title' => (string) $task->changeRequest?->title,
                 'application_name' => $task->changeRequest?->application?->name,
                 'result' => (string) $task->execution_status,
-                'executed_at' => $task->executed_at?->copy()->timezone(config('app.timezone')),
+                'executed_at' => ($task->executed_at ?? $task->updated_at)?->copy()->timezone(config('app.timezone')),
             ])
             ->all();
     }

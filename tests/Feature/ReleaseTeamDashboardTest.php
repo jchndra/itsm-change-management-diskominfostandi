@@ -369,7 +369,7 @@ it('menyaring daftar tugas berdasarkan kata kunci pencarian', function () {
         ->assertDontSee('Tidak ada tugas pada filter ini');
 });
 
-it('membatasi riwayat pada tugas selesai atau rollback milik sendiri maksimal 30', function () {
+it('membatasi riwayat pada tugas selesai, belum berhasil, atau dibatalkan milik sendiri maksimal 30', function () {
     Carbon::setTestNow(Carbon::create(2026, 11, 9, 10, 0, 0, 'Asia/Jakarta'));
 
     [$user, $member] = releaseTeamDashboardUser();
@@ -381,6 +381,15 @@ it('membatasi riwayat pada tugas selesai atau rollback milik sendiri maksimal 30
             'executed_at' => now()->subDays($index),
         ]);
     });
+
+    releaseTeamDashboardTask(releaseTeamDashboardRfc(['title' => 'Tugas dibatalkan sendiri']), $member, [
+        'execution_status' => 'cancelled',
+        'updated_at' => now()->subHours(2),
+    ]);
+    releaseTeamDashboardTask(releaseTeamDashboardRfc(['title' => 'Tugas dibatalkan orang lain']), $otherMember, [
+        'execution_status' => 'cancelled',
+        'updated_at' => now()->subHours(2),
+    ]);
 
     releaseTeamDashboardTask(releaseTeamDashboardRfc(['title' => 'Tugas berjalan']), $member, [
         'execution_status' => 'in_progress',
@@ -397,11 +406,14 @@ it('membatasi riwayat pada tugas selesai atau rollback milik sendiri maksimal 30
     $titles = collect($history)->pluck('title');
 
     expect($history)->toHaveCount(30)
+        ->and($history[0]['result'])->toBe('cancelled')
         ->and(collect($history)->pluck('result')->unique()->sort()->values()->all())
-        ->toBe(['rolled_back', 'successful'])
+        ->toBe(['cancelled', 'rolled_back', 'successful'])
         ->and($history[0]['executed_at']->greaterThan($history[29]['executed_at']))->toBeTrue()
+        ->and($titles)->toContain('Tugas dibatalkan sendiri')
         ->and($titles)->not->toContain('Tugas berjalan')
-        ->and($titles)->not->toContain('Tugas anggota lain');
+        ->and($titles)->not->toContain('Tugas anggota lain')
+        ->and($titles)->not->toContain('Tugas dibatalkan orang lain');
 
     Livewire::actingAs($user)
         ->test(ReleaseTeamDashboard::class)
@@ -409,6 +421,8 @@ it('membatasi riwayat pada tugas selesai atau rollback milik sendiri maksimal 30
         ->assertSet('tab', 'history')
         ->assertSee('Riwayat Tugas')
         ->assertSee('Tugas selesai 1')
+        ->assertSee('Tugas dibatalkan sendiri')
+        ->assertSee('Dibatalkan')
         ->assertSee('Lihat detail')
         ->assertDontSee('Menunggu dimulai');
 });

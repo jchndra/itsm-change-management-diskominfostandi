@@ -201,6 +201,44 @@ it('menerapkan filter status aplikasi dan tanggal', function () {
         ->not->toContain('RFC C');
 });
 
+it('menerapkan filter grup status pada ekspor dan menolak nilai yang tidak valid', function () {
+    rfcExportMakeRfc([
+        'title' => 'RFC Hasil Belum Berhasil',
+        'status' => RfcStatus::FAILED->value,
+    ]);
+    rfcExportMakeRfc([
+        'title' => 'RFC Ditolak',
+        'status' => RfcStatus::REJECTED->value,
+    ]);
+
+    $notSuccessful = $this->actingAs($this->cm)
+        ->get(route('change-requests.export', [
+            'format' => 'csv',
+            'status_group' => 'not_successful',
+        ]))
+        ->streamedContent();
+
+    expect($notSuccessful)->toContain('RFC Hasil Belum Berhasil')
+        ->not->toContain('RFC Ditolak');
+
+    $rejected = $this->actingAs($this->cm)
+        ->get(route('change-requests.export', [
+            'format' => 'csv',
+            'status_group' => 'rejected',
+        ]))
+        ->streamedContent();
+
+    expect($rejected)->toContain('RFC Ditolak')
+        ->not->toContain('RFC Hasil Belum Berhasil');
+
+    $this->actingAs($this->cm)
+        ->get(route('change-requests.export', [
+            'format' => 'csv',
+            'status_group' => 'bukan_grup',
+        ]))
+        ->assertStatus(422);
+});
+
 it('memakai ticket_created_at saat basis tanggal tiket', function () {
     rfcExportMakeRfc([
         'title' => 'RFC Basis Tiket',

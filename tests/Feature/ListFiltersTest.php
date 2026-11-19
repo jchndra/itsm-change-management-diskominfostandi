@@ -1,10 +1,12 @@
 <?php
 
+use App\Enums\ImplementationResult;
 use App\Enums\RfcStatus;
 use App\Livewire\ChangeRequests\DeleteRfc;
 use App\Livewire\ChangeRequests\ListChangeRequests;
 use App\Models\Application;
 use App\Models\ChangeRequest;
+use App\Models\ChangeRequestImplementation;
 use App\Models\Opd;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
@@ -166,6 +168,89 @@ it('mencari draft menggunakan identitas tampilan Draft #<id>', function () {
         ->set('search', $draft->displayIdentifier())
         ->assertSee($draft->title)
         ->assertDontSee($draftLain->title);
+});
+
+it('memfilter daftar RFC berdasarkan grup status dan menghapusnya lewat chip', function () {
+    $admin = penggunaFilter('Admin');
+    $pemohon = penggunaFilter('Pemohon');
+
+    $failed = ChangeRequest::factory()->create([
+        'submitted_by_id' => $pemohon->id,
+        'created_by_id' => $pemohon->id,
+        'status' => RfcStatus::FAILED->value,
+        'title' => 'RFC Belum Berhasil',
+    ]);
+    $rejected = ChangeRequest::factory()->create([
+        'submitted_by_id' => $pemohon->id,
+        'created_by_id' => $pemohon->id,
+        'status' => RfcStatus::REJECTED->value,
+        'title' => 'RFC Ditolak',
+    ]);
+    $approved = ChangeRequest::factory()->create([
+        'submitted_by_id' => $pemohon->id,
+        'created_by_id' => $pemohon->id,
+        'status' => RfcStatus::APPROVED->value,
+        'title' => 'RFC Disetujui',
+    ]);
+    $closedFailed = ChangeRequest::factory()->create([
+        'submitted_by_id' => $pemohon->id,
+        'created_by_id' => $pemohon->id,
+        'status' => RfcStatus::CLOSED->value,
+        'title' => 'RFC Ditutup Tidak Berhasil',
+    ]);
+    $closedSuccess = ChangeRequest::factory()->create([
+        'submitted_by_id' => $pemohon->id,
+        'created_by_id' => $pemohon->id,
+        'status' => RfcStatus::CLOSED->value,
+        'title' => 'RFC Ditutup Berhasil',
+    ]);
+
+    foreach ([['rfc' => $closedFailed, 'result' => ImplementationResult::FAILED->value], ['rfc' => $closedSuccess, 'result' => ImplementationResult::SUCCESS->value]] as $row) {
+        ChangeRequestImplementation::create([
+            'change_request_id' => $row['rfc']->id,
+            'recorded_by_id' => $admin->id,
+            'implementation_result' => $row['result'],
+            'started_at' => now()->subHour(),
+            'finished_at' => now(),
+            'executor_name' => 'Tim Rilis Diskominfostandi',
+            'report_source' => 'Laporan tertulis Tim Rilis',
+            'summary' => 'Ringkasan pelaksanaan.',
+            'test_results' => 'Pengujian fungsional.',
+            'failure_notes' => $row['result'] === ImplementationResult::SUCCESS->value ? null : 'Perubahan gagal diterapkan.',
+            'follow_up_action' => $row['result'] === ImplementationResult::SUCCESS->value ? null : 'none',
+        ]);
+    }
+
+    $this->actingAs($admin);
+
+    Livewire::test(ListChangeRequests::class)
+        ->set('statusGroupFilter', 'not_successful')
+        ->assertSee($failed->rfc_number)
+        ->assertSee($closedFailed->rfc_number)
+        ->assertDontSee($rejected->rfc_number)
+        ->assertDontSee($approved->rfc_number)
+        ->assertDontSee($closedSuccess->rfc_number)
+        ->assertSee('Grup')
+        ->set('statusGroupFilter', 'rejected')
+        ->assertSee($rejected->rfc_number)
+        ->assertDontSee($failed->rfc_number)
+        ->set('statusGroupFilter', '')
+        ->call('resetFilters')
+        ->assertSet('statusGroupFilter', '');
+});
+
+it('menerima grup status lewat query string dan menolak nilai yang tidak dikenal', function () {
+    $admin = penggunaFilter('Admin');
+
+    $this->actingAs($admin);
+
+    Livewire::withQueryParams(['grup' => 'not_successful'])
+        ->test(ListChangeRequests::class)
+        ->assertSet('statusGroupFilter', 'not_successful');
+
+    Livewire::withQueryParams(['grup' => 'tidak_dikenal'])
+        ->test(ListChangeRequests::class)
+        ->assertSet('statusGroupFilter', '');
 });
 
 it('tetap membatasi filter pada RFC milik pemohon sendiri', function () {
