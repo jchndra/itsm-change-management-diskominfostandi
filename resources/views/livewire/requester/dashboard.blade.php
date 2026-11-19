@@ -158,6 +158,15 @@
                 'chevron' => 'text-emerald-400',
             ],
             [
+                'label' => \App\Enums\RfcStatus::groupLabel('not_successful'),
+                'value' => $stats['not_successful'],
+                'hint' => 'Pelaksanaan belum berhasil',
+                'wrapper' => 'border-amber-200 bg-amber-50/70 hover:border-amber-300',
+                'icon' => 'bg-amber-100 text-amber-600',
+                'path' => 'M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z',
+                'chevron' => 'text-amber-400',
+            ],
+            [
                 'label' => 'Ditolak',
                 'value' => $stats['rejected'],
                 'hint' => 'Ditolak',
@@ -169,7 +178,7 @@
         ];
     @endphp
 
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         @foreach ($cards as $card)
             <a href="{{ route('change-requests.index') }}" wire:navigate
                 class="group flex h-full min-h-[112px] items-center gap-4 rounded-2xl border p-5 shadow-sm transition {{ $card['wrapper'] }}">

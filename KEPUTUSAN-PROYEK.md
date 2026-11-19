@@ -41,6 +41,7 @@ Pemohon register -> membuat RFC (satu nomor RFC sejak diajukan) -> langsung ke a
 * Penolakan setelah disposisi dicatat lewat halaman khusus `/change-requests/{rfc}/reject` (bukan modal) dan `RfcRejectionService`: tercatat pada `decisions`, mengisi `rejection_note`, dan memindahkan RFC ke status `rejected`. Setelah ditolak, RFC final — tidak dapat diimplementasikan, dievaluasi, atau ditutup.
 * Penolakan saat pekerjaan berjalan membatalkan tugas Tim Rilis aktif dengan status baru `release_tasks.execution_status = cancelled` ("Dibatalkan"), bukan `rolled_back`. Tugas yang sudah selesai (`successful`/`rolled_back`) tidak diubah.
 * Tim Rilis yang ditugaskan pada RFC yang ditolak mendapat notifikasi penolakan.
+* Grup `not_successful` ("Belum Berhasil") kini tampil sebagai kartu statistik amber di dashboard Pemohon dan daftar RFC Pemohon, Change Manager, dan Admin (hint: "Pelaksanaan belum berhasil" / "Menunggu evaluasi atau penutupan" untuk CM). Definisi angka tetap memakai `scopeInStatusGroup('not_successful')`; "Ditolak" tetap khusus `rejected`. Tim Rilis tidak diberi kartu baru karena "Menunggu Evaluasi" sudah mencakup `failed`.
 
 ## Menunggu konfirmasi mentor
 

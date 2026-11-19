@@ -31,14 +31,15 @@ class Dashboard extends Component
         // Keamanan: Hanya ambil RFC yang dibuat oleh user ini
         $baseQuery = ChangeRequest::where('submitted_by_id', $user->id);
 
-        // Menghitung statistik berdasarkan kelompok status. Grup approved dan
-        // rejected memperhitungkan hasil akhir closed lewat scope khusus
-        // sehingga angka kartu sama dengan definisi tampilan.
+        // Menghitung statistik berdasarkan kelompok status. Grup approved,
+        // not_successful, dan rejected memperhitungkan hasil akhir closed lewat
+        // scope khusus sehingga angka kartu sama dengan definisi tampilan.
         $stats = [
             'draft' => (clone $baseQuery)->whereIn('status', RfcStatus::valuesForGroup('draft'))->count(),
             'in_process' => (clone $baseQuery)->whereIn('status', RfcStatus::valuesForGroup('in_process'))->count(),
             'needs_revision' => (clone $baseQuery)->whereIn('status', RfcStatus::valuesForGroup('needs_revision'))->count(),
             'approved' => (clone $baseQuery)->inStatusGroup('approved')->count(),
+            'not_successful' => (clone $baseQuery)->inStatusGroup('not_successful')->count(),
             'rejected' => (clone $baseQuery)->inStatusGroup('rejected')->count(),
         ];
 

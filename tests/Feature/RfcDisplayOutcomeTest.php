@@ -166,9 +166,12 @@ test('statistik kartu memperhitungkan hasil closed dan widget menahan RFC failed
     Livewire::actingAs($this->pemohon)
         ->test(Dashboard::class)
         ->assertOk()
-        ->assertViewHas('stats', fn (array $stats): bool => $stats['approved'] === 3 && $stats['rejected'] === 1)
+        ->assertViewHas('stats', fn (array $stats): bool => $stats['approved'] === 3
+            && $stats['not_successful'] === 3
+            && $stats['rejected'] === 1)
         // RFC gagal yang belum ditutup tetap muncul di widget sebagai belum berhasil.
         ->assertViewHas('latestActiveRfc', fn (?ChangeRequest $rfc): bool => $rfc?->id === $failed->id)
+        ->assertSee('Belum Berhasil')
         ->assertSee('Implementasi belum berhasil')
         ->assertSee('Menunggu evaluasi')
         ->assertDontSee('Selesai');
@@ -197,19 +200,41 @@ test('statistik kartu memperhitungkan hasil closed dan widget menahan RFC failed
             && $rfc->id !== $failed->id);
 
     // Angka kartu sama dengan jumlah baris filter terkait di daftar (approved
-    // 3 dan rejected 1 tetap terhitung dari seluruh RFC Pemohon).
+    // 3, belum berhasil 3, dan rejected 1 tetap terhitung dari seluruh RFC
+    // Pemohon).
     Livewire::actingAs($this->pemohon)
         ->test(ListChangeRequests::class)
         ->assertOk()
         ->assertViewHas('stats', fn (array $stats): bool => $stats['my_rfc'] === 7
             && $stats['approved'] === 3
+            && $stats['not_successful'] === 3
             && $stats['rejected'] === 1)
+        ->assertSee('Belum Berhasil')
         ->set('statusFilter', RfcStatus::CLOSED->value)
         ->assertOk()
         ->assertViewHas('stats', fn (array $stats): bool => $stats['approved'] === 3
+            && $stats['not_successful'] === 3
             && $stats['rejected'] === 1)
         ->assertSee('Ditutup — Berhasil')
         ->assertSee('Ditutup — Tidak Berhasil');
+
+    // Kartu staf memakai definisi grup yang sama dengan kartu Pemohon.
+    Livewire::actingAs($this->cm)
+        ->test(ListChangeRequests::class)
+        ->assertOk()
+        ->assertViewHas('stats', fn (array $stats): bool => $stats['not_successful'] === 3
+            && $stats['rejected'] === 1)
+        ->assertSee('Belum Berhasil');
+
+    $admin = User::factory()->create(['name' => 'Admin Hasil']);
+    $admin->assignRole('Admin');
+
+    Livewire::actingAs($admin)
+        ->test(ListChangeRequests::class)
+        ->assertOk()
+        ->assertViewHas('stats', fn (array $stats): bool => $stats['not_successful'] === 3
+            && $stats['rejected'] === 1)
+        ->assertSee('Belum Berhasil');
 });
 
 test('RFC failed yang ditutup tidak pernah tampil sebagai berhasil atau selesai', function () {

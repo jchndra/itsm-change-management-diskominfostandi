@@ -143,8 +143,8 @@ it('tetap menampilkan seluruh RFC beserta statistik dan tombol untuk staf', func
     'admin' => [
         'Admin',
         'admin',
-        ['incoming' => 1, 'needs_revision' => 0, 'forwarded' => 1, 'rejected' => 0],
-        ['RFC Masuk', 'Perlu Revisi', 'Diteruskan', 'Buat Tiket', 'Detail'],
+        ['incoming' => 1, 'needs_revision' => 0, 'forwarded' => 1, 'not_successful' => 0, 'rejected' => 0],
+        ['RFC Masuk', 'Perlu Revisi', 'Diteruskan', 'Belum Berhasil', 'Buat Tiket', 'Detail'],
     ],
     'change manager' => [
         'Change Manager',
@@ -153,10 +153,11 @@ it('tetap menampilkan seluruh RFC beserta statistik dan tombol untuk staf', func
             'total' => 2,
             'pending_approval' => 1,
             'approved' => 0,
+            'not_successful' => 0,
             'rejected' => 0,
             'emergency' => 0,
         ],
-        ['Total RFC', 'Menunggu Persetujuan', 'Disetujui', 'Emergency', 'Evaluasi', 'Detail'],
+        ['Total RFC', 'Menunggu Persetujuan', 'Disetujui', 'Belum Berhasil', 'Emergency', 'Evaluasi', 'Detail'],
     ],
 ]);
 

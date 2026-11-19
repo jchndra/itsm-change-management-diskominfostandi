@@ -114,7 +114,8 @@
 
     {{-- Kartu statistik --}}
     @if ($roleView === 'pemohon')
-        <div class="dashboard-rise dashboard-rise-1 grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <div
+            class="dashboard-rise dashboard-rise-1 grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
             <x-dashboard.stat-card label="RFC Saya" :value="$stats['my_rfc']" hint="Total usulan yang Anda ajukan"
                 tone="blue">
                 <x-slot:icon>
@@ -157,6 +158,16 @@
                 </x-slot:icon>
             </x-dashboard.stat-card>
 
+            <x-dashboard.stat-card :label="\App\Enums\RfcStatus::groupLabel('not_successful')"
+                :value="$stats['not_successful']" hint="Pelaksanaan belum berhasil" tone="amber">
+                <x-slot:icon>
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                            d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                    </svg>
+                </x-slot:icon>
+            </x-dashboard.stat-card>
+
             <x-dashboard.stat-card :label="\App\Enums\RfcStatus::groupLabel('rejected')" :value="$stats['rejected']"
                 hint="Ditolak" tone="rose">
                 <x-slot:icon>
@@ -168,7 +179,8 @@
             </x-dashboard.stat-card>
         </div>
     @elseif ($roleView === 'admin')
-        <div class="dashboard-rise dashboard-rise-1 grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div
+            class="dashboard-rise dashboard-rise-1 grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <a href="{{ route('change-requests.index', ['queue' => 'incoming']) }}" class="block h-full">
                 <x-dashboard.stat-card label="RFC Masuk" :value="$stats['incoming']"
                     hint="Buka antrean buat tiket change" tone="blue" class="h-full">
@@ -197,6 +209,16 @@
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
                             d="m9 5 7 7-7 7" />
+                    </svg>
+                </x-slot:icon>
+            </x-dashboard.stat-card>
+
+            <x-dashboard.stat-card :label="\App\Enums\RfcStatus::groupLabel('not_successful')"
+                :value="$stats['not_successful']" hint="Pelaksanaan belum berhasil" tone="amber">
+                <x-slot:icon>
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                            d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
                     </svg>
                 </x-slot:icon>
             </x-dashboard.stat-card>
@@ -254,7 +276,8 @@
             </x-dashboard.stat-card>
         </div>
     @else
-        <div class="dashboard-rise dashboard-rise-1 grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <div
+            class="dashboard-rise dashboard-rise-1 grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
             <x-dashboard.stat-card label="Total RFC" :value="$stats['total']" hint="Seluruh RFC yang tercatat"
                 tone="slate">
                 <x-slot:icon>
@@ -283,6 +306,17 @@
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
                             d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
+                </x-slot:icon>
+            </x-dashboard.stat-card>
+
+            <x-dashboard.stat-card :label="\App\Enums\RfcStatus::groupLabel('not_successful')"
+                :value="$stats['not_successful']" :percent="$statusPercent($stats['not_successful'])"
+                hint="Menunggu evaluasi atau penutupan" tone="amber">
+                <x-slot:icon>
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                            d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
                     </svg>
                 </x-slot:icon>
             </x-dashboard.stat-card>
