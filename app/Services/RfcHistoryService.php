@@ -11,6 +11,7 @@ use App\Enums\TicketPriority;
 use App\Models\ChangeRequest;
 use App\Models\Decision;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\Models\Activity;
 
@@ -24,6 +25,8 @@ class RfcHistoryService
      * Instruksi disposisi hanya dibuka untuk penerima disposisi pada RFC ini.
      * Estimasi kegiatan dan rencana mulai Tim Rilis tetap terlihat oleh semua
      * pengguna yang berhak melihat RFC sebagai bagian dari kronologi proses.
+     * Kejadian yang dicatat akun Admin atau Super Admin tidak ditampilkan
+     * karena kedua peran tersebut sudah tidak ada pada alur RFC baru.
      *
      * @return array{events: array<int, array<string, mixed>>, next_steps: array<int, array<string, string>>}
      */
@@ -82,6 +85,11 @@ class RfcHistoryService
         }
 
         foreach ($activities as $activity) {
+            // Akun Admin/Super Admin sudah tidak ada pada alur RFC baru.
+            if ($this->isRetiredAdminCauser($activity->causer)) {
+                continue;
+            }
+
             $sequence++;
 
             $newStatusRaw = data_get($activity->properties, 'new_status');
@@ -383,7 +391,7 @@ class RfcHistoryService
         }
 
         $this->ensureCreationEvent($events, $rfc, $forStaff);
-        $this->ensureCurrentStatusEvent($events, $rfc);
+        $this->ensureCurrentStatusEvent($events, $rfc, $activities);
         $this->applyFallbackNotes($events, $rfc, $forStaff);
 
         usort($events, fn (array $a, array $b): int => [
@@ -1105,9 +1113,17 @@ class RfcHistoryService
 
     private function ensureCreationEvent(array &$events, ChangeRequest $rfc, bool $forStaff): void
     {
+        $hasDraftEvent = false;
+
         foreach ($events as $event) {
-            if (in_array($event['key'], [RfcStatus::SUBMITTED->value, 'draft_created'], true)) {
+            if ($event['key'] === RfcStatus::SUBMITTED->value) {
                 return;
+            }
+
+            if ($event['key'] === 'draft_created') {
+                $hasDraftEvent = true;
+
+                continue;
             }
 
             // Pengajuan langsung ke Change Manager sudah menjadi kejadian
@@ -1120,20 +1136,34 @@ class RfcHistoryService
 
         $isDraft = RfcStatus::fromValue($rfc->status) === RfcStatus::DRAFT;
 
+        if ($isDraft && $hasDraftEvent) {
+            return;
+        }
+
+        // RFC lama hanya menyimpan draft lalu verifikasi Admin. Setelah
+        // kejadian Admin disembunyikan, pengajuan tetap ditampilkan sebagai
+        // kejadian Pemohon agar kronologi tidak melompat dari draft.
+        $time = ! $isDraft && filled($rfc->ticket_created_at)
+            ? $rfc->ticket_created_at
+            : ($rfc->created_at ?? $rfc->updated_at ?? now());
+
         $events[] = [
             'key' => $isDraft ? 'draft_created' : RfcStatus::SUBMITTED->value,
             'label' => $isDraft ? 'Draft dibuat' : 'RFC diajukan',
             'note' => null,
-            'time' => $rfc->created_at ?? $rfc->updated_at ?? now(),
+            'time' => $time,
             'tone' => $isDraft ? 'neutral' : 'info',
             'actor_name' => $forStaff ? $rfc->submittedBy?->name : null,
             'actor_role' => 'Pemohon',
             'legacy' => false,
-            'order' => -1,
+            'order' => $isDraft ? -1 : 2,
         ];
     }
 
-    private function ensureCurrentStatusEvent(array &$events, ChangeRequest $rfc): void
+    /**
+     * @param  Collection<int, Activity>  $activities
+     */
+    private function ensureCurrentStatusEvent(array &$events, ChangeRequest $rfc, Collection $activities): void
     {
         $status = RfcStatus::fromValue($rfc->status);
         $currentKey = $status?->value;
@@ -1153,6 +1183,7 @@ class RfcHistoryService
 
         $label = match ($status) {
             RfcStatus::REJECTED => 'Ditolak',
+            RfcStatus::NEEDS_REVISION => 'Perlu revisi',
             RfcStatus::CANCELLED => 'Dibatalkan',
             RfcStatus::IMPLEMENTED => 'Implementasi berhasil dicatat — menunggu evaluasi',
             RfcStatus::FAILED => 'Implementasi Reject — menunggu evaluasi',
@@ -1167,6 +1198,7 @@ class RfcHistoryService
 
         $tone = match ($status) {
             RfcStatus::REJECTED, RfcStatus::CANCELLED, RfcStatus::FAILED => 'danger',
+            RfcStatus::NEEDS_REVISION => 'warning',
             RfcStatus::IMPLEMENTED => 'success',
             RfcStatus::CLOSED => match ($rfc->implementationOutcome()) {
                 'successful' => 'success',
@@ -1176,11 +1208,20 @@ class RfcHistoryService
             default => 'neutral',
         };
 
+        // Waktu transisi diambil dari activity terakhir untuk status tersebut,
+        // termasuk activity Admin yang tidak lagi ditampilkan, agar baris
+        // status tetap berada pada urutan kronologi yang benar.
+        $statusActivity = $status !== null
+            ? $activities
+                ->filter(fn (Activity $activity): bool => data_get($activity->properties, 'new_status') === $status->value)
+                ->last()
+            : null;
+
         $events[] = [
             'key' => $status?->value ?? 'legacy',
             'label' => $label,
             'note' => null,
-            'time' => $rfc->updated_at ?? $rfc->created_at ?? now(),
+            'time' => $statusActivity?->created_at ?? $rfc->updated_at ?? $rfc->created_at ?? now(),
             'tone' => $tone,
             'actor_name' => null,
             'actor_role' => null,
@@ -1261,6 +1302,18 @@ class RfcHistoryService
 
         return str_contains($description, 'diajukan')
             || str_contains($description, 'draft');
+    }
+
+    /**
+     * Admin dan Super Admin sudah tidak ada pada alur RFC baru. Kejadian yang
+     * mereka catat tetap tersimpan di activity log, tetapi tidak ditampilkan
+     * pada riwayat proses agar kronologi hanya memuat pelaku alur terkini.
+     */
+    private function isRetiredAdminCauser(?object $causer): bool
+    {
+        return $causer !== null
+            && method_exists($causer, 'hasRole')
+            && ($causer->hasRole('Admin') || $causer->hasRole('Super Admin'));
     }
 
     private function actorRole(?object $causer, ?RfcStatus $oldStatus, RfcStatus $newStatus): ?string

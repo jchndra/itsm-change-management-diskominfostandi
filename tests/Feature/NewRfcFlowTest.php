@@ -369,7 +369,7 @@ test('tiket kosong tidak dirender sebagai strip pada daftar dan halaman review',
     Livewire::actingAs($this->cm)
         ->test(AssessRisk::class, ['rfc' => $newRfc])
         ->assertOk()
-        ->assertDontSee('Informasi Tiket dari Admin')
+        ->assertDontSee('Informasi Tiket')
         ->assertDontSee('Nomor Tiket');
 
     $legacy = newFlowRfc($this->owner, RfcStatus::TICKET_CREATED, [
@@ -389,7 +389,7 @@ test('tiket kosong tidak dirender sebagai strip pada daftar dan halaman review',
     Livewire::actingAs($this->cm)
         ->test(AssessRisk::class, ['rfc' => $legacy])
         ->assertOk()
-        ->assertSee('Informasi Tiket dari Admin')
+        ->assertSee('Informasi Tiket')
         ->assertSee('CHG-'.date('Y').'-0099')
         ->assertSee('Tinggi')
         ->assertSee('Aplikasi')

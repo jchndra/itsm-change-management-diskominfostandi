@@ -83,7 +83,8 @@ test('rejected RFC tidak menampilkan persetujuan dan tidak punya langkah mendata
 
     Livewire::test(ShowChangeRequest::class, ['rfc' => $rfc->fresh()])
         ->assertOk()
-        ->assertSee('Ditolak pada tahap pemeriksaan')
+        ->assertSee('Ditolak')
+        ->assertDontSee('Ditolak pada tahap pemeriksaan')
         ->assertSee('Ditolak karena dokumen tidak lengkap.')
         ->assertDontSee('Disetujui oleh Change Manager')
         ->assertDontSee('Persetujuan Pimpinan (Eselon II)')
@@ -164,7 +165,7 @@ test('tampilan Pemohon menyembunyikan catatan internal CM', function () {
         ->assertSee($this->cm->name);
 });
 
-test('penolakan oleh Admin tercatat dengan pelaku dan catatan', function () {
+test('penolakan oleh Admin tidak ditampilkan sebagai baris riwayat', function () {
     $rfc = ($this->makeRfc)(['status' => RfcStatus::RETURNED_TO_ADMIN->value]);
     $note = 'Tidak memenuhi ketentuan administrasi.';
 
@@ -179,16 +180,51 @@ test('penolakan oleh Admin tercatat dengan pelaku dan catatan', function () {
     $history = app(RfcHistoryService::class)->build($rfc->fresh(), true);
     $rejected = collect($history['events'])->firstWhere('key', RfcStatus::REJECTED->value);
 
+    // Baris penolakan oleh Admin hilang; status akhir tetap tampil netral
+    // tanpa nama pelaku melalui ensureCurrentStatusEvent().
     expect($rejected)->not->toBeNull()
-        ->and($rejected['label'])->toBe('Ditolak pada tahap pemeriksaan')
-        ->and($rejected['note'])->toBe($note)
-        ->and($rejected['actor_name'])->toBe($this->admin->name);
+        ->and($rejected['label'])->toBe('Ditolak')
+        ->and($rejected['actor_name'])->toBeNull();
 
     Livewire::test(ShowChangeRequest::class, ['rfc' => $rfc->fresh()])
         ->assertOk()
-        ->assertSee('Ditolak pada tahap pemeriksaan')
-        ->assertSee($this->admin->name)
+        ->assertSee('Ditolak')
+        ->assertDontSee($this->admin->name)
         ->assertSee($note);
+});
+
+test('kejadian Admin disembunyikan dan pengajuan legacy tetap tampil sebagai kejadian Pemohon', function () {
+    $rfc = ($this->makeRfc)([
+        'status' => RfcStatus::APPROVED->value,
+        'ticket_number' => 'CHG-2026-0100',
+        'ticket_created_at' => now()->subHour(),
+    ]);
+
+    activity('rfc')
+        ->performedOn($rfc)
+        ->causedBy($this->pemohon)
+        ->withProperties(['old_status' => null, 'new_status' => RfcStatus::DRAFT->value])
+        ->log('Draft RFC disimpan');
+
+    activity('rfc')
+        ->performedOn($rfc)
+        ->causedBy($this->admin)
+        ->withProperties([
+            'event' => 'ticket_created',
+            'ticket_number' => 'CHG-2026-0100',
+            'priority' => TicketPriority::HIGH->value,
+            'category' => ServiceCategory::SECURITY->value,
+        ])
+        ->log('Tiket Change dibuat');
+
+    $events = collect(app(RfcHistoryService::class)->build($rfc->fresh(), true)['events']);
+    $submission = $events->firstWhere('key', RfcStatus::SUBMITTED->value);
+
+    expect($events->pluck('label')->implode(' | '))->not->toContain('Tiket Change')
+        ->and($events->pluck('actor_name')->contains($this->admin->name))->toBeFalse()
+        ->and($submission)->not->toBeNull()
+        ->and($submission['actor_name'])->toBe($this->pemohon->name)
+        ->and($submission['actor_role'])->toBe('Pemohon');
 });
 
 test('RFC dengan status legacy yang tidak dikenal tetap dapat dirender', function () {
@@ -208,7 +244,7 @@ test('RFC dengan status legacy yang tidak dikenal tetap dapat dirender', functio
         ->assertSee('Mystery status');
 });
 
-test('riwayat proses pemohon mengikuti aksi Admin dan Change Manager tanpa muat ulang', function () {
+test('riwayat proses pemohon mengikuti aksi Change Manager tanpa muat ulang', function () {
     $rfc = ($this->makeRfc)(['title' => 'RFC Integrasi Riwayat']);
 
     activity('rfc')
@@ -228,8 +264,10 @@ test('riwayat proses pemohon mengikuti aksi Admin dan Change Manager tanpa muat 
 
     RfcStatusTransition::transitionTo($rfc->fresh(), RfcStatus::TICKET_CREATED, $this->admin);
 
+    // Transisi yang dicatat Admin tidak lagi muncul pada riwayat proses.
     $component->call('refreshProcessHistory')
-        ->assertSee('Diverifikasi dan diteruskan ke Change Manager');
+        ->assertDontSee('Diverifikasi dan diteruskan ke Change Manager')
+        ->assertDontSee($this->admin->name);
 
     RfcStatusTransition::transitionTo($rfc->fresh(), RfcStatus::APPROVED, $this->cm);
 
@@ -261,7 +299,7 @@ test('catatan riwayat dipecah menjadi baris label dan nilai untuk tampilan', fun
 
     activity('rfc')
         ->performedOn($rfc)
-        ->causedBy($this->admin)
+        ->causedBy($this->cm)
         ->withProperties([
             'event' => 'ticket_created',
             'ticket_number' => 'CHG-2026-0099',

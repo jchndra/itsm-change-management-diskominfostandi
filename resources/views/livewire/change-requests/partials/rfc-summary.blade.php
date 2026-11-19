@@ -114,7 +114,7 @@
 
     @if ($hasTicketInformation)
         <div class="space-y-3 border-t border-slate-100 pt-4">
-            <h3 class="text-sm font-bold text-slate-800">Informasi Tiket dari Admin</h3>
+            <h3 class="text-sm font-bold text-slate-800">Informasi Tiket</h3>
             <div class="grid grid-cols-1 gap-4 text-xs md:grid-cols-3">
                 @if (filled($rfc->ticket_number))
                     <div>
@@ -137,7 +137,7 @@
             </div>
             @if (filled($rfc->admin_note))
                 <div class="text-xs">
-                    <p class="font-semibold text-slate-500">Catatan Admin untuk Change Manager</p>
+                    <p class="font-semibold text-slate-500">Catatan Pemeriksaan Awal</p>
                     <p class="mt-1 whitespace-pre-wrap leading-relaxed text-slate-700">{{ $rfc->admin_note }}</p>
                 </div>
             @endif

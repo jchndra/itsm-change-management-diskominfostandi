@@ -427,7 +427,7 @@ test('klik ganda tidak membuat nomor tiket kedua ketika status berubah di tengah
         ->and($activityCount)->toBe(1);
 });
 
-test('riwayat proses menampilkan kejadian tiket sesuai peran tanpa duplikasi', function () {
+test('kejadian tiket oleh Admin tidak muncul pada riwayat proses', function () {
     $this->actingAs($this->admin);
 
     $rfc = ($this->makeRfc)();
@@ -437,31 +437,25 @@ test('riwayat proses menampilkan kejadian tiket sesuai peran tanpa duplikasi', f
     $component->call('createTicket')->assertHasNoErrors();
 
     $fresh = $rfc->fresh();
-    $staffEvents = collect(app(RfcHistoryService::class)->build($fresh, true)['events'])
-        ->where('key', RfcStatus::TICKET_CREATED->value);
+    $staffEvents = collect(app(RfcHistoryService::class)->build($fresh, true)['events']);
+    $ownerEvents = collect(app(RfcHistoryService::class)->build($fresh, false)['events']);
 
-    expect($staffEvents)->toHaveCount(1);
+    // Admin sudah tidak ada pada alur RFC baru sehingga kejadian tiket yang
+    // dicatat Admin tidak ditampilkan untuk staf maupun Pemohon.
+    expect($staffEvents->pluck('label')->contains(
+        fn (string $label): bool => str_contains($label, 'Tiket Change')
+    ))->toBeFalse()
+        ->and($ownerEvents->pluck('label')->contains(
+            fn (string $label): bool => str_contains($label, 'Tiket Change')
+        ))->toBeFalse()
+        ->and($staffEvents->pluck('actor_name')->contains($this->admin->name))->toBeFalse();
 
-    $staffEvent = $staffEvents->sole();
-
-    expect($staffEvent['label'])->toBe("Tiket Change {$fresh->ticket_number} dibuat dan diteruskan ke Change Manager")
-        ->and($staffEvent['note'])->toContain('Prioritas: Tinggi')
-        ->and($staffEvent['note'])->toContain('Kategori layanan: Keamanan')
-        ->and($staffEvent['note'])->toContain($admin_note)
-        ->and($staffEvent['actor_name'])->toBe($this->admin->name);
-
-    $ownerEvents = collect(app(RfcHistoryService::class)->build($fresh, false)['events'])
-        ->where('key', RfcStatus::TICKET_CREATED->value);
-
-    expect($ownerEvents)->toHaveCount(1);
-
-    $ownerEvent = $ownerEvents->sole();
-
-    expect($ownerEvent['label'])->toBe('Diverifikasi dan diteruskan ke Change Manager')
-        ->and($ownerEvent['note'])->toBe("Nomor tiket: {$fresh->ticket_number}")
-        ->and($ownerEvent['actor_name'])->toBeNull()
-        ->and($ownerEvent['note'])->not->toContain($admin_note)
-        ->and($ownerEvent['note'])->not->toContain('Prioritas');
+    // Metadata tiket tetap tersedia pada ringkasan penetapan petugas.
+    Livewire::actingAs($this->cm)
+        ->test(ShowChangeRequest::class, ['rfc' => $fresh])
+        ->assertOk()
+        ->assertSee('Ditetapkan Petugas')
+        ->assertSee($fresh->ticket_number);
 });
 
 test('halaman buat tiket menampilkan ringkasan lampiran peringatan emergency dan catatan CM', function () {
@@ -567,7 +561,7 @@ test('menu dan antrean buat tiket admin menampilkan RFC masuk dengan urutan terl
         ->assertDontSee('Buat Tiket Change');
 });
 
-test('halaman Change Manager menampilkan prioritas dan catatan Admin secara baca-saja', function () {
+test('halaman Change Manager menampilkan prioritas dan catatan pemeriksaan awal secara baca-saja', function () {
     $rfc = ($this->makeRfc)([
         'status' => RfcStatus::TICKET_CREATED->value,
         'ticket_number' => 'CHG-'.now()->format('Y').'-0099',
@@ -584,14 +578,14 @@ test('halaman Change Manager menampilkan prioritas dan catatan Admin secara baca
     ] as $url) {
         $this->get($url)
             ->assertOk()
-            ->assertSee('Informasi Tiket dari Admin')
+            ->assertSee('Informasi Tiket')
             ->assertSee('Nomor Tiket')
             ->assertSee($rfc->ticket_number)
             ->assertSee('Prioritas')
             ->assertSee('Tinggi')
             ->assertSee('Kategori Layanan')
             ->assertSee('Keamanan')
-            ->assertSee('Catatan Admin untuk Change Manager')
+            ->assertSee('Catatan Pemeriksaan Awal')
             ->assertSee('Catatan Admin yang harus dibaca Change Manager.');
     }
 });
