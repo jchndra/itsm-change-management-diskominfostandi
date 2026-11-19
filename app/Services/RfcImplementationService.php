@@ -48,7 +48,7 @@ class RfcImplementationService
         }
 
         if (! in_array($result, [ImplementationResult::SUCCESS, ImplementationResult::FAILED], true)) {
-            throw new RfcImplementationException('Hasil implementasi hanya dapat Berhasil atau Reject.');
+            throw new RfcImplementationException('Hasil implementasi hanya dapat Berhasil atau Belum Berhasil.');
         }
 
         $executorName = trim((string) ($data['executor_name'] ?? ''));
@@ -76,7 +76,7 @@ class RfcImplementationService
             $failureNotes = trim((string) ($data['failure_notes'] ?? ''));
 
             if ($failureNotes === '') {
-                throw new RfcImplementationException('Alasan Reject wajib diisi.');
+                throw new RfcImplementationException('Catatan Belum Berhasil wajib diisi.');
             }
 
             $followUpAction = FollowUpAction::tryFrom((string) ($data['follow_up_action'] ?? ''));

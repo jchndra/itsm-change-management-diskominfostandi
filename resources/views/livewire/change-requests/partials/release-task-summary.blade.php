@@ -21,7 +21,8 @@
                                     'pending' => ['label' => 'Menunggu dimulai', 'classes' => 'bg-slate-100 text-slate-700'],
                                     'in_progress' => ['label' => 'Sedang dikerjakan', 'classes' => 'bg-blue-100 text-blue-700'],
                                     'successful' => ['label' => 'Selesai', 'classes' => 'bg-emerald-100 text-emerald-700'],
-                                    'rolled_back' => ['label' => 'Reject', 'classes' => 'bg-rose-100 text-rose-700'],
+                                    'rolled_back' => ['label' => 'Belum Berhasil', 'classes' => 'bg-amber-100 text-amber-800'],
+                                    'cancelled' => ['label' => 'Dibatalkan', 'classes' => 'bg-slate-100 text-slate-500'],
                                     default => ['label' => $task->execution_status, 'classes' => 'bg-slate-100 text-slate-700'],
                                 };
                                 $isOverdue = $task->execution_status === 'in_progress'

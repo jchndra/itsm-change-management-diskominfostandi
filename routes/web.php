@@ -19,6 +19,7 @@ use App\Livewire\ChangeRequests\EvaluateRfc;
 use App\Livewire\ChangeRequests\ImplementChange;
 use App\Livewire\ChangeRequests\ListChangeRequests;
 use App\Livewire\ChangeRequests\RecordDecision;
+use App\Livewire\ChangeRequests\RejectRfc;
 use App\Livewire\ChangeRequests\ReviewByChangeManager;
 use App\Livewire\ChangeRequests\ReviewCompleteness;
 use App\Livewire\ChangeRequests\ShowChangeRequest;
@@ -174,5 +175,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/{rfc}/close', CloseRfc::class)
             ->middleware('can:close,rfc')
             ->name('close');
+        Route::get('/{rfc}/reject', RejectRfc::class)
+            ->middleware('can:reject,rfc')
+            ->name('reject');
     });
 });

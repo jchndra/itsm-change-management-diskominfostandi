@@ -270,7 +270,7 @@ class DashboardMetricsService
     }
 
     /**
-     * Riwayat tugas selesai atau di-rollback milik anggota aktif pengguna,
+     * Riwayat tugas selesai atau belum berhasil milik anggota aktif pengguna,
      * diurutkan dari eksekusi terbaru.
      *
      * @return array<int, array{
@@ -1007,7 +1007,7 @@ class DashboardMetricsService
             $status === RfcStatus::APPROVED => 'Disetujui',
             $status === RfcStatus::IN_PROGRESS => 'Implementasi dimulai',
             $status === RfcStatus::IMPLEMENTED => 'Implementasi dicatat',
-            $status === RfcStatus::FAILED => 'Implementasi Reject',
+            $status === RfcStatus::FAILED => 'Implementasi belum berhasil',
             $status === RfcStatus::CLOSED => 'RFC ditutup',
             $status === RfcStatus::REJECTED => 'RFC ditolak',
             $status === RfcStatus::CANCELLED => 'RFC dibatalkan',

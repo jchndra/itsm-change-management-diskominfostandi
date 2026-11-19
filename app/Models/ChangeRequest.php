@@ -403,8 +403,9 @@ class ChangeRequest extends Model
                             });
                     });
             }),
-            'rejected' => $query->where(function (Builder $q): void {
-                $q->whereIn('status', [RfcStatus::REJECTED->value, RfcStatus::FAILED->value])
+            'rejected' => $query->where('status', RfcStatus::REJECTED->value),
+            'not_successful' => $query->where(function (Builder $q): void {
+                $q->where('status', RfcStatus::FAILED->value)
                     ->orWhere(function (Builder $closed): void {
                         $closed->where('status', RfcStatus::CLOSED->value)->whereHas(
                             'implementation',

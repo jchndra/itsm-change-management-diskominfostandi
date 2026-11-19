@@ -235,7 +235,7 @@ test('hasil gagal mewajibkan catatan dan tindak lanjut beserta keterangannya', f
         ->and($implementation->follow_up_notes)->toBe('Akan diajukan RFC baru setelah analisis akar masalah.');
 });
 
-test('hasil Reject membuat status failed dan tindak lanjut none tidak mewajibkan keterangan', function () {
+test('hasil Belum Berhasil membuat status failed dan tindak lanjut none tidak mewajibkan keterangan', function () {
     $rfc = implementationRfc(RfcStatus::APPROVED);
     $team = implementationReleaseTeamActor($rfc);
 
@@ -259,7 +259,7 @@ test('hasil Reject membuat status failed dan tindak lanjut none tidak mewajibkan
         ->and($implementation->follow_up_action)->toBe(FollowUpAction::NONE->value)
         ->and($implementation->follow_up_notes)->toBeNull()
         ->and($rfc->fresh()->releaseTaskFor($team)->execution_status)->toBe('rolled_back')
-        ->and(ImplementationResult::labelFor($implementation->implementation_result))->toBe('Reject');
+        ->and(ImplementationResult::labelFor($implementation->implementation_result))->toBe('Belum Berhasil');
 });
 
 test('service menolak hasil rolled_back untuk laporan implementasi baru', function () {
@@ -270,7 +270,7 @@ test('service menolak hasil rolled_back untuk laporan implementasi baru', functi
         'implementation_result' => ImplementationResult::ROLLED_BACK->value,
         'failure_notes' => 'Perubahan di-rollback ke versi sebelumnya.',
         'follow_up_action' => FollowUpAction::NONE->value,
-    ]))->toThrow(RfcImplementationException::class, 'Hasil implementasi hanya dapat Berhasil atau Reject.');
+    ]))->toThrow(RfcImplementationException::class, 'Hasil implementasi hanya dapat Berhasil atau Belum Berhasil.');
 
     expect(ChangeRequestImplementation::count())->toBe(0)
         ->and(Evidence::count())->toBe(0)
@@ -293,7 +293,7 @@ test('data implementasi rolled_back lama tetap terbaca dengan label legacy', fun
         ->assertOk()
         ->assertSee('Rollback dilakukan')
         ->assertSee('Perubahan lama dikembalikan ke versi sebelumnya.')
-        ->assertSee('Alasan Reject');
+        ->assertSee('Catatan Belum Berhasil');
 
     expect(ImplementationResult::labelFor(ImplementationResult::ROLLED_BACK->value))
         ->toBe('Rollback dilakukan');
@@ -680,7 +680,7 @@ test('pemohon hanya melihat hasil ringkasan catatan tindak lanjut dan jumlah buk
     Livewire::test(ShowChangeRequest::class, ['rfc' => $rfc->fresh()])
         ->assertOk()
         ->assertSee('Hasil Implementasi')
-        ->assertSee('Reject')
+        ->assertSee('Belum Berhasil')
         ->assertSee('Ringkasan hasil yang boleh dilihat Pemohon.')
         ->assertSee('Catatan kegagalan yang boleh dilihat Pemohon.')
         ->assertSee('Eskalasi atau investigasi')
@@ -697,7 +697,7 @@ test('pemohon hanya melihat hasil ringkasan catatan tindak lanjut dan jumlah buk
     $implementationEvent = collect($history['events'])->firstWhere('implementation', true);
 
     expect($implementationEvent)->not->toBeNull()
-        ->and($implementationEvent['note'])->toContain('Hasil: Reject')
+        ->and($implementationEvent['note'])->toContain('Hasil: Belum Berhasil')
         ->and($implementationEvent['note'])->toContain('Ringkasan: Ringkasan hasil yang boleh dilihat Pemohon.')
         ->and($implementationEvent['actor_name'])->toBeNull()
         ->and($serialized)->not->toContain('Nama Pelaksana Rahasia')
@@ -730,7 +730,7 @@ test('tombol catat implementasi hanya untuk Tim Rilis yang ditugaskan dan CM mem
 
     Livewire::test(ShowChangeRequest::class, ['rfc' => $approved])
         ->assertOk()
-        ->assertSee('Selesaikan pekerjaan')
+        ->assertSee('Laporkan hasil pelaksanaan')
         ->assertSee(route('change-requests.implement', $approved));
 
     $this->actingAs($implementedTeam);

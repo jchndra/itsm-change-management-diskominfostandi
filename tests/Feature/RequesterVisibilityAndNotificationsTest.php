@@ -349,7 +349,6 @@ it('menampilkan kartu Ditolak yang ringkas di dashboard Pemohon', function () {
     Livewire::test(Dashboard::class)
         ->assertOk()
         ->assertSee('Ditolak')
-        ->assertSee('Ditolak atau tidak terlaksana')
         ->assertDontSee('Ditolak / Tidak Terlaksana')
         ->assertViewHas('stats', fn (array $stats): bool => $stats['rejected'] === 1);
 });

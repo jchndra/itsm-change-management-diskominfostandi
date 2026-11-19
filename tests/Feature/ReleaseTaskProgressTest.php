@@ -281,7 +281,7 @@ it('menolak memulai pengerjaan tanpa analisis risiko', function () {
     expect($task->fresh()->execution_status)->toBe('pending');
 });
 
-it('menampilkan tombol Setuju dan Reject untuk tugas in progress milik Tim Rilis', function () {
+it('menampilkan tombol Berhasil dan Belum Berhasil untuk tugas in progress milik Tim Rilis', function () {
     [$user, $rfc, $task] = releaseTaskProgressSetup();
 
     $service = app(ReleaseTaskProgressService::class);
@@ -291,11 +291,11 @@ it('menampilkan tombol Setuju dan Reject untuk tugas in progress milik Tim Rilis
     Livewire::actingAs($user)
         ->test(ShowChangeRequest::class, ['rfc' => $rfc])
         ->assertOk()
-        ->assertSee('Selesaikan pekerjaan')
-        ->assertSee('Pilih Setuju bila pekerjaan tuntas, atau Reject bila pelaksanaan dihentikan.')
-        ->assertSee('Wajib menuliskan alasan reject.')
-        ->assertSee('Setuju')
-        ->assertSee('Reject')
+        ->assertSee('Laporkan hasil pelaksanaan')
+        ->assertSee('Pilih Berhasil bila pekerjaan tuntas, atau Belum Berhasil bila pelaksanaan belum berhasil.')
+        ->assertSee('Wajib menuliskan catatan belum berhasil.')
+        ->assertSee('Berhasil')
+        ->assertSee('Belum Berhasil')
         ->assertSee('hasil=success')
         ->assertSee('hasil=failed')
         ->assertDontSee('hasil=rolled_back');
@@ -308,8 +308,8 @@ it('tidak menampilkan aksi penyelesaian saat tugas masih menunggu dimulai', func
         ->test(ShowChangeRequest::class, ['rfc' => $rfc])
         ->assertOk()
         ->assertSee('Mulai Pengerjaan')
-        ->assertDontSee('Pilih Setuju bila pekerjaan tuntas, atau Reject bila pelaksanaan dihentikan.')
-        ->assertDontSee('Wajib menuliskan alasan reject.')
+        ->assertDontSee('Pilih Berhasil bila pekerjaan tuntas, atau Belum Berhasil bila pelaksanaan belum berhasil.')
+        ->assertDontSee('Wajib menuliskan catatan belum berhasil.')
         ->assertDontSee('hasil=failed');
 });
 
@@ -330,8 +330,8 @@ it('tidak menampilkan tombol aksi pengerjaan kepada change manager dan pemohon',
     Livewire::actingAs($viewer)
         ->test(ShowChangeRequest::class, ['rfc' => $rfc])
         ->assertOk()
-        ->assertDontSee('Pilih Setuju bila pekerjaan tuntas, atau Reject bila pelaksanaan dihentikan.')
-        ->assertDontSee('Wajib menuliskan alasan reject.')
+        ->assertDontSee('Pilih Berhasil bila pekerjaan tuntas, atau Belum Berhasil bila pelaksanaan belum berhasil.')
+        ->assertDontSee('Wajib menuliskan catatan belum berhasil.')
         ->assertDontSee('hasil=success')
         ->assertDontSee('hasil=failed');
 })->with(['Change Manager', 'Pemohon']);

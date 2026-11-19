@@ -113,6 +113,8 @@
             && (auth()->user()?->can('close', $rfc) ?? false)
             && $implementation
             && $implementation->evaluated_at !== null;
+        $canReject = ! $rfc->trashed()
+            && (auth()->user()?->can('reject', $rfc) ?? false);
         $awaitingEvaluation = $isStaff
             && in_array($status, [\App\Enums\RfcStatus::IMPLEMENTED, \App\Enums\RfcStatus::FAILED], true)
             && $implementation
@@ -247,6 +249,16 @@
                 @if ($canClose)
                     <x-ui.button :href="route('change-requests.close', $rfc)" variant="navy" navigate>
                         Tutup RFC
+                    </x-ui.button>
+                @endif
+
+                @if ($canReject)
+                    <x-ui.button :href="route('change-requests.reject', $rfc)" variant="danger" navigate>
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18 18 6M6 6l12 12" />
+                        </svg>
+                        Tolak RFC
                     </x-ui.button>
                 @endif
 
@@ -725,7 +737,7 @@
                                             {{ $implementation->test_results }}</p>
                                     </x-ui.fact>
                                     @if (filled($implementation->failure_notes))
-                                        <x-ui.fact label="Alasan Reject" class="sm:col-span-2">
+                                        <x-ui.fact label="Catatan Belum Berhasil" class="sm:col-span-2">
                                             <p class="whitespace-pre-wrap leading-relaxed text-slate-700">
                                                 {{ $implementation->failure_notes }}</p>
                                         </x-ui.fact>
@@ -792,7 +804,7 @@
                                             {{ $implementation->summary }}</p>
                                     </x-ui.fact>
                                     @if (filled($implementation->failure_notes))
-                                        <x-ui.fact label="Alasan Reject" class="sm:col-span-2">
+                                        <x-ui.fact label="Catatan Belum Berhasil" class="sm:col-span-2">
                                             <p class="whitespace-pre-wrap leading-relaxed text-slate-700">
                                                 {{ $implementation->failure_notes }}</p>
                                         </x-ui.fact>

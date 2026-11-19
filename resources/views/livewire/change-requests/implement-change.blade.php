@@ -9,14 +9,15 @@
         'pending' => ['label' => 'Menunggu dimulai', 'classes' => 'bg-slate-100 text-slate-700 ring-slate-200'],
         'in_progress' => ['label' => 'Sedang dikerjakan', 'classes' => 'bg-blue-100 text-blue-700 ring-blue-200'],
         'successful' => ['label' => 'Selesai', 'classes' => 'bg-emerald-100 text-emerald-700 ring-emerald-200'],
-        'rolled_back' => ['label' => 'Reject', 'classes' => 'bg-rose-100 text-rose-700 ring-rose-200'],
+        'rolled_back' => ['label' => 'Belum Berhasil', 'classes' => 'bg-amber-100 text-amber-800 ring-amber-200'],
+        'cancelled' => ['label' => 'Dibatalkan', 'classes' => 'bg-slate-100 text-slate-500 ring-slate-200'],
         default => ['label' => 'Belum tersedia', 'classes' => 'bg-slate-100 text-slate-700 ring-slate-200'],
     };
 
     $steps = [
         ['label' => 'Estimasi', 'state' => 'done'],
         ['label' => 'Dikerjakan', 'state' => 'done'],
-        ['label' => 'Selesai / Reject', 'state' => 'active'],
+        ['label' => 'Selesai / Belum Berhasil', 'state' => 'active'],
     ];
 
     $fieldClasses = 'block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 shadow-sm transition placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500';
@@ -158,14 +159,14 @@
                             \App\Enums\ImplementationResult::SUCCESS => [
                                 'card' => 'peer-checked:border-emerald-500 peer-checked:bg-emerald-50 peer-checked:ring-emerald-500',
                                 'icon' => 'bg-emerald-100 text-emerald-700',
-                                'label' => 'Setuju',
+                                'label' => 'Berhasil',
                                 'description' => 'Perubahan berjalan sesuai rencana.',
                             ],
                             \App\Enums\ImplementationResult::FAILED => [
-                                'card' => 'peer-checked:border-rose-500 peer-checked:bg-rose-50 peer-checked:ring-rose-500',
-                                'icon' => 'bg-rose-100 text-rose-700',
-                                'label' => 'Reject',
-                                'description' => 'Perubahan tidak diterima atau gagal diterapkan.',
+                                'card' => 'peer-checked:border-amber-500 peer-checked:bg-amber-50 peer-checked:ring-amber-500',
+                                'icon' => 'bg-amber-100 text-amber-800',
+                                'label' => 'Belum Berhasil',
+                                'description' => 'Pelaksanaan belum berhasil diterapkan atau dihentikan.',
                             ],
                         };
                     @endphp
@@ -263,37 +264,37 @@
             </div>
         </section>
 
-        {{-- 3. Alasan Reject (kondisional) --}}
+        {{-- 3. Catatan Belum Berhasil (kondisional) --}}
         @if ($isFailureResult)
-            <section class="rounded-xl border border-rose-200 bg-rose-50/60 p-5 shadow-sm sm:p-6"
-                aria-labelledby="kegagalan-heading">
+            <section class="rounded-xl border border-amber-200 bg-amber-50/60 p-5 shadow-sm sm:p-6"
+                aria-labelledby="belum-berhasil-heading">
                 <div class="flex items-start gap-3">
                     <span
-                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-100 text-sm font-bold text-rose-700 ring-1 ring-inset ring-rose-200">3</span>
+                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-sm font-bold text-amber-800 ring-1 ring-inset ring-amber-200">3</span>
                     <div class="min-w-0">
-                        <h2 id="kegagalan-heading" class="text-base font-bold text-rose-900">Alasan Reject</h2>
-                        <p class="mt-0.5 text-xs text-rose-700">Wajib dilengkapi karena hasil yang dipilih adalah Reject.</p>
+                        <h2 id="belum-berhasil-heading" class="text-base font-bold text-amber-900">Catatan Belum Berhasil</h2>
+                        <p class="mt-0.5 text-xs text-amber-800">Wajib dilengkapi karena hasil yang dipilih adalah Belum Berhasil.</p>
                     </div>
                 </div>
 
                 <div class="mt-4 space-y-5">
                     <div>
-                        <label for="failure_notes" class="mb-1 block text-sm font-semibold text-rose-900">
-                            Alasan Reject <span class="text-rose-500" aria-hidden="true">*</span>
+                        <label for="failure_notes" class="mb-1 block text-sm font-semibold text-amber-900">
+                            Catatan Belum Berhasil <span class="text-rose-500" aria-hidden="true">*</span>
                         </label>
                         <textarea id="failure_notes" wire:model="failure_notes" rows="3"
-                            class="{{ $fieldClasses }} resize-y border-rose-300 focus:border-rose-500 focus:ring-rose-500"></textarea>
+                            class="{{ $fieldClasses }} resize-y border-amber-300 focus:border-amber-500 focus:ring-amber-500"></textarea>
                         @error('failure_notes')
                             <p class="mt-1 text-xs font-medium text-rose-600" role="alert">{{ $message }}</p>
                         @enderror
                     </div>
 
                     <div>
-                        <label for="follow_up_action" class="mb-1 block text-sm font-semibold text-rose-900">
+                        <label for="follow_up_action" class="mb-1 block text-sm font-semibold text-amber-900">
                             Tindak Lanjut <span class="text-rose-500" aria-hidden="true">*</span>
                         </label>
                         <select id="follow_up_action" wire:model.live="follow_up_action"
-                            class="{{ $fieldClasses }} border-rose-300 focus:border-rose-500 focus:ring-rose-500">
+                            class="{{ $fieldClasses }} border-amber-300 focus:border-amber-500 focus:ring-amber-500">
                             <option value="">Pilih tindak lanjut</option>
                             @foreach (\App\Enums\FollowUpAction::cases() as $action)
                                 <option value="{{ $action->value }}">{{ $action->label() }}</option>
@@ -305,11 +306,11 @@
                     </div>
 
                     <div>
-                        <label for="follow_up_notes" class="mb-1 block text-sm font-semibold text-rose-900">
+                        <label for="follow_up_notes" class="mb-1 block text-sm font-semibold text-amber-900">
                             Keterangan Tindak Lanjut @if ($follow_up_action !== \App\Enums\FollowUpAction::NONE->value)<span class="text-rose-500" aria-hidden="true">*</span>@endif
                         </label>
                         <textarea id="follow_up_notes" wire:model="follow_up_notes" rows="3"
-                            class="{{ $fieldClasses }} resize-y border-rose-300 focus:border-rose-500 focus:ring-rose-500"></textarea>
+                            class="{{ $fieldClasses }} resize-y border-amber-300 focus:border-amber-500 focus:ring-amber-500"></textarea>
                         @error('follow_up_notes')
                             <p class="mt-1 text-xs font-medium text-rose-600" role="alert">{{ $message }}</p>
                         @enderror
@@ -427,7 +428,7 @@
                             @if ($isSuccessResult)
                                 Saya menyatakan pekerjaan ini telah selesai dilaksanakan dan menyetujui hasil pelaksanaan beserta dokumen perubahan dan bukti dukung yang dilampirkan.
                             @else
-                                Saya menyatakan pelaksanaan dinyatakan Reject dan menyetujui laporan beserta dokumen perubahan dan bukti dukung yang dilampirkan.
+                                Saya menyatakan pelaksanaan belum berhasil dan menyetujui laporan beserta dokumen perubahan dan bukti dukung yang dilampirkan.
                             @endif
                             <span class="mt-1 block text-xs text-slate-500">
                                 Setelah disimpan, laporan dan bukti tidak dapat diubah, dan RFC masuk review Change Manager.

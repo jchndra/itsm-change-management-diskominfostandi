@@ -79,7 +79,7 @@ class ImplementChange extends Component
         'report_source.max' => 'Sumber laporan maksimal 255 karakter.',
         'summary.required' => 'Ringkasan hasil wajib diisi.',
         'test_results.required' => 'Hasil pengujian wajib diisi.',
-        'failure_notes.required' => 'Alasan Reject wajib diisi.',
+        'failure_notes.required' => 'Catatan Belum Berhasil wajib diisi.',
         'follow_up_action.required' => 'Pilihan tindak lanjut wajib ditentukan.',
         'follow_up_action.in' => 'Pilihan tindak lanjut tidak dikenali.',
         'follow_up_notes.required' => 'Keterangan tindak lanjut wajib diisi.',
@@ -155,7 +155,7 @@ class ImplementChange extends Component
 
         $message = $this->implementation_result === ImplementationResult::SUCCESS->value
             ? "Implementasi RFC {$this->rfc->displayIdentifier()} berhasil dicatat dan diselesaikan."
-            : "Implementasi RFC {$this->rfc->displayIdentifier()} dicatat dengan hasil Reject.";
+            : "Implementasi RFC {$this->rfc->displayIdentifier()} dicatat dengan hasil Belum Berhasil.";
 
         session()->flash('message', $message);
         $this->redirect(route('change-requests.show', $this->rfc->id), navigate: true);

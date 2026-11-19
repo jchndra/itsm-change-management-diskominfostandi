@@ -251,10 +251,19 @@ class ReleaseCalendar extends Component
     {
         if ($task->execution_status === 'rolled_back') {
             return [
-                'key' => 'rejected',
-                'label' => 'Reject',
-                'bar' => 'bg-rose-500 text-white hover:bg-rose-600',
-                'dot' => 'bg-rose-500',
+                'key' => 'unsuccessful',
+                'label' => 'Belum Berhasil',
+                'bar' => 'bg-amber-500 text-white hover:bg-amber-600',
+                'dot' => 'bg-amber-500',
+            ];
+        }
+
+        if ($task->execution_status === 'cancelled') {
+            return [
+                'key' => 'cancelled',
+                'label' => 'Dibatalkan',
+                'bar' => 'bg-slate-400 text-white hover:bg-slate-500',
+                'dot' => 'bg-slate-400',
             ];
         }
 

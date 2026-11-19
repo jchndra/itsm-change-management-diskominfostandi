@@ -14,12 +14,15 @@
         'pending' => ['label' => 'Menunggu dimulai', 'classes' => 'bg-slate-100 text-slate-700 ring-slate-200'],
         'in_progress' => ['label' => 'Sedang dikerjakan', 'classes' => 'bg-blue-100 text-blue-700 ring-blue-200'],
         'successful' => ['label' => 'Selesai', 'classes' => 'bg-emerald-100 text-emerald-700 ring-emerald-200'],
-        'rolled_back' => ['label' => 'Reject', 'classes' => 'bg-rose-100 text-rose-700 ring-rose-200'],
+        'rolled_back' => ['label' => 'Belum Berhasil', 'classes' => 'bg-amber-100 text-amber-800 ring-amber-200'],
+        'cancelled' => ['label' => 'Dibatalkan', 'classes' => 'bg-slate-100 text-slate-500 ring-slate-200'],
         default => ['label' => $progressTask->execution_status, 'classes' => 'bg-slate-100 text-slate-700 ring-slate-200'],
     };
+    $isCancelled = $progressTask->execution_status === 'cancelled';
     $progressStatusLabel = $progressStatusBadge['label'];
     $progressEditable = in_array($progressTask->execution_status, ['pending', 'in_progress'], true)
-        && ! $rfc->trashed();
+        && ! $rfc->trashed()
+        && \App\Enums\RfcStatus::fromValue($rfc->status) !== \App\Enums\RfcStatus::REJECTED;
     $hasRiskAnalysis = $progressTask->riskAnalysis !== null;
     $hasEstimate = $progressTask->estimated_days !== null;
     $canStart = $hasEstimate && $hasRiskAnalysis;
@@ -48,11 +51,12 @@
     $progressSteps = [
         [
             'label' => 'Analisis risiko',
-            'state' => $hasRiskAnalysis ? 'done' : 'active',
+            'state' => $isCancelled && ! $hasRiskAnalysis ? 'upcoming' : ($hasRiskAnalysis ? 'done' : 'active'),
         ],
         [
             'label' => 'Dikerjakan',
             'state' => match (true) {
+                $isCancelled => 'upcoming',
                 in_array($progressTask->execution_status, ['successful', 'rolled_back'], true) => 'done',
                 $progressTask->execution_status === 'in_progress' => 'active',
                 $canStart => 'active',
@@ -60,7 +64,7 @@
             },
         ],
         [
-            'label' => 'Selesai / Reject',
+            'label' => 'Hasil pelaksanaan',
             'state' => in_array($progressTask->execution_status, ['successful', 'rolled_back'], true)
                 ? 'done'
                 : 'upcoming',
@@ -95,6 +99,22 @@
             {{ $progressStatusLabel }}
         </span>
     </div>
+
+    @if ($isCancelled)
+        <div class="mt-4 flex items-start gap-3 rounded-xl border border-slate-300 bg-slate-100 p-4 text-sm text-slate-700"
+            role="status">
+            <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-300 text-slate-700">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+            </span>
+            <span>
+                <strong class="font-semibold text-slate-800">Tugas dibatalkan.</strong>
+                RFC ini ditolak oleh Change Manager sehingga seluruh pekerjaan Tim Rilis dihentikan.
+                Tidak ada tindakan lanjutan yang dapat dilakukan pada tugas ini.
+            </span>
+        </div>
+    @endif
 
     <div class="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
         <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
@@ -196,9 +216,9 @@
                                 </svg>
                             </span>
                             <div class="min-w-0">
-                                <h4 class="text-base font-bold text-slate-900">Selesaikan pekerjaan</h4>
+                                <h4 class="text-base font-bold text-slate-900">Laporkan hasil pelaksanaan</h4>
                                 <p class="mt-1 text-sm text-slate-600">
-                                    Pilih Setuju bila pekerjaan tuntas, atau Reject bila pelaksanaan dihentikan. Setelah laporan disimpan, RFC masuk review Change Manager.
+                                    Pilih Berhasil bila pekerjaan tuntas, atau Belum Berhasil bila pelaksanaan belum berhasil. Keputusan penolakan tetap menjadi kewenangan Change Manager.
                                 </p>
                             </div>
                         </div>
@@ -207,16 +227,16 @@
                             <div class="flex flex-col gap-1.5">
                                 <a href="{{ route('change-requests.implement', ['rfc' => $rfc, 'hasil' => 'success']) }}" wire:navigate
                                     class="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2">
-                                    Setuju
+                                    Berhasil
                                 </a>
                                 <p class="text-xs text-slate-600">Isi laporan hasil pengerjaan yang berhasil.</p>
                             </div>
                             <div class="flex flex-col gap-1.5">
                                 <a href="{{ route('change-requests.implement', ['rfc' => $rfc, 'hasil' => 'failed']) }}" wire:navigate
-                                    class="inline-flex items-center justify-center rounded-lg bg-rose-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-700 focus-visible:ring-offset-2">
-                                    Reject
+                                    class="inline-flex items-center justify-center rounded-lg bg-amber-500 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-2">
+                                    Belum Berhasil
                                 </a>
-                                <p class="text-xs font-medium text-rose-700">Wajib menuliskan alasan reject.</p>
+                                <p class="text-xs font-medium text-amber-800">Wajib menuliskan catatan belum berhasil.</p>
                             </div>
                         </div>
                     </div>

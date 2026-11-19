@@ -518,7 +518,7 @@
                 @endif
                 @if (filled($implementation->failure_notes))
                     <tr>
-                        <th>Alasan Reject</th>
+                        <th>Catatan Belum Berhasil</th>
                         <td>{{ $implementation->failure_notes }}</td>
                     </tr>
                 @endif

@@ -12,7 +12,7 @@ enum ImplementationResult: string
     {
         return match ($this) {
             self::SUCCESS => 'Berhasil',
-            self::FAILED => 'Reject',
+            self::FAILED => 'Belum Berhasil',
             self::ROLLED_BACK => 'Rollback dilakukan',
         };
     }

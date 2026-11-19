@@ -132,8 +132,8 @@ test('label dan tone status akhir membedakan hasil implementasi', function () {
     expect($implemented->displayStatusLabel())->toBe('Menunggu Evaluasi')
         ->and($implemented->displayStatusTone())->toBe('bg-amber-100 text-amber-700')
         ->and($implemented->isImplementationUnsuccessful())->toBeFalse()
-        ->and($failed->displayStatusLabel())->toBe('Reject')
-        ->and($failed->displayStatusTone())->toBe('bg-red-700 text-white')
+        ->and($failed->displayStatusLabel())->toBe('Belum Berhasil — Menunggu Evaluasi')
+        ->and($failed->displayStatusTone())->toBe('bg-amber-100 text-amber-800')
         ->and($failed->isImplementationUnsuccessful())->toBeTrue()
         ->and($closedSuccess->displayStatusLabel())->toBe('Ditutup — Berhasil')
         ->and($closedSuccess->displayStatusTone())->toBe('bg-emerald-100 text-emerald-700')
@@ -166,10 +166,10 @@ test('statistik kartu memperhitungkan hasil closed dan widget menahan RFC failed
     Livewire::actingAs($this->pemohon)
         ->test(Dashboard::class)
         ->assertOk()
-        ->assertViewHas('stats', fn (array $stats): bool => $stats['approved'] === 3 && $stats['rejected'] === 4)
-        // RFC gagal yang belum ditutup tetap muncul di widget dengan hasil merah.
+        ->assertViewHas('stats', fn (array $stats): bool => $stats['approved'] === 3 && $stats['rejected'] === 1)
+        // RFC gagal yang belum ditutup tetap muncul di widget sebagai belum berhasil.
         ->assertViewHas('latestActiveRfc', fn (?ChangeRequest $rfc): bool => $rfc?->id === $failed->id)
-        ->assertSee('Implementasi Reject')
+        ->assertSee('Implementasi belum berhasil')
         ->assertSee('Menunggu evaluasi')
         ->assertDontSee('Selesai');
 
@@ -197,17 +197,17 @@ test('statistik kartu memperhitungkan hasil closed dan widget menahan RFC failed
             && $rfc->id !== $failed->id);
 
     // Angka kartu sama dengan jumlah baris filter terkait di daftar (approved
-    // 3 dan rejected 4 tetap terhitung dari seluruh RFC Pemohon).
+    // 3 dan rejected 1 tetap terhitung dari seluruh RFC Pemohon).
     Livewire::actingAs($this->pemohon)
         ->test(ListChangeRequests::class)
         ->assertOk()
         ->assertViewHas('stats', fn (array $stats): bool => $stats['my_rfc'] === 7
             && $stats['approved'] === 3
-            && $stats['rejected'] === 4)
+            && $stats['rejected'] === 1)
         ->set('statusFilter', RfcStatus::CLOSED->value)
         ->assertOk()
         ->assertViewHas('stats', fn (array $stats): bool => $stats['approved'] === 3
-            && $stats['rejected'] === 4)
+            && $stats['rejected'] === 1)
         ->assertSee('Ditutup — Berhasil')
         ->assertSee('Ditutup — Tidak Berhasil');
 });
@@ -321,7 +321,7 @@ test('riwayat dan langkah berikutnya untuk approved, implemented, failed, dan cl
     $historyFailed = app(RfcHistoryService::class)->build($failed, false);
     $failedEvent = collect($historyFailed['events'])->firstWhere('key', RfcStatus::FAILED->value);
 
-    expect($failedEvent['label'])->toBe('Implementasi Reject — menunggu evaluasi')
+    expect($failedEvent['label'])->toBe('Implementasi belum berhasil — menunggu evaluasi')
         ->and($historyFailed['next_steps'])->toBe([$evaluation, $closure]);
 
     // FAILED setelah evaluasi tercatat: hanya Penutupan.
@@ -380,7 +380,7 @@ test('notifikasi baru membawa outcome dan pesan hasil yang benar', function () {
         ->and($failedNotification)->not->toBeNull()
         ->and(data_get($failedNotification->data, 'outcome'))->toBe('unsuccessful')
         ->and(data_get($failedNotification->data, 'message'))
-        ->toBe("RFC {$failed->rfc_number} dicatat dengan hasil Reject, menunggu evaluasi")
+        ->toBe("RFC {$failed->rfc_number} dicatat dengan hasil Belum Berhasil, menunggu evaluasi")
         ->and($closedNotification)->not->toBeNull()
         ->and(data_get($closedNotification->data, 'outcome'))->toBe('unsuccessful')
         ->and(data_get($closedNotification->data, 'message'))
@@ -394,7 +394,7 @@ test('notifikasi baru membawa outcome dan pesan hasil yang benar', function () {
         ->assertSee('bg-red-100 text-red-600')
         ->assertDontSee('bg-emerald-100 text-emerald-600')
         ->assertSee("RFC {$closed->rfc_number} ditutup — tidak berhasil")
-        ->assertSee("RFC {$failed->rfc_number} dicatat dengan hasil Reject, menunggu evaluasi");
+        ->assertSee("RFC {$failed->rfc_number} dicatat dengan hasil Belum Berhasil, menunggu evaluasi");
 });
 
 test('notifikasi implemented berwarna kuning untuk staf dan biru untuk Pemohon', function () {

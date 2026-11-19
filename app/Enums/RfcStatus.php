@@ -37,7 +37,7 @@ enum RfcStatus: string
             self::APPROVED => 'Disetujui',
             self::IN_PROGRESS => 'Sedang Dikerjakan',
             self::IMPLEMENTED => 'Menunggu Evaluasi',
-            self::FAILED => 'Reject',
+            self::FAILED => 'Belum Berhasil — Menunggu Evaluasi',
             self::CLOSED => 'Ditutup',
             self::REJECTED => 'Ditolak',
             self::CANCELLED => 'Dibatalkan',
@@ -67,7 +67,7 @@ enum RfcStatus: string
             self::IN_PROGRESS => 'bg-blue-100 text-blue-700',
             self::IMPLEMENTED => 'bg-amber-100 text-amber-700',
             self::CLOSED => 'bg-slate-200 text-slate-700',
-            self::FAILED => 'bg-red-700 text-white',
+            self::FAILED => 'bg-amber-100 text-amber-800',
             self::REJECTED => 'bg-rose-100 text-rose-700',
             self::CANCELLED => 'bg-slate-100 text-slate-500',
         };
@@ -80,7 +80,8 @@ enum RfcStatus: string
             self::SUBMITTED, self::TICKET_CREATED, self::RETURNED_TO_ADMIN, self::IN_PROGRESS => 'in_process',
             self::NEEDS_REVISION => 'needs_revision',
             self::APPROVED, self::IMPLEMENTED, self::CLOSED => 'approved',
-            self::REJECTED, self::FAILED => 'rejected',
+            self::REJECTED => 'rejected',
+            self::FAILED => 'not_successful',
             self::CANCELLED => 'cancelled',
         };
     }
@@ -95,9 +96,9 @@ enum RfcStatus: string
             self::SUBMITTED => [self::NEEDS_REVISION, self::TICKET_CREATED, self::REJECTED, self::CANCELLED],
             self::TICKET_CREATED => [self::APPROVED, self::REJECTED, self::RETURNED_TO_ADMIN, self::NEEDS_REVISION],
             self::RETURNED_TO_ADMIN => [self::TICKET_CREATED, self::NEEDS_REVISION, self::REJECTED],
-            self::APPROVED => [self::IN_PROGRESS],
-            self::IN_PROGRESS => [self::IMPLEMENTED, self::FAILED],
-            self::IMPLEMENTED, self::FAILED => [self::CLOSED],
+            self::APPROVED => [self::IN_PROGRESS, self::REJECTED],
+            self::IN_PROGRESS => [self::IMPLEMENTED, self::FAILED, self::REJECTED],
+            self::IMPLEMENTED, self::FAILED => [self::CLOSED, self::REJECTED],
             self::REJECTED, self::CLOSED, self::CANCELLED => [],
         };
     }
@@ -125,6 +126,10 @@ enum RfcStatus: string
                 && in_array($target, [self::TICKET_CREATED, self::NEEDS_REVISION, self::REJECTED], true) => 'admin',
             $this === self::TICKET_CREATED
                 && in_array($target, [self::APPROVED, self::REJECTED, self::RETURNED_TO_ADMIN, self::NEEDS_REVISION], true) => 'change_manager',
+            // Penolakan setelah disposisi tetap menjadi kewenangan Change
+            // Manager, termasuk saat Tim Rilis sedang mengerjakan RFC.
+            in_array($this, [self::APPROVED, self::IN_PROGRESS, self::IMPLEMENTED, self::FAILED], true)
+                && $target === self::REJECTED => 'change_manager',
             // Implementasi dicatat oleh anggota Tim Rilis yang ditugaskan,
             // bukan oleh Change Manager.
             $this === self::APPROVED && $target === self::IN_PROGRESS => 'release_team',
@@ -175,8 +180,12 @@ enum RfcStatus: string
                 'statuses' => [self::APPROVED, self::IMPLEMENTED, self::CLOSED],
             ],
             'rejected' => [
-                'label' => 'Ditolak / Tidak Terlaksana',
-                'statuses' => [self::REJECTED, self::FAILED],
+                'label' => 'Ditolak',
+                'statuses' => [self::REJECTED],
+            ],
+            'not_successful' => [
+                'label' => 'Belum Berhasil',
+                'statuses' => [self::FAILED],
             ],
         ];
     }

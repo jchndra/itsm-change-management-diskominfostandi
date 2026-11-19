@@ -39,7 +39,7 @@
     </div>
     @if (filled($implementation->failure_notes))
         <div class="md:col-span-2">
-            <span class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Alasan Reject</span>
+            <span class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Catatan Belum Berhasil</span>
             <p class="whitespace-pre-wrap text-slate-800">{{ $implementation->failure_notes }}</p>
         </div>
     @endif

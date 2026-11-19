@@ -74,7 +74,7 @@
             </x-dashboard.stat-card>
 
             <x-dashboard.stat-card label="Selesai bulan ini" :value="$overview['counts']['done_this_month']"
-                hint="Berhasil atau Reject bulan ini" tone="emerald">
+                hint="Berhasil atau belum berhasil bulan ini" tone="emerald">
                 <x-slot:icon>
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
@@ -417,7 +417,7 @@
     @else
         {{-- Riwayat tugas --}}
         <x-dashboard.panel class="dashboard-rise dashboard-rise-3" title="Riwayat Tugas" id="riwayat-tugas-tim-rilis"
-            description="Tugas yang sudah selesai atau Reject, terbaru lebih dulu.">
+            description="Tugas yang sudah selesai atau belum berhasil, terbaru lebih dulu.">
             <x-slot:icon>
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
@@ -428,7 +428,7 @@
             @if ($history === [])
                 <div class="p-5">
                     <x-dashboard.empty-state title="Belum ada riwayat"
-                        description="Tugas yang selesai atau Reject akan muncul di sini." />
+                        description="Tugas yang selesai atau belum berhasil akan muncul di sini." />
                 </div>
             @else
                 <ul class="divide-y divide-slate-100/80">
@@ -446,10 +446,10 @@
                                         {{ $item['rfc_number'] ?: 'RFC' }}
                                     </span>
                                     <span
-                                        class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold {{ $isSuccessful ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-rose-200 bg-rose-50 text-rose-700' }}">
-                                        <span class="h-1.5 w-1.5 rounded-full {{ $isSuccessful ? 'bg-emerald-500' : 'bg-rose-500' }}"
+                                        class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold {{ $isSuccessful ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-800' }}">
+                                        <span class="h-1.5 w-1.5 rounded-full {{ $isSuccessful ? 'bg-emerald-500' : 'bg-amber-500' }}"
                                             aria-hidden="true"></span>
-                                        {{ $isSuccessful ? 'Selesai' : 'Reject' }}
+                                        {{ $isSuccessful ? 'Selesai' : 'Belum Berhasil' }}
                                     </span>
                                 </div>
 

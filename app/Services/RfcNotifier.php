@@ -38,31 +38,57 @@ class RfcNotifier
         $recipient = $rfc->submittedBy;
         $notifyOwnerForSubmission = $newStatus === RfcStatus::TICKET_CREATED;
 
-        if (! $recipient || ($recipient->is($actor) && ! $notifyOwnerForSubmission)) {
-            return;
-        }
+        if ($recipient && (! $recipient->is($actor) || $notifyOwnerForSubmission)) {
+            $send = function () use ($rfc, $recipient, $newStatus, $note): void {
+                try {
+                    $recipient->notify(new RfcStatusChangedNotification($rfc, $newStatus, $note));
+                } catch (Throwable $exception) {
+                    report($exception);
 
-        $send = function () use ($rfc, $recipient, $newStatus, $note): void {
-            try {
-                $recipient->notify(new RfcStatusChangedNotification($rfc, $newStatus, $note));
-            } catch (Throwable $exception) {
-                report($exception);
+                    Log::warning('Notifikasi perubahan status RFC gagal dikirim.', [
+                        'rfc_id' => $rfc->id,
+                        'recipient_id' => $recipient->id,
+                        'status' => $newStatus->value,
+                    ]);
+                }
+            };
 
-                Log::warning('Notifikasi perubahan status RFC gagal dikirim.', [
-                    'rfc_id' => $rfc->id,
-                    'recipient_id' => $recipient->id,
-                    'status' => $newStatus->value,
-                ]);
+            if (config('rfc.notify_after_commit', true) && DB::transactionLevel() > 0) {
+                DB::afterCommit($send);
+            } else {
+                $send();
             }
-        };
-
-        if (config('rfc.notify_after_commit', true) && DB::transactionLevel() > 0) {
-            DB::afterCommit($send);
-
-            return;
         }
 
-        $send();
+        // Penolakan setelah disposisi menghentikan pekerjaan Tim Rilis,
+        // sehingga anggota yang ditugaskan perlu diberi tahu.
+        if ($newStatus === RfcStatus::REJECTED) {
+            foreach ($this->assignedReleaseTeamUsers($rfc) as $teamRecipient) {
+                if ($teamRecipient->is($actor)) {
+                    continue;
+                }
+
+                $teamSend = function () use ($rfc, $teamRecipient, $newStatus, $note): void {
+                    try {
+                        $teamRecipient->notify(new RfcStatusChangedNotification($rfc, $newStatus, $note));
+                    } catch (Throwable $exception) {
+                        report($exception);
+
+                        Log::warning('Notifikasi penolakan RFC ke Tim Rilis gagal dikirim.', [
+                            'rfc_id' => $rfc->id,
+                            'recipient_id' => $teamRecipient->id,
+                            'status' => $newStatus->value,
+                        ]);
+                    }
+                };
+
+                if (config('rfc.notify_after_commit', true) && DB::transactionLevel() > 0) {
+                    DB::afterCommit($teamSend);
+                } else {
+                    $teamSend();
+                }
+            }
+        }
     }
 
     /**

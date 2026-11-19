@@ -154,6 +154,28 @@ class ChangeRequestPolicy
     }
 
     /**
+     * Penolakan setelah disposisi hanya untuk Change Manager yang bukan
+     * pemilik RFC. Tim Rilis tidak pernah memiliki kewenangan ini.
+     */
+    public function reject(User $user, ChangeRequest $rfc): bool
+    {
+        if ($rfc->trashed() || $rfc->submitted_by_id === $user->id) {
+            return false;
+        }
+
+        if (! $user->hasRole('Change Manager') || ! $user->hasPermissionTo('rfc.record_decision')) {
+            return false;
+        }
+
+        return in_array(RfcStatus::fromValue($rfc->status), [
+            RfcStatus::APPROVED,
+            RfcStatus::IN_PROGRESS,
+            RfcStatus::IMPLEMENTED,
+            RfcStatus::FAILED,
+        ], true);
+    }
+
+    /**
      * Riwayat penghapusan hanya untuk staf dan pemohon. Tim Rilis tidak
      * memiliki akses ke arsip lintas RFC karena kewenangannya terbatas pada
      * tugas yang diberikan.

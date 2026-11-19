@@ -158,7 +158,7 @@
             </x-dashboard.stat-card>
 
             <x-dashboard.stat-card :label="\App\Enums\RfcStatus::groupLabel('rejected')" :value="$stats['rejected']"
-                hint="Ditolak atau tidak terlaksana" tone="rose">
+                hint="Ditolak" tone="rose">
                 <x-slot:icon>
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
@@ -202,7 +202,7 @@
             </x-dashboard.stat-card>
 
             <x-dashboard.stat-card :label="\App\Enums\RfcStatus::groupLabel('rejected')" :value="$stats['rejected']"
-                hint="Ditolak atau tidak terlaksana" tone="rose">
+                hint="Ditolak" tone="rose">
                 <x-slot:icon>
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
@@ -288,7 +288,7 @@
             </x-dashboard.stat-card>
 
             <x-dashboard.stat-card :label="\App\Enums\RfcStatus::groupLabel('rejected')" :value="$stats['rejected']"
-                :percent="$statusPercent($stats['rejected'])" hint="Ditolak atau tidak terlaksana" tone="rose">
+                :percent="$statusPercent($stats['rejected'])" hint="Ditolak" tone="rose">
                 <x-slot:icon>
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
