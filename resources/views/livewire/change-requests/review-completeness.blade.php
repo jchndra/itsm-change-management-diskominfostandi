@@ -1,32 +1,19 @@
-<div class="max-w-5xl mx-auto space-y-6">
+<x-rfc.action-page :back-href="route('change-requests.index', ['queue' => 'incoming'])"
+    back-label="Kembali ke Antrean Buat Tiket"
+    eyebrow="Buat Tiket Change (Admin / Frontdesk)" title="Buat Tiket Change"
+    :description="$rfc->displayIdentifier().' · '.$rfc->title" width="5xl">
     @php
         $isReturnedToAdmin = $rfc->status === \App\Enums\RfcStatus::RETURNED_TO_ADMIN->value;
     @endphp
 
-    {{-- Top Bar --}}
-    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <a href="{{ route('change-requests.index', ['queue' => 'incoming']) }}"
-            class="inline-flex items-center text-xs font-semibold text-slate-600 transition hover:text-blue-900">
-            <svg class="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Kembali ke Antrean Buat Tiket
-        </a>
-        <span class="text-xs font-medium text-slate-500">Buat Tiket Change (Admin / Frontdesk)</span>
-    </div>
+    <x-slot:actions>
+        <x-status-badge :status="$rfc->status" :tone="$rfc->displayStatusTone()" :label="$rfc->displayStatusLabel()" />
+    </x-slot:actions>
 
-    {{-- Judul Halaman --}}
-    <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div class="flex flex-col gap-4 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-                <span class="rounded-md bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-900">{{ $rfc->displayIdentifier() }}</span>
-                <h1 class="mt-2 text-xl font-bold text-slate-900">Buat Tiket Change</h1>
-                <p class="mt-1 text-sm text-slate-500">{{ $rfc->title }}</p>
-            </div>
-            <x-status-badge :status="$rfc->status" :tone="$rfc->displayStatusTone()" :label="$rfc->displayStatusLabel()" />
-        </div>
+    {{-- Ringkasan RFC --}}
+    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
 
-        <div class="mt-5 grid grid-cols-1 gap-4 text-xs sm:grid-cols-2 lg:grid-cols-4">
+        <div class="grid grid-cols-1 gap-4 text-xs sm:grid-cols-2 lg:grid-cols-4">
             <div>
                 <p class="text-slate-400">Pemohon</p>
                 <p class="mt-0.5 font-semibold text-slate-800">{{ $rfc->submittedBy?->name ?? '-' }}</p>
@@ -274,4 +261,4 @@
             </div>
         </div>
     </form>
-</div>
+</x-rfc.action-page>

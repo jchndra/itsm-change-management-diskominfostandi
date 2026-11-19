@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\User;
 use App\Policies\ChangeRequestPolicy;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -22,6 +23,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Gunakan tampilan pagination kustom agar seluruh daftar di aplikasi
+        // memiliki gaya tombol dan penanda halaman yang konsisten.
+        Paginator::defaultView('vendor.pagination.tailwind');
+
         // Tidak ada lagi bypass global untuk Super Admin. Setiap ability harus
         // memiliki permission eksplisit, dan aturan bisnis tetap ditegakkan di
         // policy, service, serta state machine.

@@ -251,8 +251,8 @@ class ReleaseCalendar extends Component
     {
         if ($task->execution_status === 'rolled_back') {
             return [
-                'key' => 'rollback',
-                'label' => 'Rollback',
+                'key' => 'rejected',
+                'label' => 'Reject',
                 'bar' => 'bg-rose-500 text-white hover:bg-rose-600',
                 'dot' => 'bg-rose-500',
             ];

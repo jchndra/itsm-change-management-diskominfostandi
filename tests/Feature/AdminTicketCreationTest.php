@@ -359,7 +359,7 @@ test('Pemohon hanya melihat nomor tiket sedangkan staf melihat prioritas kategor
         ->assertDontSee('Kategori Layanan')
         ->assertDontSee('Keamanan')
         ->assertDontSee($admin_note)
-        ->assertDontSee('Catatan Admin untuk Change Manager')
+        ->assertDontSee('Catatan Pemeriksaan Awal')
         ->assertDontSee('Ditetapkan Petugas');
 
     $this->actingAs($this->admin);
@@ -372,7 +372,7 @@ test('Pemohon hanya melihat nomor tiket sedangkan staf melihat prioritas kategor
         ->assertSee('Tinggi')
         ->assertSee('Kategori Layanan')
         ->assertSee('Keamanan')
-        ->assertSee('Catatan Admin untuk Change Manager')
+        ->assertSee('Catatan Pemeriksaan Awal')
         ->assertSee($admin_note);
 });
 
@@ -457,7 +457,7 @@ test('riwayat proses menampilkan kejadian tiket sesuai peran tanpa duplikasi', f
 
     $ownerEvent = $ownerEvents->sole();
 
-    expect($ownerEvent['label'])->toBe('Diverifikasi Admin dan diteruskan ke Change Manager')
+    expect($ownerEvent['label'])->toBe('Diverifikasi dan diteruskan ke Change Manager')
         ->and($ownerEvent['note'])->toBe("Nomor tiket: {$fresh->ticket_number}")
         ->and($ownerEvent['actor_name'])->toBeNull()
         ->and($ownerEvent['note'])->not->toContain($admin_note)

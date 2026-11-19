@@ -1,7 +1,10 @@
 <?php
 
 use App\Enums\DecisionStatus;
+use App\Enums\ImplementationResult;
 use App\Enums\RfcStatus;
+use App\Enums\ServiceCategory;
+use App\Enums\TicketPriority;
 use App\Livewire\ChangeRequests\ProcessHistoryTimeline;
 use App\Livewire\ChangeRequests\ReviewCompleteness;
 use App\Livewire\ChangeRequests\ShowChangeRequest;
@@ -80,7 +83,7 @@ test('rejected RFC tidak menampilkan persetujuan dan tidak punya langkah mendata
 
     Livewire::test(ShowChangeRequest::class, ['rfc' => $rfc->fresh()])
         ->assertOk()
-        ->assertSee('Ditolak oleh Admin')
+        ->assertSee('Ditolak pada tahap pemeriksaan')
         ->assertSee('Ditolak karena dokumen tidak lengkap.')
         ->assertDontSee('Disetujui oleh Change Manager')
         ->assertDontSee('Persetujuan Pimpinan (Eselon II)')
@@ -116,7 +119,7 @@ test('keputusan returned_to_admin tidak menandai persetujuan', function () {
     Livewire::test(ShowChangeRequest::class, ['rfc' => $rfc->fresh()])
         ->assertOk()
         ->assertSee('Sedang ditinjau')
-        ->assertDontSee('Dikembalikan ke Admin')
+        ->assertDontSee('Dikembalikan untuk pemeriksaan')
         ->assertDontSee('Disetujui oleh Change Manager')
         ->assertDontSee('Persetujuan Pimpinan (Eselon II)');
 });
@@ -156,7 +159,7 @@ test('tampilan Pemohon menyembunyikan catatan internal CM', function () {
 
     Livewire::test(ShowChangeRequest::class, ['rfc' => $rfc->fresh()])
         ->assertOk()
-        ->assertSee('Dikembalikan ke Admin')
+        ->assertSee('Dikembalikan untuk pemeriksaan')
         ->assertSee($internalNote)
         ->assertSee($this->cm->name);
 });
@@ -177,13 +180,13 @@ test('penolakan oleh Admin tercatat dengan pelaku dan catatan', function () {
     $rejected = collect($history['events'])->firstWhere('key', RfcStatus::REJECTED->value);
 
     expect($rejected)->not->toBeNull()
-        ->and($rejected['label'])->toBe('Ditolak oleh Admin')
+        ->and($rejected['label'])->toBe('Ditolak pada tahap pemeriksaan')
         ->and($rejected['note'])->toBe($note)
         ->and($rejected['actor_name'])->toBe($this->admin->name);
 
     Livewire::test(ShowChangeRequest::class, ['rfc' => $rfc->fresh()])
         ->assertOk()
-        ->assertSee('Ditolak oleh Admin')
+        ->assertSee('Ditolak pada tahap pemeriksaan')
         ->assertSee($this->admin->name)
         ->assertSee($note);
 });
@@ -219,14 +222,14 @@ test('riwayat proses pemohon mengikuti aksi Admin dan Change Manager tanpa muat 
     $component = Livewire::test(ProcessHistoryTimeline::class, ['rfc' => $rfc->fresh()])
         ->assertOk()
         ->assertSee('RFC diajukan')
-        ->assertDontSee('Diverifikasi Admin dan diteruskan ke Change Manager');
+        ->assertDontSee('Diverifikasi dan diteruskan ke Change Manager');
 
     expect($component->html())->toContain('wire:poll.30s.visible="refreshProcessHistory"');
 
     RfcStatusTransition::transitionTo($rfc->fresh(), RfcStatus::TICKET_CREATED, $this->admin);
 
     $component->call('refreshProcessHistory')
-        ->assertSee('Diverifikasi Admin dan diteruskan ke Change Manager');
+        ->assertSee('Diverifikasi dan diteruskan ke Change Manager');
 
     RfcStatusTransition::transitionTo($rfc->fresh(), RfcStatus::APPROVED, $this->cm);
 
@@ -251,6 +254,65 @@ test('timeline dashboard pemohon ikut diperbarui otomatis setelah status berubah
     $component->call('$refresh')
         ->assertSee('Review selesai')
         ->assertDontSee('Menunggu keputusan Change Manager');
+});
+
+test('catatan riwayat dipecah menjadi baris label dan nilai untuk tampilan', function () {
+    $rfc = ($this->makeRfc)();
+
+    activity('rfc')
+        ->performedOn($rfc)
+        ->causedBy($this->admin)
+        ->withProperties([
+            'event' => 'ticket_created',
+            'ticket_number' => 'CHG-2026-0099',
+            'priority' => TicketPriority::HIGH->value,
+            'category' => ServiceCategory::SECURITY->value,
+            'admin_note' => 'Catatan untuk Change Manager.',
+        ])
+        ->log('Tiket dibuat');
+
+    $event = collect(app(RfcHistoryService::class)->build($rfc->fresh(), true)['events'])
+        ->firstWhere('key', RfcStatus::TICKET_CREATED->value);
+
+    expect($event)->not->toBeNull()
+        ->and($event['details'])->toContain(['label' => 'Prioritas', 'value' => 'Tinggi', 'long' => false])
+        ->and($event['details'])->toContain(['label' => 'Kategori layanan', 'value' => 'Keamanan', 'long' => false])
+        ->and($event['details'])->toContain(['label' => 'Catatan', 'value' => 'Catatan untuk Change Manager.', 'long' => false]);
+});
+
+test('rincian level risiko gabungan dipecah menjadi beberapa baris', function () {
+    $rfc = ($this->makeRfc)();
+    ($this->makeRisk)($rfc);
+
+    $event = collect(app(RfcHistoryService::class)->build($rfc->fresh(), true)['events'])
+        ->firstWhere('key', 'risk_assessment');
+
+    expect($event['details'])->toContain(['label' => 'Risiko', 'value' => 'Sedang', 'long' => false])
+        ->and($event['details'])->toContain(['label' => 'Dampak', 'value' => 'Sedang', 'long' => false])
+        ->and($event['details'])->toContain(['label' => 'Klasifikasi', 'value' => 'Normal Change', 'long' => false]);
+});
+
+test('nilai catatan yang panjang ditandai agar dapat dilipat pada tampilan', function () {
+    $rfc = ($this->makeRfc)();
+
+    activity('rfc')
+        ->performedOn($rfc)
+        ->causedBy($this->cm)
+        ->withProperties([
+            'event' => 'evaluation_recorded',
+            'implementation_result' => ImplementationResult::SUCCESS->value,
+            'evaluation_notes' => str_repeat('Rincian evaluasi panjang. ', 6),
+        ])
+        ->log('Evaluasi dicatat');
+
+    $details = collect(app(RfcHistoryService::class)->build($rfc->fresh(), true)['events'])
+        ->firstWhere('key', 'evaluation_recorded')['details'];
+
+    $evaluation = collect($details)->firstWhere('label', 'Catatan evaluasi');
+
+    expect($evaluation)->not->toBeNull()
+        ->and($evaluation['long'])->toBeTrue()
+        ->and(collect($details)->firstWhere('label', 'Hasil implementasi')['long'])->toBeFalse();
 });
 
 test('widget dashboard tidak menampilkan RFC closed, rejected, atau draft', function () {

@@ -155,12 +155,12 @@
 
     .rfc-responsive-table tbody tr {
         display: block;
-        margin: 0.75rem;
-        padding: 0.5rem 0.25rem;
+        margin: 0 0.75rem 0.75rem;
+        padding: 0.75rem 0.5rem;
         border: 1px solid rgb(226 232 240);
-        border-radius: 0.9rem;
+        border-radius: 1rem;
         background-color: #fff;
-        box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+        box-shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 14px 30px -26px rgb(15 23 42 / 0.55);
     }
 
     .rfc-responsive-table tbody td {
@@ -182,13 +182,22 @@
         color: rgb(100 116 139);
     }
 
+    .rfc-responsive-table tbody td:first-child {
+        padding-bottom: 0.65rem !important;
+        border-bottom: 1px dashed rgb(226 232 240);
+    }
+
     .rfc-responsive-table tbody td[data-label='Aksi'] {
-        padding-top: 0.75rem !important;
+        margin-top: 0.5rem;
+        padding-top: 0.85rem !important;
+        border-top: 1px solid rgb(241 245 249);
     }
 
     .rfc-responsive-table tbody tr:has(td[colspan]) {
         margin: 0.75rem;
         padding: 0;
+        border-style: dashed;
+        box-shadow: none;
     }
 
     .rfc-responsive-table tbody td[colspan] {

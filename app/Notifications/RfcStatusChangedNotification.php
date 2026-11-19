@@ -60,7 +60,7 @@ class RfcStatusChangedNotification extends Notification
             RfcStatus::REJECTED => $this->withNote("RFC {$number} ditolak"),
             RfcStatus::IN_PROGRESS => "RFC {$number} sedang dikerjakan",
             RfcStatus::IMPLEMENTED => "RFC {$number} selesai diimplementasikan, menunggu evaluasi",
-            RfcStatus::FAILED => "RFC {$number} gagal atau rollback dilaksanakan, menunggu evaluasi",
+            RfcStatus::FAILED => "RFC {$number} dicatat dengan hasil Reject, menunggu evaluasi",
             RfcStatus::CLOSED => "RFC {$number} ".match ($this->outcome()) {
                 'successful' => 'ditutup — berhasil',
                 'unsuccessful' => 'ditutup — tidak berhasil',

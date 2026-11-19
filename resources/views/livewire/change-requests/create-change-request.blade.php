@@ -1,377 +1,460 @@
-<div class="max-w-4xl mx-auto space-y-6">
-    <!-- Header -->
-    <div class="flex items-center justify-between border-b border-slate-200 pb-4">
-        <div>
-            <h1 class="text-2xl font-bold text-slate-900">Ajukan Request for Change (RFC)</h1>
-            <p class="text-sm text-slate-500 mt-1">Lengkapi formulir di bawah ini untuk mengajukan permohonan perubahan
-                sistem</p>
+@php
+    $inputBase = 'w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-slate-800 shadow-sm placeholder-slate-400 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30';
+@endphp
+
+<div class="mx-auto max-w-5xl space-y-6">
+    {{-- Header Halaman --}}
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div class="flex min-w-0 items-start gap-3 sm:gap-4">
+            <span class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-600/25">
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                        d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                </svg>
+            </span>
+            <div class="min-w-0">
+                <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-blue-700">Permohonan Perubahan</p>
+                <h1 class="mt-1 text-[26px] font-bold leading-tight tracking-tight text-slate-900 sm:text-[30px]">
+                    Ajukan Request for Change (RFC)
+                </h1>
+                <p class="mt-1 max-w-xl text-sm leading-relaxed text-slate-500">
+                    Lengkapi formulir di bawah ini untuk mengajukan permohonan perubahan sistem.
+                </p>
+            </div>
         </div>
         <a href="{{ route('requester.dashboard') }}" wire:navigate
-            class="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+            class="inline-flex shrink-0 items-center gap-1.5 self-start rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+            </svg>
             Batal
         </a>
     </div>
 
-    <!-- Form Container -->
-    <form class="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm space-y-6">
+    {{-- Form Container --}}
+    <form class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div class="space-y-8 p-5 sm:p-7 lg:p-8">
 
-        <!-- Data Pemohon -->
-        <div class="rounded-xl border border-slate-200 bg-slate-50 p-5 space-y-4">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-                <h2 class="text-sm font-bold uppercase tracking-wide text-slate-700">Data Pemohon</h2>
-                <span class="text-xs text-slate-500">Terisi otomatis dari profil</span>
-            </div>
-
-            @if (blank($requester?->position) || blank($requester?->phone_number))
-                <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                    Jabatan atau no. telepon belum lengkap.
-                    <a href="{{ route('profile.show') }}" wire:navigate class="font-semibold underline">
-                        Lengkapi profil
-                    </a>
-                    agar data pemohon pada formulir ini lengkap.
-                </div>
-            @endif
-
-            <div class="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
-                <div>
-                    <span class="block text-xs font-semibold uppercase tracking-wide text-slate-500">Nama</span>
-                    <p class="mt-1 font-medium text-slate-800">{{ $requester?->name ?? '-' }}</p>
-                </div>
-                <div>
-                    <span class="block text-xs font-semibold uppercase tracking-wide text-slate-500">Jabatan</span>
-                    <p class="mt-1 font-medium text-slate-800">{{ $requester?->position ?: '-' }}</p>
-                </div>
-                <div>
-                    <span class="block text-xs font-semibold uppercase tracking-wide text-slate-500">Unit Kerja (OPD)</span>
-                    <p class="mt-1 font-medium text-slate-800">{{ $requester?->opd?->name ?? '-' }}</p>
-                </div>
-                <div>
-                    <span class="block text-xs font-semibold uppercase tracking-wide text-slate-500">No. Telepon</span>
-                    <p class="mt-1 font-medium text-slate-800">{{ $requester?->phone_number ?: '-' }}</p>
-                </div>
-                <div>
-                    <span class="block text-xs font-semibold uppercase tracking-wide text-slate-500">Email</span>
-                    <p class="mt-1 font-medium text-slate-800">{{ $requester?->email ?? '-' }}</p>
-                </div>
-                <div>
-                    <span class="block text-xs font-semibold uppercase tracking-wide text-slate-500">NIP</span>
-                    <p class="mt-1 font-medium text-slate-800">{{ $requester?->nip ?: '-' }}</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Judul Perubahan -->
-        <div>
-            <label for="title" class="block text-sm font-semibold text-slate-700 mb-1">Judul Perubahan *</label>
-            <input type="text" id="title" wire:model="title"
-                placeholder="Contoh: Pembaruan Modul Integrasi Database API"
-                class="w-full text-sm px-3.5 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 {{ $errors->has('title') ? 'border-red-500' : 'border-slate-300' }}">
-            @error('title')
-                <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>
-            @enderror
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Kategori Perubahan -->
-            <div>
-                <label for="change_type" class="block text-sm font-semibold text-slate-700 mb-1">Kategori Perubahan *</label>
-                <select id="change_type" wire:model="change_type"
-                    class="w-full text-sm px-3.5 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 {{ $errors->has('change_type') ? 'border-red-500' : 'border-slate-300' }}">
-                    <option value="">-- Pilih Kategori --</option>
-                    <option value="standard">Standar</option>
-                    <option value="normal">Normal</option>
-                    <option value="emergency">Emergency</option>
-                </select>
-                @error('change_type')
-                    <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>
-                @enderror
-            </div>
-
-            <!-- Aplikasi / Sistem Tujuan -->
-            <div>
-                <label for="application_id" class="block text-sm font-semibold text-slate-700 mb-1">Sistem / Layanan
-                    yang Terdampak *</label>
-                <select id="application_id" wire:model="application_id"
-                    class="w-full text-sm px-3.5 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 {{ $errors->has('application_id') ? 'border-red-500' : 'border-slate-300' }}">
-                    <option value="">-- Pilih Aplikasi --</option>
-                    @foreach ($applications as $app)
-                        <option value="{{ $app->id }}">
-                            {{ $app->name }} ({{ $app->opd->code ?? 'OPD' }})
-                        </option>
-                    @endforeach
-                </select>
-                @error('application_id')
-                    <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>
-                @enderror
-            </div>
-        </div>
-
-        <!-- Detail Perubahan -->
-        <div>
-            <label for="description" class="block text-sm font-semibold text-slate-700 mb-1">
-                Detail Perubahan *
-            </label>
-            <textarea id="description" wire:model="description" rows="4"
-                placeholder="Jelaskan perubahan yang diajukan beserta tujuan yang ingin dicapai..."
-                class="w-full text-sm px-3.5 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 {{ $errors->has('description') ? 'border-red-500' : 'border-slate-300' }}"></textarea>
-            @error('description')
-                <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>
-            @enderror
-        </div>
-
-        <!-- Alasan Perubahan -->
-        <div>
-            <label for="reason_for_change" class="block text-sm font-semibold text-slate-700 mb-1">
-                Alasan Perubahan *
-            </label>
-            <textarea id="reason_for_change" wire:model="reason_for_change" rows="3"
-                placeholder="Jelaskan latar belakang dan urgensi perubahan ini..."
-                class="w-full text-sm px-3.5 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 {{ $errors->has('reason_for_change') ? 'border-red-500' : 'border-slate-300' }}"></textarea>
-            @error('reason_for_change')
-                <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>
-            @enderror
-        </div>
-
-        <!-- Dasar Hukum -->
-        <div>
-            <label for="legal_basis" class="block text-sm font-semibold text-slate-700 mb-1">
-                Dasar Hukum *
-            </label>
-            <textarea id="legal_basis" wire:model="legal_basis" rows="3"
-                placeholder="Sebutkan dasar hukum atau regulasi yang melandasi perubahan ini..."
-                class="w-full text-sm px-3.5 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 {{ $errors->has('legal_basis') ? 'border-red-500' : 'border-slate-300' }}"></textarea>
-            @error('legal_basis')
-                <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>
-            @enderror
-        </div>
-
-        <!-- Risiko Perubahan -->
-        <div>
-            <label for="change_risk" class="block text-sm font-semibold text-slate-700 mb-1">
-                Risiko Perubahan *
-            </label>
-            <textarea id="change_risk" wire:model="change_risk" rows="3"
-                placeholder="Jelaskan risiko yang mungkin timbul jika perubahan dilakukan atau tidak dilakukan..."
-                class="w-full text-sm px-3.5 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 {{ $errors->has('change_risk') ? 'border-red-500' : 'border-slate-300' }}"></textarea>
-            @error('change_risk')
-                <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>
-            @enderror
-        </div>
-
-        <!-- Register Risiko -->
-        <div>
-            <label for="risk_event" class="block text-sm font-semibold text-slate-700 mb-1">
-                Register Risiko
-            </label>
-            <select id="risk_event" wire:model="risk_event"
-                class="w-full text-sm px-3.5 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 {{ $errors->has('risk_event') ? 'border-red-500' : 'border-slate-300' }}">
-                <option value="">-- Pilih Register Risiko --</option>
-                @foreach (\App\Enums\RiskEvent::cases() as $riskEvent)
-                    <option value="{{ $riskEvent->value }}">{{ $riskEvent->optionLabel() }}</option>
-                @endforeach
-            </select>
-            <p class="mt-1 text-xs text-slate-500">
-                Pilih kejadian risiko pada gambar Panduan Manajemen Risiko
-                <a href="{{ asset('images/register-risiko-indikatif.png') }}" target="_blank" rel="noopener"
-                    class="font-semibold text-indigo-600 hover:text-indigo-800 hover:underline">
-                    Lampiran B — Register Risiko Indikatif Tingkat Kota (Tabel B.1)
-                </a>.
-            </p>
-            @error('risk_event')
-                <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>
-            @enderror
-        </div>
-
-        <!-- Analisis Dampak dan Risiko Perubahan -->
-        <section class="rounded-xl border-2 border-slate-300 p-5 sm:p-6 space-y-4"
-            x-data="{
-                dampak: @js(old('level_dampak', '')),
-                kemungkinan: @js(old('level_kemungkinan', '')),
-                besaran: @js(old('besaran_risiko', '')),
-                level: @js(old('level_risiko', '')),
-                prioritas: {
-                    1: [0, 25, 23, 21, 18, 16],
-                    2: [0, 24, 19, 14, 12, 9],
-                    3: [0, 22, 15, 11, 7, 5],
-                    4: [0, 20, 13, 8, 4, 2],
-                    5: [0, 17, 10, 6, 3, 1],
-                },
-                hitung() {
-                    if (!this.dampak || !this.kemungkinan) {
-                        this.besaran = '';
-                        this.level = '';
-                        return;
-                    }
-
-                    const nilaiPrioritas = this.prioritas[this.kemungkinan]?.[Number(this.dampak)];
-
-                    if (!nilaiPrioritas) {
-                        this.besaran = '';
-                        this.level = '';
-                        return;
-                    }
-
-                    this.besaran = String(26 - nilaiPrioritas);
-                    this.level = nilaiPrioritas <= 3 ? '5'
-                        : nilaiPrioritas <= 8 ? '4'
-                        : nilaiPrioritas <= 17 ? '3'
-                        : nilaiPrioritas <= 22 ? '2'
-                        : '1';
-                },
-                init() {
-                    this.hitung();
-                },
-            }">
-            <h2 class="text-center text-base font-bold text-slate-800">Analisis Dampak dan Risiko Perubahan</h2>
-
-            <div class="text-center">
-                <a href="{{ route('rfc-documents.panduan-analisis-risiko') }}" target="_blank" rel="noopener noreferrer"
-                    class="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:underline">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                    </svg>
-                    Panduan Pengisian Analisis Risiko
-                </a>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Level Dampak -->
-                <div>
-                    <label for="level_dampak" class="block text-sm font-semibold text-slate-700 mb-1">Level Dampak</label>
-                    <select id="level_dampak" name="level_dampak" x-model="dampak" x-on:change="hitung()"
-                        class="w-full text-sm px-3.5 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                        <option value="">-- Pilih Level Dampak --</option>
-                        <option value="1">Tidak Signifikan (1)</option>
-                        <option value="2">Minor (2)</option>
-                        <option value="3">Moderat (3)</option>
-                        <option value="4">Signifikan (4)</option>
-                        <option value="5">Sangat Signifikan (5)</option>
-                    </select>
+            {{-- 1. Data Pemohon --}}
+            <section aria-labelledby="section-pemohon-heading">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-3">
+                        <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-600 text-[13px] font-bold text-white">1</span>
+                        <div>
+                            <h2 id="section-pemohon-heading" class="text-sm font-bold uppercase tracking-wide text-slate-800">Data Pemohon</h2>
+                            <p class="mt-0.5 text-xs text-slate-500">Identitas pengaju perubahan.</p>
+                        </div>
+                    </div>
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-600">
+                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="m4.5 12.75 6 6 9-13.5" />
+                        </svg>
+                        Terisi otomatis
+                    </span>
                 </div>
 
-                <!-- Level Kemungkinan -->
-                <div>
-                    <label for="level_kemungkinan" class="block text-sm font-semibold text-slate-700 mb-1">Level Kemungkinan</label>
-                    <select id="level_kemungkinan" name="level_kemungkinan" x-model="kemungkinan" x-on:change="hitung()"
-                        class="w-full text-sm px-3.5 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                        <option value="">-- Pilih Level Kemungkinan --</option>
-                        <option value="1">Hampir Tidak Terjadi (1)</option>
-                        <option value="2">Jarang Terjadi (2)</option>
-                        <option value="3">Kadang Terjadi (3)</option>
-                        <option value="4">Sering Terjadi (4)</option>
-                        <option value="5">Hampir Pasti Terjadi (5)</option>
-                    </select>
+                @if (blank($requester?->position) || blank($requester?->phone_number))
+                    <div class="mt-4 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+                        role="alert">
+                        <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                d="M12 9v3.75m0 3.75h.008v.008H12v-.008ZM10.34 3.94 2.7 17.06A1.9 1.9 0 0 0 4.34 20h15.32a1.9 1.9 0 0 0 1.64-2.9L13.66 3.94a1.9 1.9 0 0 0-3.32 0Z" />
+                        </svg>
+                        <span>
+                            Jabatan atau no. telepon belum lengkap.
+                            <a href="{{ route('profile.show') }}" wire:navigate class="font-semibold underline underline-offset-2 hover:text-amber-900">
+                                Lengkapi profil
+                            </a>
+                            agar data pemohon pada formulir ini lengkap.
+                        </span>
+                    </div>
+                @endif
+
+                <dl class="mt-4 grid grid-cols-1 gap-x-6 gap-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm sm:grid-cols-2 sm:p-5">
+                    <div>
+                        <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Nama</dt>
+                        <dd class="mt-1 font-medium text-slate-800">{{ $requester?->name ?? '-' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Jabatan</dt>
+                        <dd class="mt-1 font-medium text-slate-800">{{ $requester?->position ?: '-' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Unit Kerja (OPD)</dt>
+                        <dd class="mt-1 font-medium text-slate-800">{{ $requester?->opd?->name ?? '-' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">No. Telepon</dt>
+                        <dd class="mt-1 font-medium text-slate-800">{{ $requester?->phone_number ?: '-' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Email</dt>
+                        <dd class="mt-1 font-medium text-slate-800 break-all">{{ $requester?->email ?? '-' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">NIP</dt>
+                        <dd class="mt-1 font-medium text-slate-800">{{ $requester?->nip ?: '-' }}</dd>
+                    </div>
+                </dl>
+            </section>
+
+            {{-- 2. Informasi Perubahan --}}
+            <section aria-labelledby="section-informasi-heading" class="border-t border-slate-100 pt-7">
+                <div class="flex items-center gap-3">
+                    <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-600 text-[13px] font-bold text-white">2</span>
+                    <div>
+                        <h2 id="section-informasi-heading" class="text-sm font-bold uppercase tracking-wide text-slate-800">Informasi Perubahan</h2>
+                        <p class="mt-0.5 text-xs text-slate-500">Judul, kategori, dan sistem yang terdampak.</p>
+                    </div>
                 </div>
 
-                <!-- Besaran Risiko -->
-                <div>
-                    <label for="besaran_risiko" class="block text-sm font-semibold text-slate-700 mb-1">Besaran Risiko</label>
-                    <select id="besaran_risiko" name="besaran_risiko" x-model="besaran" tabindex="-1"
-                        aria-readonly="true"
-                        class="w-full text-sm px-3.5 py-2.5 border border-slate-300 rounded-lg bg-slate-100 text-slate-500 cursor-not-allowed pointer-events-none">
-                        <option value="">-- Besaran Risiko --</option>
-                        @for ($nilai = 1; $nilai <= 25; $nilai++)
-                            <option value="{{ $nilai }}">{{ $nilai }}</option>
-                        @endfor
-                    </select>
-                </div>
+                <div class="mt-4 space-y-5">
+                    {{-- Judul Perubahan --}}
+                    <div>
+                        <label for="title" class="mb-1.5 block text-sm font-semibold text-slate-700">Judul Perubahan <span class="text-rose-600" aria-hidden="true">*</span></label>
+                        <input type="text" id="title" wire:model="title"
+                            placeholder="Contoh: Pembaruan Modul Integrasi Database API"
+                            @error('title') aria-invalid="true" aria-describedby="title-error" @enderror
+                            class="{{ $inputBase }} {{ $errors->has('title') ? 'border-rose-400' : 'border-slate-300' }}">
+                        @error('title')
+                            <p id="title-error" class="mt-1.5 flex items-start gap-1.5 text-xs font-medium text-rose-600" role="alert">
+                                <svg class="mt-0.5 h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m0 3.75h.008v.008H12v-.008Zm0-18 10.5 18H1.5L12 3.75Z" />
+                                </svg>
+                                <span>{{ $message }}</span>
+                            </p>
+                        @enderror
+                    </div>
 
-                <!-- Level Risiko -->
-                <div>
-                    <label for="level_risiko" class="block text-sm font-semibold text-slate-700 mb-1">Level Risiko</label>
-                    <select id="level_risiko" name="level_risiko" x-model="level" tabindex="-1" aria-readonly="true"
-                        class="w-full text-sm px-3.5 py-2.5 border border-slate-300 rounded-lg bg-slate-100 text-slate-500 cursor-not-allowed pointer-events-none">
-                        <option value="">-- Level Risiko --</option>
-                        <option value="1">Sangat Rendah (1)</option>
-                        <option value="2">Rendah (2)</option>
-                        <option value="3">Sedang (3)</option>
-                        <option value="4">Tinggi (4)</option>
-                        <option value="5">Sangat Tinggi (5)</option>
-                    </select>
-                </div>
-            </div>
-        </section>
-
-        <!-- Keterangan -->
-        <div>
-            <label for="impact_description" class="block text-sm font-semibold text-slate-700 mb-1">Keterangan
-                (opsional)</label>
-            <textarea id="impact_description" wire:model="impact_description" rows="3"
-                placeholder="Tuliskan keterangan tambahan terkait perubahan, misalnya perkiraan downtime, jumlah pengguna terdampak, atau modul lain yang dipengaruhi..."
-                class="w-full text-sm px-3.5 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 {{ $errors->has('impact_description') ? 'border-red-500' : 'border-slate-300' }}"></textarea>
-            @error('impact_description')
-                <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>
-            @enderror
-        </div>
-
-        <!-- Lampiran -->
-        <div class="space-y-3">
-            <div>
-                <label for="attachments" class="block text-sm font-semibold text-slate-700 mb-1">Lampiran *</label>
-                <p class="text-xs text-slate-500">
-                    Berkas pendukung lainnya. Format PDF Maksimal 5 file per RFC dan 5 MB per file.
-                </p>
-            </div>
-
-            <!-- Lampiran Pendukung -->
-            <input type="file" id="attachments" wire:model="attachments" multiple accept=".pdf"
-                class="block w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100">
-
-            <div wire:loading wire:target="attachments" class="text-xs text-slate-500">
-                Mengunggah lampiran...
-            </div>
-
-            @error('attachments')
-                <span class="text-xs text-red-500 block">{{ $message }}</span>
-            @enderror
-
-            @if (count($attachments) > 0)
-                <ul class="divide-y divide-slate-100 rounded-lg border border-slate-200">
-                    @foreach ($attachments as $index => $file)
-                        <li class="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm"
-                            wire:key="pending-attachment-{{ $index }}-{{ $file->getFilename() }}">
-                            <span class="min-w-0 flex-1 truncate text-slate-700">{{ $file->getClientOriginalName() }}</span>
-                            <span class="text-xs text-slate-400">{{ number_format($file->getSize() / 1024, 0, ',', '.') }} KB</span>
-                            <button type="button" wire:click="removePendingAttachment({{ $index }})"
-                                class="text-xs font-semibold text-rose-600 hover:text-rose-700">
-                                Hapus
-                            </button>
-                            @error('attachments.'.$index)
-                                <span class="w-full text-xs text-red-500">{{ $message }}</span>
+                    <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+                        {{-- Kategori Perubahan --}}
+                        <div>
+                            <label for="change_type" class="mb-1.5 block text-sm font-semibold text-slate-700">Kategori Perubahan <span class="text-rose-600" aria-hidden="true">*</span></label>
+                            <select id="change_type" wire:model="change_type"
+                                @error('change_type') aria-invalid="true" aria-describedby="change-type-error" @enderror
+                                class="{{ $inputBase }} {{ $errors->has('change_type') ? 'border-rose-400' : 'border-slate-300' }}">
+                                <option value="">-- Pilih Kategori --</option>
+                                <option value="standard">Standar</option>
+                                <option value="normal">Normal</option>
+                                <option value="emergency">Emergency</option>
+                            </select>
+                            @error('change_type')
+                                <p id="change-type-error" class="mt-1.5 flex items-start gap-1.5 text-xs font-medium text-rose-600" role="alert">
+                                    <svg class="mt-0.5 h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m0 3.75h.008v.008H12v-.008Zm0-18 10.5 18H1.5L12 3.75Z" />
+                                    </svg>
+                                    <span>{{ $message }}</span>
+                                </p>
                             @enderror
-                        </li>
-                    @endforeach
-                </ul>
-            @endif
+                        </div>
+
+                        {{-- Aplikasi / Sistem Tujuan --}}
+                        <div>
+                            <label for="application_id" class="mb-1.5 block text-sm font-semibold text-slate-700">Sistem / Layanan yang Terdampak <span class="text-rose-600" aria-hidden="true">*</span></label>
+                            <select id="application_id" wire:model="application_id"
+                                @error('application_id') aria-invalid="true" aria-describedby="application-id-error" @enderror
+                                class="{{ $inputBase }} {{ $errors->has('application_id') ? 'border-rose-400' : 'border-slate-300' }}">
+                                <option value="">-- Pilih Aplikasi --</option>
+                                @foreach ($applications as $app)
+                                    <option value="{{ $app->id }}">
+                                        {{ $app->name }} ({{ $app->opd->code ?? 'OPD' }})
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('application_id')
+                                <p id="application-id-error" class="mt-1.5 flex items-start gap-1.5 text-xs font-medium text-rose-600" role="alert">
+                                    <svg class="mt-0.5 h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m0 3.75h.008v.008H12v-.008Zm0-18 10.5 18H1.5L12 3.75Z" />
+                                    </svg>
+                                    <span>{{ $message }}</span>
+                                </p>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {{-- 3. Detail Perubahan --}}
+            <section aria-labelledby="section-detail-heading" class="border-t border-slate-100 pt-7">
+                <div class="flex items-center gap-3">
+                    <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-600 text-[13px] font-bold text-white">3</span>
+                    <div>
+                        <h2 id="section-detail-heading" class="text-sm font-bold uppercase tracking-wide text-slate-800">Detail Perubahan</h2>
+                        <p class="mt-0.5 text-xs text-slate-500">Konteks, urgensi, dan dasar hukum perubahan.</p>
+                    </div>
+                </div>
+
+                <div class="mt-4 space-y-5">
+                    {{-- Detail Perubahan --}}
+                    <div>
+                        <label for="description" class="mb-1.5 block text-sm font-semibold text-slate-700">Detail Perubahan <span class="text-rose-600" aria-hidden="true">*</span></label>
+                        <textarea id="description" wire:model="description" rows="4"
+                            placeholder="Jelaskan perubahan yang diajukan beserta tujuan yang ingin dicapai..."
+                            @error('description') aria-invalid="true" aria-describedby="description-error" @enderror
+                            class="{{ $inputBase }} {{ $errors->has('description') ? 'border-rose-400' : 'border-slate-300' }}"></textarea>
+                        @error('description')
+                            <p id="description-error" class="mt-1.5 flex items-start gap-1.5 text-xs font-medium text-rose-600" role="alert">
+                                <svg class="mt-0.5 h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m0 3.75h.008v.008H12v-.008Zm0-18 10.5 18H1.5L12 3.75Z" />
+                                </svg>
+                                <span>{{ $message }}</span>
+                            </p>
+                        @enderror
+                    </div>
+
+                    {{-- Alasan Perubahan --}}
+                    <div>
+                        <label for="reason_for_change" class="mb-1.5 block text-sm font-semibold text-slate-700">Alasan Perubahan <span class="text-rose-600" aria-hidden="true">*</span></label>
+                        <textarea id="reason_for_change" wire:model="reason_for_change" rows="3"
+                            placeholder="Jelaskan latar belakang dan urgensi perubahan ini..."
+                            @error('reason_for_change') aria-invalid="true" aria-describedby="reason-for-change-error" @enderror
+                            class="{{ $inputBase }} {{ $errors->has('reason_for_change') ? 'border-rose-400' : 'border-slate-300' }}"></textarea>
+                        <p class="mt-1.5 text-[11px] text-slate-500">Minimal 10 karakter.</p>
+                        @error('reason_for_change')
+                            <p id="reason-for-change-error" class="mt-1.5 flex items-start gap-1.5 text-xs font-medium text-rose-600" role="alert">
+                                <svg class="mt-0.5 h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m0 3.75h.008v.008H12v-.008Zm0-18 10.5 18H1.5L12 3.75Z" />
+                                </svg>
+                                <span>{{ $message }}</span>
+                            </p>
+                        @enderror
+                    </div>
+
+                    {{-- Dasar Hukum --}}
+                    <div>
+                        <label for="legal_basis" class="mb-1.5 block text-sm font-semibold text-slate-700">Dasar Hukum <span class="text-rose-600" aria-hidden="true">*</span></label>
+                        <textarea id="legal_basis" wire:model="legal_basis" rows="3"
+                            placeholder="Sebutkan dasar hukum atau regulasi yang melandasi perubahan ini..."
+                            @error('legal_basis') aria-invalid="true" aria-describedby="legal-basis-error" @enderror
+                            class="{{ $inputBase }} {{ $errors->has('legal_basis') ? 'border-rose-400' : 'border-slate-300' }}"></textarea>
+                        @error('legal_basis')
+                            <p id="legal-basis-error" class="mt-1.5 flex items-start gap-1.5 text-xs font-medium text-rose-600" role="alert">
+                                <svg class="mt-0.5 h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m0 3.75h.008v.008H12v-.008Zm0-18 10.5 18H1.5L12 3.75Z" />
+                                </svg>
+                                <span>{{ $message }}</span>
+                            </p>
+                        @enderror
+                    </div>
+                </div>
+            </section>
+
+            {{-- 4. Risiko & Dampak --}}
+            <section aria-labelledby="section-risiko-heading" class="border-t border-slate-100 pt-7">
+                <div class="flex items-center gap-3">
+                    <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-600 text-[13px] font-bold text-white">4</span>
+                    <div>
+                        <h2 id="section-risiko-heading" class="text-sm font-bold uppercase tracking-wide text-slate-800">Risiko &amp; Dampak</h2>
+                        <p class="mt-0.5 text-xs text-slate-500">Identifikasi risiko dan estimasi besaran dampaknya.</p>
+                    </div>
+                </div>
+
+                <div class="mt-4 space-y-5">
+                    {{-- Risiko Perubahan --}}
+                    <div>
+                        <label for="change_risk" class="mb-1.5 block text-sm font-semibold text-slate-700">Risiko Perubahan <span class="text-rose-600" aria-hidden="true">*</span></label>
+                        <textarea id="change_risk" wire:model="change_risk" rows="3"
+                            placeholder="Jelaskan risiko yang mungkin timbul jika perubahan dilakukan atau tidak dilakukan..."
+                            @error('change_risk') aria-invalid="true" aria-describedby="change-risk-error" @enderror
+                            class="{{ $inputBase }} {{ $errors->has('change_risk') ? 'border-rose-400' : 'border-slate-300' }}"></textarea>
+                        @error('change_risk')
+                            <p id="change-risk-error" class="mt-1.5 flex items-start gap-1.5 text-xs font-medium text-rose-600" role="alert">
+                                <svg class="mt-0.5 h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m0 3.75h.008v.008H12v-.008Zm0-18 10.5 18H1.5L12 3.75Z" />
+                                </svg>
+                                <span>{{ $message }}</span>
+                            </p>
+                        @enderror
+                    </div>
+
+                    {{-- Register Risiko --}}
+                    <div>
+                        <label for="risk_event" class="mb-1.5 block text-sm font-semibold text-slate-700">Register Risiko</label>
+                        <select id="risk_event" wire:model="risk_event"
+                            @error('risk_event') aria-invalid="true" aria-describedby="risk-event-error" @enderror
+                            class="{{ $inputBase }} {{ $errors->has('risk_event') ? 'border-rose-400' : 'border-slate-300' }}">
+                            <option value="">-- Pilih Register Risiko --</option>
+                            @foreach (\App\Enums\RiskEvent::cases() as $riskEvent)
+                                <option value="{{ $riskEvent->value }}">{{ $riskEvent->optionLabel() }}</option>
+                            @endforeach
+                        </select>
+                        @include('livewire.change-requests.partials.risk-register-reference')
+                        @error('risk_event')
+                            <p id="risk-event-error" class="mt-1.5 flex items-start gap-1.5 text-xs font-medium text-rose-600" role="alert">
+                                <svg class="mt-0.5 h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m0 3.75h.008v.008H12v-.008Zm0-18 10.5 18H1.5L12 3.75Z" />
+                                </svg>
+                                <span>{{ $message }}</span>
+                            </p>
+                        @enderror
+                    </div>
+
+                    {{-- Analisis Dampak dan Risiko Perubahan --}}
+                    @include('livewire.change-requests.partials.risk-calculator')
+
+                    {{-- Keterangan --}}
+                    <div>
+                        <label for="impact_description" class="mb-1.5 block text-sm font-semibold text-slate-700">Keterangan
+                            <span class="font-normal text-slate-400">(opsional)</span></label>
+                        <textarea id="impact_description" wire:model="impact_description" rows="3"
+                            placeholder="Tuliskan keterangan tambahan terkait perubahan, misalnya perkiraan downtime, jumlah pengguna terdampak, atau modul lain yang dipengaruhi..."
+                            @error('impact_description') aria-invalid="true" aria-describedby="impact-description-error" @enderror
+                            class="{{ $inputBase }} {{ $errors->has('impact_description') ? 'border-rose-400' : 'border-slate-300' }}"></textarea>
+                        @error('impact_description')
+                            <p id="impact-description-error" class="mt-1.5 flex items-start gap-1.5 text-xs font-medium text-rose-600" role="alert">
+                                <svg class="mt-0.5 h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m0 3.75h.008v.008H12v-.008Zm0-18 10.5 18H1.5L12 3.75Z" />
+                                </svg>
+                                <span>{{ $message }}</span>
+                            </p>
+                        @enderror
+                    </div>
+                </div>
+            </section>
+
+            {{-- 5. Lampiran & Pernyataan --}}
+            <section aria-labelledby="section-lampiran-heading" class="border-t border-slate-100 pt-7">
+                <div class="flex items-center gap-3">
+                    <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-600 text-[13px] font-bold text-white">5</span>
+                    <div>
+                        <h2 id="section-lampiran-heading" class="text-sm font-bold uppercase tracking-wide text-slate-800">Lampiran &amp; Pernyataan</h2>
+                        <p class="mt-0.5 text-xs text-slate-500">Berkas pendukung dan pernyataan persetujuan pimpinan.</p>
+                    </div>
+                </div>
+
+                <div class="mt-4 space-y-5">
+                    {{-- Lampiran --}}
+                    <div class="space-y-3" x-data="{ attachmentTypeError: '' }"
+                        x-on:change.capture="
+                            const files = Array.from($event.target.files || []);
+
+                            if (files.some((file) => !file.name.toLowerCase().endsWith('.pdf'))) {
+                                $event.target.value = '';
+                                $event.stopPropagation();
+                                attachmentTypeError = 'Lampiran harus berformat PDF. Pilih ulang berkas PDF.';
+                            } else {
+                                attachmentTypeError = '';
+                            }
+                        ">
+                        <div>
+                            <label for="attachments" class="mb-1.5 block text-sm font-semibold text-slate-700">Lampiran <span class="text-rose-600" aria-hidden="true">*</span></label>
+                            <p class="text-xs text-slate-500">Berkas pendukung lainnya. Format PDF maksimal 5 file dan 5 MB per file.</p>
+                        </div>
+
+                        {{-- Area unggah --}}
+                        <label for="attachments"
+                            class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 px-6 py-7 text-center transition hover:border-blue-400 hover:bg-blue-50/40 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/30">
+                            <svg class="h-8 w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                            </svg>
+                            <span class="text-sm font-semibold text-slate-700">Pilih berkas atau seret ke sini</span>
+                            <span class="text-xs text-slate-500">Format PDF, maksimal 5 MB per file, 5 file per RFC</span>
+                        </label>
+                        <input type="file" id="attachments" wire:model="attachments" multiple
+                            accept="application/pdf,.pdf" class="sr-only"
+                            @error('attachments') aria-invalid="true" aria-describedby="attachments-error" @enderror>
+
+                        <div wire:loading wire:target="attachments" class="flex items-center gap-2 text-xs font-medium text-blue-700">
+                            <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"></path>
+                            </svg>
+                            Mengunggah lampiran...
+                        </div>
+
+                        @error('attachments')
+                            <p id="attachments-error" class="flex items-start gap-1.5 text-xs font-medium text-rose-600" role="alert">
+                                <svg class="mt-0.5 h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m0 3.75h.008v.008H12v-.008Zm0-18 10.5 18H1.5L12 3.75Z" />
+                                </svg>
+                                <span>{{ $message }}</span>
+                            </p>
+                        @enderror
+
+                        <p x-show="attachmentTypeError" x-cloak x-text="attachmentTypeError"
+                            class="flex items-start gap-1.5 text-xs font-medium text-rose-600" role="alert"></p>
+
+                        @if (count($attachments) > 0)
+                            <ul class="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200">
+                                @foreach ($attachments as $index => $file)
+                                    <li class="flex flex-wrap items-center justify-between gap-2 bg-white px-3 py-2.5 text-sm"
+                                        wire:key="pending-attachment-{{ $index }}-{{ $file->getFilename() }}">
+                                        <span class="flex min-w-0 flex-1 items-center gap-2.5">
+                                            <svg class="h-7 w-7 shrink-0 text-rose-500" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                                <path d="M6 2a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6H6Z" opacity="0.18" />
+                                                <path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M13 2 19 8v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h6Z" />
+                                                <path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" d="M13 2v6h6" />
+                                            </svg>
+                                            <span class="min-w-0 flex-1 truncate font-medium text-slate-700">{{ $file->getClientOriginalName() }}</span>
+                                        </span>
+                                        <span class="text-xs text-slate-400">{{ number_format($file->getSize() / 1024, 0, ',', '.') }} KB</span>
+                                        <button type="button" wire:click="removePendingAttachment({{ $index }})"
+                                            class="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 hover:text-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500">
+                                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18 18 6M6 6l12 12" />
+                                            </svg>
+                                            Hapus
+                                        </button>
+                                        @error('attachments.'.$index)
+                                            <span class="w-full text-xs font-medium text-rose-600" role="alert">{{ $message }}</span>
+                                        @enderror
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </div>
+
+                    {{-- Pernyataan Persetujuan Pimpinan (Eselon II) --}}
+                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+                        <label class="flex cursor-pointer items-start gap-3">
+                            <input type="checkbox" wire:model.live="head_of_department_approved"
+                                class="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                            <span class="text-sm leading-relaxed text-slate-700">Saya menyatakan bahwa perubahan ini telah disetujui oleh Pimpinan (Eselon II).</span>
+                        </label>
+                        @error('head_of_department_approved')
+                            <p id="head-of-department-approved-error" class="mt-2 flex items-start gap-1.5 pl-7 text-xs font-medium text-rose-600" role="alert">
+                                <svg class="mt-0.5 h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m0 3.75h.008v.008H12v-.008Zm0-18 10.5 18H1.5L12 3.75Z" />
+                                </svg>
+                                <span>{{ $message }}</span>
+                            </p>
+                        @enderror
+                    </div>
+                </div>
+            </section>
         </div>
 
-        <!-- Pernyataan Persetujuan Pimpinan (Eselon II) -->
-        <div>
-            <label class="flex items-start text-sm font-medium text-slate-700 cursor-pointer">
-                <input type="checkbox" wire:model.live="head_of_department_approved"
-                    class="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mr-2.5">
-                <span>Saya menyatakan bahwa perubahan ini telah disetujui oleh Pimpinan (Eselon II).</span>
-            </label>
-            @error('head_of_department_approved')
-                <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>
-            @enderror
+        {{-- Tombol Aksi Form (sticky) --}}
+        <div class="sticky bottom-0 z-10 border-t border-slate-200 bg-white/85 px-5 py-4 backdrop-blur sm:px-7 lg:px-8">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p class="text-xs leading-relaxed text-slate-500">
+                    <span class="font-semibold text-slate-600">Draft dapat dilanjutkan nanti.</span>
+                    Pastikan seluruh data benar sebelum diajukan.
+                </p>
+                <div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
+                    <button type="button" wire:click="save('{{ \App\Enums\RfcStatus::DRAFT->value }}')" wire:loading.attr="disabled" wire:target="save"
+                        class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-slate-100 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-0">
+                        <svg wire:loading wire:target="save" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"></path>
+                        </svg>
+                        Simpan Draft
+                    </button>
+
+                    <button type="button" wire:click="save('{{ \App\Enums\RfcStatus::TICKET_CREATED->value }}')" wire:loading.attr="disabled" wire:target="save"
+                        class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-0">
+                        <svg wire:loading wire:target="save" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"></path>
+                        </svg>
+                        Ajukan Sekarang
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
         </div>
-
-        <!-- Tombol Aksi Form -->
-        <div class="flex items-center justify-end space-x-3 pt-4 border-t border-slate-100">
-            <button type="button" wire:click="save('{{ \App\Enums\RfcStatus::DRAFT->value }}')" wire:loading.attr="disabled"
-                class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg text-sm transition disabled:opacity-60">
-                Simpan Draft
-            </button>
-
-            <button type="button" wire:click="save('{{ \App\Enums\RfcStatus::TICKET_CREATED->value }}')" wire:loading.attr="disabled"
-                class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm shadow-sm transition disabled:opacity-60">
-                Ajukan Sekarang
-            </button>
-        </div>
-
     </form>
 </div>

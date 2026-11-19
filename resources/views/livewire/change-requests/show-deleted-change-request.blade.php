@@ -28,14 +28,13 @@
                 </div>
             </div>
 
-            <a href="{{ route('change-requests.deletions.index') }}" wire:navigate
-                class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2 text-xs font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <x-ui.button variant="secondary" :href="route('change-requests.deletions.index')" navigate size="sm">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M10 19l-7-7m0 0 7-7m-7 7h18" />
                 </svg>
                 Kembali ke Riwayat Penghapusan
-            </a>
+            </x-ui.button>
         </div>
     </div>
 

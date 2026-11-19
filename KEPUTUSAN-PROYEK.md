@@ -6,13 +6,13 @@
 
 * Pemohon: mendaftar sendiri lewat halaman register (NIP dan data pegawai, tanpa dibuatkan akun); membuat dan merevisi RFC; melihat notifikasi dan perkembangan RFC dari awal sampai akhir; mengunduh dua template PDF di dashboard (surat persetujuan untuk dicetak, ditandatangani, dipindai, dan diunggah ke form; buku panduan matriks risiko); memberi penilaian kepuasan bintang 1-5 setelah RFC selesai (bintang 5 tanpa komentar, bintang 1-4 wajib komentar).
 * Change Manager: menerima RFC langsung setelah diajukan; analisis risiko; keputusan; disposisi ke Tim Rilis; mereview hasil Tim Rilis; menutup RFC; mengunduh PDF hasil RFC; melihat notifikasi dari awal sampai akhir.
-* Tim Rilis (role baru): hanya melihat RFC yang ditugaskan (dashboard "Tugas Saya"); memberi estimasi jadwal dan rencana awal (terlihat oleh CM dan Pemohon); memulai pengerjaan; menambah catatan kegiatan; merevisi estimasi (perpanjangan jadwal) dengan alasan; tombol Selesai (masuk review CM); tombol Rollback dengan alasan; catatan keterlambatan.
+* Tim Rilis (role baru): hanya melihat RFC yang ditugaskan (dashboard "Tugas Saya"); mengisi analisis risiko wajib (estimasi kegiatan dan rencana mulai, rencana kegiatan, rencana perubahan, mekanisme rollback) sebelum memulai; memulai pengerjaan; memperbarui rencana perubahan selama pelaksanaan; memperbarui informasi estimasi dengan alasan; tombol Setuju atau Reject (masuk review CM); catatan keterlambatan.
 * Admin dan Super Admin: tidak ada dalam desain akhir. Dipensiunkan paling akhir (tahap 7), JANGAN dihapus lebih dulu.
 * CAB dan ECAB adalah proses rapat, bukan role login.
 
 ## Alur target
 
-Pemohon register -> membuat RFC (satu nomor RFC sejak diajukan) -> langsung ke antrean Change Manager -> analisis risiko -> keputusan (CAB dibahas bersama Tim Rilis; bentuk di aplikasi menunggu konfirmasi) -> disposisi ke Tim Rilis -> Tim Rilis memberi estimasi -> memulai pengerjaan -> pelaksanaan (revisi estimasi bila perlu) -> Selesai atau Rollback (Catat Implementasi) -> review dan evaluasi CM -> penutupan -> penilaian kepuasan Pemohon.
+Pemohon register -> membuat RFC (satu nomor RFC sejak diajukan) -> langsung ke antrean Change Manager -> analisis risiko -> keputusan (CAB dibahas bersama Tim Rilis; bentuk di aplikasi menunggu konfirmasi) -> disposisi ke Tim Rilis -> Tim Rilis mengisi analisis risiko dan estimasi -> memulai pengerjaan -> pelaksanaan (pembaruan rencana perubahan dan update informasi bila perlu) -> Setuju atau Reject (Catat Implementasi) -> review dan evaluasi CM -> penutupan -> penilaian kepuasan Pemohon.
 
 ## Keputusan yang sudah diambil
 
@@ -25,13 +25,17 @@ Pemohon register -> membuat RFC (satu nomor RFC sejak diajukan) -> langsung ke a
 * Cara kerja: satu prompt satu tujuan; tes hijau, cek manual, lalu commit sebelum prompt berikutnya.
 * Catat Implementasi, waktu: waktu mulai dan waktu selesai tidak diinput manual. Waktu mulai diambil dari saat Tim Rilis menekan "Mulai Pengerjaan"; waktu selesai dicatat saat laporan disimpan. Kolom waktu pada data implementasi tetap dipakai, nilainya ditentukan oleh service.
 * Catat Implementasi, bukti: unggahan bukti baru hanya berformat PDF (maks. 5 berkas, 5 MB per berkas). Bukti lama berformat gambar tetap dapat dibuka.
-* Catat Implementasi, konfirmasi: centang konfirmasi bermakna persetujuan Tim Rilis atas laporan, yaitu pekerjaan selesai (hasil Berhasil) atau pelaksanaan dihentikan (hasil Gagal atau Rollback). Setelah disimpan, laporan dan bukti tidak dapat diubah dan RFC masuk review Change Manager.
+* Catat Implementasi, hasil: hanya dua pilihan, yaitu Setuju (`success`) dan Reject (`failed`). Opsi Rollback dihapus dari alur laporan baru. Nilai lama `rolled_back` tetap disimpan dan tetap terbaca sebagai "Rollback dilakukan" untuk data historis.
+* Catat Implementasi, konfirmasi: centang konfirmasi berarti menyetujui laporan beserta dokumen perubahan dan bukti dukung; teks dibedakan untuk hasil Setuju dan Reject, tanpa frasa "mewakili Tim Rilis". Setelah disimpan, laporan dan bukti tidak dapat diubah dan RFC masuk review Change Manager.
+* Analisis risiko Tim Rilis wajib diisi sebelum "Mulai Pengerjaan". Form berurutan: estimasi kegiatan (hari dan rencana mulai), rencana kegiatan, rencana perubahan, dan mekanisme rollback. Penyimpanan form menetapkan estimasi dalam satu transaksi dan mencatat tipe pembaruan `risk_analysis_submitted`. Form tetap dapat diubah selama tugas masih menunggu dimulai, lalu menjadi baca-saja bagi Change Manager dan Pemohon.
+* Pembaruan selama pengerjaan: "Update informasi" menggantikan "Revisi Estimasi" untuk mengubah estimasi hari dengan alasan. "Rencana perubahan" dipakai sebagai pembaruan berjalan atas rencana awal pada analisis risiko.
+* Notifikasi dipisah menjadi dua bagian: "Diskusi RFC" (event `comment_added`) dan "Notifikasi lainnya" (termasuk notifikasi lama tanpa `event`). Masing-masing memiliki filter, paginasi, jumlah belum dibaca, dan aksi tandai dibaca sendiri. Klik notifikasi diskusi membuka RFC pada bagian `#diskusi`.
 * Kalender (/kalender): hanya untuk Tim Rilis (anggota aktif, tugasnya sendiri) dan Change Manager (semua tugas). Pemohon, Admin, dan Super Admin tidak mendapat akses. Otorisasi diperiksa di route dan di setiap request Livewire.
 * Menetapkan estimasi selalu menyimpan tanggal rencana mulai. Bila Tim Rilis tidak memilih tanggal, sistem memakai tanggal penetapan estimasi (WIB) agar jadwal di Kalender tidak bergeser.
 
 ## Menunggu konfirmasi mentor
 
-1. Arti "Rollback": pemulihan teknis setelah gagal, atau penolakan penugasan oleh Tim Rilis?
+1. Istilah "Rollback" pada hasil implementasi sudah diputuskan dihapus dari pilihan laporan baru; "Mekanisme rollback" tetap dipertahankan pada form analisis risiko sebagai rencana pemulihan teknis.
 2. CAB: perlu fitur di aplikasi (tanggal, peserta, hasil) atau cukup proses di luar aplikasi?
 3. Siapa yang membuat akun Tim Rilis dan menonaktifkan akun bermasalah?
 4. Dokumen asli kedua template PDF dari mentor (isi tidak boleh dikarang).
@@ -64,5 +68,6 @@ Berjalan di luar tahap 0-7 di atas. Centang sesuai kondisi terakhir.
 * \[x] Perbaikan kecil panel progres (format riwayat estimasi, keterangan tombol)
 * \[x] Dashboard: pencarian, penanda jatuh tempo, tab Riwayat
 * \[x] Dashboard: aksi cepat estimasi dan catatan kegiatan
+* \[x] Analisis risiko wajib sebelum mulai, label "Setuju" dan "Reject", pemisahan notifikasi diskusi dan lainnya
 * \[x] Audit halaman Kalender (otorisasi, konsistensi, layar sempit)
 

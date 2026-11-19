@@ -12,9 +12,22 @@ enum ImplementationResult: string
     {
         return match ($this) {
             self::SUCCESS => 'Berhasil',
-            self::FAILED => 'Gagal',
+            self::FAILED => 'Reject',
             self::ROLLED_BACK => 'Rollback dilakukan',
         };
+    }
+
+    /**
+     * Nilai hasil yang boleh dipilih untuk laporan implementasi baru.
+     *
+     * ROLLED_BACK hanya dipertahankan untuk membaca data lama dan tidak lagi
+     * ditawarkan sebagai opsi laporan.
+     *
+     * @return array<int, string>
+     */
+    public static function reportableValues(): array
+    {
+        return [self::SUCCESS->value, self::FAILED->value];
     }
 
     /**

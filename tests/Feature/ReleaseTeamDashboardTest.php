@@ -205,6 +205,12 @@ it('memulai pengerjaan tugas dan mengubah status RFC', function () {
     [$user, $member] = releaseTeamDashboardUser();
     $rfc = releaseTeamDashboardRfc();
     $task = releaseTeamDashboardTask($rfc, $member, ['estimated_days' => 3]);
+    $task->riskAnalysis()->create([
+        'submitted_by_id' => $user->id,
+        'activity_plan' => 'Menyiapkan cadangan basis data sebelum pelaksanaan perubahan.',
+        'change_plan' => 'Memperbarui konfigurasi layanan dan menjalankan pengujian fungsional.',
+        'rollback_mechanism' => 'Memulihkan cadangan basis data dan konfigurasi sebelumnya.',
+    ]);
 
     Livewire::actingAs($user)
         ->test(ReleaseTeamDashboard::class)
@@ -531,7 +537,7 @@ it('menyimpan catatan kegiatan langsung dari dashboard', function () {
         ->assertSet('quickTaskId', null)
         ->assertSet('progressNote', '')
         ->assertSet('progressBlocked', false)
-        ->assertSet('quickMessage', 'Catatan kegiatan berhasil ditambahkan.');
+        ->assertSet('quickMessage', 'Rencana perubahan berhasil ditambahkan.');
 
     $this->assertDatabaseHas('release_task_updates', [
         'release_task_id' => $task->id,

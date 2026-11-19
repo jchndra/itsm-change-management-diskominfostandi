@@ -1,15 +1,6 @@
-<div class="max-w-4xl mx-auto space-y-6">
-    {{-- Top Bar Navigation --}}
-    <div class="flex items-center justify-between">
-        <a href="{{ route('change-requests.index') }}"
-            class="inline-flex items-center text-xs font-semibold text-slate-600 hover:text-blue-900 transition">
-            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Kembali ke Dashboard
-        </a>
-        <span class="text-xs text-slate-500 font-medium">Evaluasi & Penilaian Risiko (Change Manager)</span>
-    </div>
+<x-rfc.action-page :back-href="route('change-requests.index')" back-label="Kembali ke Dashboard"
+    eyebrow="Evaluasi & Penilaian Risiko (Change Manager)" title="Penilaian Risiko"
+    :description="'Evaluasi dan klasifikasi untuk '.$rfc->displayIdentifier()" width="4xl">
 
     @include('livewire.change-requests.partials.rfc-summary', ['rfc' => $rfc])
 
@@ -140,4 +131,4 @@
             </button>
         </div>
     </form>
-</div>
+</x-rfc.action-page>

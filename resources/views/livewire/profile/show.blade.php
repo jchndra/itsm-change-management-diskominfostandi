@@ -1,28 +1,25 @@
 <div class="space-y-6" x-data="{ tab: 'profil' }">
 
-    <div>
-        <h1 class="text-[26px] font-bold leading-tight tracking-tight text-slate-900 sm:text-[30px]">Profil Saya</h1>
-        <p class="mt-1 text-sm text-slate-500">Informasi akun dan pengaturan keamanan Anda.</p>
-    </div>
+    <x-ui.page-header eyebrow="Akun" title="Profil Saya"
+        description="Informasi akun dan pengaturan keamanan Anda." icon-tone="navy">
+        <x-slot:icon>
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                    d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+            </svg>
+        </x-slot:icon>
+    </x-ui.page-header>
 
     @if (session('warning'))
-        <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3.5 text-sm font-medium text-amber-800"
-            role="alert">
-            {{ session('warning') }}
-        </div>
+        <x-ui.alert tone="warning">
+            <span class="font-medium">{{ session('warning') }}</span>
+        </x-ui.alert>
     @endif
 
     @if ($user->must_change_password)
-        <div class="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3.5 text-sm text-amber-800"
-            role="alert">
-            <svg class="mt-0.5 h-5 w-5 shrink-0 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                    d="M12 9v3.75m0 3.75h.008v.008H12v-.008ZM10.34 3.94 2.7 17.06A1.9 1.9 0 0 0 4.34 20h15.32a1.9 1.9 0 0 0 1.64-2.94L13.66 3.94a1.9 1.9 0 0 0-3.32 0Z" />
-            </svg>
-            <p class="leading-relaxed">
-                Anda harus mengganti kata sandi sementara terlebih dahulu. Buka tab Keamanan untuk membuat kata sandi baru.
-            </p>
-        </div>
+        <x-ui.alert tone="warning">
+            Anda harus mengganti kata sandi sementara terlebih dahulu. Buka tab Keamanan untuk membuat kata sandi baru.
+        </x-ui.alert>
     @endif
 
     <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">

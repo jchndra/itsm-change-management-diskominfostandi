@@ -47,26 +47,51 @@ function releaseProgressPanelSetup(): array
     return [$user, $rfc, $task];
 }
 
-it('menyimpan estimasi lalu menampilkan ringkasan di tempat yang sama', function () {
+/**
+ * @return array{activity_plan: string, change_plan: string, rollback_mechanism: string}
+ */
+function releaseProgressPanelRiskData(): array
+{
+    return [
+        'activity_plan' => 'Menyiapkan cadangan basis data sebelum pelaksanaan perubahan.',
+        'change_plan' => 'Memperbarui konfigurasi layanan dan menjalankan pengujian fungsional.',
+        'rollback_mechanism' => 'Memulihkan cadangan basis data dan konfigurasi sebelumnya.',
+    ];
+}
+
+it('menyimpan analisis risiko beserta estimasi di tempat yang sama', function () {
     [$user, $rfc, $task] = releaseProgressPanelSetup();
+
+    $data = releaseProgressPanelRiskData();
 
     Livewire::actingAs($user)
         ->test(ReleaseTaskProgressPanel::class, ['rfc' => $rfc])
         ->set('estimatedDays', '5')
-        ->call('setEstimate')
+        ->set('plannedStartOn', now('Asia/Jakarta')->toDateString())
+        ->set('activityPlan', $data['activity_plan'])
+        ->set('changePlan', $data['change_plan'])
+        ->set('rollbackMechanism', $data['rollback_mechanism'])
+        ->call('saveRiskAnalysis')
         ->assertHasNoErrors()
         ->assertDispatched('release-progress-updated')
-        ->assertSee('Estimasi pengerjaan berhasil disimpan.')
+        ->assertSee('Analisis risiko berhasil disimpan.')
         ->assertSee('Tersimpan')
-        ->assertDontSee('Simpan Estimasi');
+        ->assertDontSee('Simpan Analisis Risiko');
 
-    expect($task->fresh()->estimated_days)->toBe(5);
+    expect($task->fresh()->estimated_days)->toBe(5)
+        ->and($task->fresh()->riskAnalysis)->not->toBeNull()
+        ->and($task->fresh()->updates()->where('type', 'risk_analysis_submitted')->count())->toBe(1);
 });
 
-it('memulai pengerjaan setelah estimasi tersimpan', function () {
+it('memulai pengerjaan setelah analisis risiko tersimpan', function () {
     [$user, $rfc, $task] = releaseProgressPanelSetup();
 
-    app(ReleaseTaskProgressService::class)->setEstimate($task, $user, 3);
+    app(ReleaseTaskProgressService::class)->saveRiskAnalysis(
+        $task,
+        $user,
+        releaseProgressPanelRiskData(),
+        3,
+    );
 
     Livewire::actingAs($user)
         ->test(ReleaseTaskProgressPanel::class, ['rfc' => $rfc])
@@ -74,7 +99,7 @@ it('memulai pengerjaan setelah estimasi tersimpan', function () {
         ->assertHasNoErrors()
         ->assertDispatched('release-progress-updated')
         ->assertSee('Pengerjaan berhasil dimulai.')
-        ->assertSee('Catatan Kegiatan');
+        ->assertSee('Rencana perubahan');
 
     expect($task->fresh()->execution_status)->toBe('in_progress');
 });
@@ -91,16 +116,16 @@ it('merevisi estimasi dengan alasan yang valid', function () {
         ->call('reviseEstimate')
         ->assertHasNoErrors()
         ->assertDispatched('release-progress-updated')
-        ->assertSee('Revisi estimasi berhasil disimpan.');
+        ->assertSee('Update tersimpan.');
 
     expect($task->fresh()->estimated_days)->toBe(8);
 });
 
-it('menambahkan catatan kegiatan dan menandai kendala', function () {
+it('menambahkan rencana perubahan dan menandai kendala', function () {
     [$user, $rfc, $task] = releaseProgressPanelSetup();
 
     $service = app(ReleaseTaskProgressService::class);
-    $service->setEstimate($task, $user, 3);
+    $service->saveRiskAnalysis($task, $user, releaseProgressPanelRiskData(), 3);
     $service->start($task, $user);
 
     Livewire::actingAs($user)
@@ -110,7 +135,7 @@ it('menambahkan catatan kegiatan dan menandai kendala', function () {
         ->call('addProgressNote')
         ->assertHasNoErrors()
         ->assertDispatched('release-progress-updated')
-        ->assertSee('Catatan kegiatan berhasil ditambahkan.');
+        ->assertSee('Rencana perubahan berhasil ditambahkan.');
 
     expect($task->fresh()->updates()->where('type', 'blocked')->count())->toBe(1);
 });
@@ -130,35 +155,79 @@ it('menolak anggota tim rilis lain yang tidak ditugaskan pada RFC', function () 
         ->assertForbidden();
 });
 
-it('menyimpan rencana mulai dan menampilkan pratinjau selesai', function () {
+it('menyimpan rencana mulai dan menampilkan ringkasan analisis risiko', function () {
     [$user, $rfc, $task] = releaseProgressPanelSetup();
 
     $plannedStart = now('Asia/Jakarta')->startOfDay()->addDays(2)->toDateString();
+    $data = releaseProgressPanelRiskData();
 
     Livewire::actingAs($user)
         ->test(ReleaseTaskProgressPanel::class, ['rfc' => $rfc])
-        ->assertSee('Rencana mulai')
-        ->assertSee('Perkiraan selesai:')
-        ->assertSee('5 hari')
+        ->assertSee('Estimasi kegiatan')
         ->set('estimatedDays', '5')
         ->set('plannedStartOn', $plannedStart)
-        ->call('setEstimate')
+        ->set('activityPlan', $data['activity_plan'])
+        ->set('changePlan', $data['change_plan'])
+        ->set('rollbackMechanism', $data['rollback_mechanism'])
+        ->call('saveRiskAnalysis')
         ->assertHasNoErrors()
-        ->assertSee('Tersimpan');
+        ->assertSee('Tersimpan')
+        ->assertSee('5 hari');
 
     expect($task->fresh()->planned_start_on->toDateString())->toBe($plannedStart);
 });
 
-it('menampilkan estimasi pertama tanpa placeholder kosong', function () {
+it('menampilkan estimasi dan analisis risiko yang sudah tersimpan', function () {
     [$user, $rfc, $task] = releaseProgressPanelSetup();
 
-    app(ReleaseTaskProgressService::class)->setEstimate($task, $user, 1);
+    app(ReleaseTaskProgressService::class)->saveRiskAnalysis($task, $user, releaseProgressPanelRiskData(), 1);
 
     Livewire::actingAs($user)
         ->test(ReleaseTaskProgressPanel::class, ['rfc' => $rfc])
         ->assertOk()
-        ->assertSee('Estimasi: 1 hari')
-        ->assertDontSee('— hari');
+        ->assertSee('1 hari')
+        ->assertSee('Rencana kegiatan')
+        ->assertSee('Mekanisme rollback');
+});
+
+it('memperbarui analisis risiko walau rencana mulai sudah lewat', function () {
+    [$user, $rfc, $task] = releaseProgressPanelSetup();
+
+    $pastDate = now('Asia/Jakarta')->startOfDay()->subDays(2);
+
+    $task->update([
+        'estimated_days' => 3,
+        'planned_start_on' => $pastDate->toDateString(),
+    ]);
+
+    app(ReleaseTaskProgressService::class)->saveRiskAnalysis($task, $user, releaseProgressPanelRiskData(), 3, $pastDate);
+
+    Livewire::actingAs($user)
+        ->test(ReleaseTaskProgressPanel::class, ['rfc' => $rfc])
+        ->call('toggleRiskForm')
+        ->set('activityPlan', 'Memperbarui rencana kegiatan berdasarkan koordinasi terbaru.')
+        ->set('changePlan', 'Memperbarui rencana perubahan tanpa mengubah jadwal yang sudah berjalan.')
+        ->set('rollbackMechanism', 'Mengembalikan konfigurasi sebelumnya sesuai prosedur rollback.')
+        ->call('saveRiskAnalysis')
+        ->assertHasNoErrors()
+        ->assertSee('Analisis risiko berhasil disimpan.');
+
+    expect($task->fresh()->planned_start_on->toDateString())->toBe($pastDate->toDateString())
+        ->and($task->fresh()->riskAnalysis->activity_plan)->toBe('Memperbarui rencana kegiatan berdasarkan koordinasi terbaru.');
+});
+
+it('menampilkan galat rencana mulai di dalam form analisis risiko', function () {
+    [$user, $rfc, $task] = releaseProgressPanelSetup();
+
+    app(ReleaseTaskProgressService::class)->saveRiskAnalysis($task, $user, releaseProgressPanelRiskData(), 3);
+
+    Livewire::actingAs($user)
+        ->test(ReleaseTaskProgressPanel::class, ['rfc' => $rfc])
+        ->call('toggleRiskForm')
+        ->set('plannedStartOn', now('Asia/Jakarta')->startOfDay()->subDays(5)->toDateString())
+        ->call('saveRiskAnalysis')
+        ->assertHasErrors('progress')
+        ->assertSee('Rencana mulai tidak boleh di masa lalu.');
 });
 
 it('menampilkan riwayat revisi estimasi dengan nilai lama dan baru', function () {
@@ -171,10 +240,11 @@ it('menampilkan riwayat revisi estimasi dengan nilai lama dan baru', function ()
     Livewire::actingAs($user)
         ->test(ReleaseTaskProgressPanel::class, ['rfc' => $rfc])
         ->assertOk()
-        ->assertSeeHtml('1 hari &rarr; 2 hari');
+        ->assertSeeHtml('1 hari &rarr; 2 hari')
+        ->assertSee('Update informasi');
 });
 
-it('menampilkan peringatan bentrok setelah estimasi disimpan', function () {
+it('menampilkan peringatan bentrok setelah analisis risiko disimpan', function () {
     [$user, $rfc] = releaseProgressPanelSetup();
 
     $application = Application::factory()->create();
@@ -191,11 +261,16 @@ it('menampilkan peringatan bentrok setelah estimasi disimpan', function () {
         'planned_start_on' => now('Asia/Jakarta')->startOfDay()->addDay()->toDateString(),
     ]);
 
+    $data = releaseProgressPanelRiskData();
+
     Livewire::actingAs($user)
         ->test(ReleaseTaskProgressPanel::class, ['rfc' => $rfc])
         ->set('estimatedDays', '5')
         ->set('plannedStartOn', now('Asia/Jakarta')->toDateString())
-        ->call('setEstimate')
+        ->set('activityPlan', $data['activity_plan'])
+        ->set('changePlan', $data['change_plan'])
+        ->set('rollbackMechanism', $data['rollback_mechanism'])
+        ->call('saveRiskAnalysis')
         ->assertHasNoErrors()
         ->assertSee('Jadwal berpotensi bentrok')
         ->assertSee($otherRfc->displayIdentifier());

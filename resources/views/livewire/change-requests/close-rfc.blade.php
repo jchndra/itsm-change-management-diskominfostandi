@@ -3,23 +3,12 @@
     $implementationEvidences = $rfc->evidences->where('evidence_type', 'implementation')->values();
 @endphp
 
-<div class="mx-auto max-w-4xl space-y-6">
-    <div class="flex items-center justify-between border-b border-slate-200 pb-4">
-        <div>
-            <div class="flex items-center space-x-3">
-                <a href="{{ route('change-requests.show', $rfc->id) }}"
-                    class="text-slate-400 transition hover:text-slate-600" wire:navigate>
-                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                    </svg>
-                </a>
-                <h1 class="text-2xl font-bold text-slate-900">Penutupan Tiket RFC</h1>
-            </div>
-            <p class="mt-1 pl-9 text-sm text-slate-500">Nomor RFC: {{ $rfc->displayIdentifier() }}</p>
-        </div>
+<x-rfc.action-page :back-href="route('change-requests.show', $rfc->id)" back-label="Kembali ke detail RFC"
+    eyebrow="Aksi RFC" title="Penutupan Tiket RFC"
+    :description="'Nomor RFC: '.$rfc->displayIdentifier()" width="4xl">
+    <x-slot:actions>
         <x-status-badge :status="$rfc->status" :tone="$rfc->displayStatusTone()" :label="$rfc->displayStatusLabel()" />
-    </div>
+    </x-slot:actions>
 
     @error('status')
         <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-medium text-rose-700">
@@ -86,4 +75,4 @@
             </button>
         </div>
     </form>
-</div>
+</x-rfc.action-page>

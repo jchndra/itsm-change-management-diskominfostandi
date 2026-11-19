@@ -173,31 +173,31 @@ it('menampilkan menu sidebar staf sesuai izin', function (array $roles, array $p
         ['Admin'],
         [],
         ['Dashboard Admin', 'Daftar RFC', 'Buat Tiket Change', 'Riwayat Penghapusan', 'Profil'],
-        ['Dashboard Change Manager', 'Ajukan RFC', 'RFC Saya'],
+        ['/change-manager/dashboard', 'Ajukan RFC', 'RFC Saya'],
     ],
     'change manager' => [
         ['Change Manager'],
         [],
-        ['Dashboard Change Manager', 'Daftar RFC', 'Riwayat Penghapusan', 'Profil'],
+        ['Dashboard', 'Daftar RFC', 'Riwayat Penghapusan', 'Profil'],
         ['Dashboard Admin', 'Buat Tiket Change', 'Ajukan RFC', 'RFC Saya'],
     ],
     'dua peran' => [
         ['Admin', 'Change Manager'],
         [],
-        ['Dashboard Admin', 'Dashboard Change Manager', 'Daftar RFC', 'Buat Tiket Change'],
+        ['Dashboard Admin', 'Dashboard', 'Daftar RFC', 'Buat Tiket Change'],
         ['Ajukan RFC', 'RFC Saya'],
     ],
     'staf tanpa izin dashboard' => [
         [],
         ['rfc.view_all'],
         ['Daftar RFC', 'Riwayat Penghapusan', 'Profil'],
-        ['Dashboard Admin', 'Dashboard Change Manager', 'Buat Tiket Change'],
+        ['Dashboard Admin', '/change-manager/dashboard', 'Buat Tiket Change'],
     ],
     'pemohon' => [
         ['Pemohon'],
         [],
         ['Dashboard', 'Ajukan RFC', 'RFC Saya', 'Riwayat Penghapusan', 'Profil'],
-        ['Dashboard Admin', 'Dashboard Change Manager', 'Daftar RFC', 'Buat Tiket Change'],
+        ['Dashboard Admin', '/change-manager/dashboard', 'Daftar RFC', 'Buat Tiket Change'],
     ],
 ]);
 
@@ -211,7 +211,7 @@ it('tidak menampilkan menu Dashboard lama pada sidebar staf', function (array $r
             ->getContent()
     );
 
-    expect($sidebar)->not->toMatch('/>\s*Dashboard\s*</');
+    expect($sidebar)->not->toContain(route('requester.dashboard'));
 })->with([
     'admin' => [['Admin'], []],
     'change manager' => [['Change Manager'], []],

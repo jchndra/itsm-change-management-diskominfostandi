@@ -6,6 +6,7 @@ use App\Enums\RfcStatus;
 use App\Exceptions\ReleaseTaskProgressException;
 use App\Models\ChangeRequest;
 use App\Models\ReleaseTask;
+use App\Models\ReleaseTaskRiskAnalysis;
 use App\Models\ReleaseTaskUpdate;
 use App\Models\User;
 use App\StateMachines\RfcStatusTransition;
@@ -29,6 +30,10 @@ class ReleaseTaskProgressService
 
     public const MAX_NOTE_LENGTH = 1000;
 
+    public const MIN_PLAN_LENGTH = 10;
+
+    public const MAX_PLAN_LENGTH = 2000;
+
     public function setEstimate(ReleaseTask $task, User $actor, int $days, ?Carbon $plannedStart = null): ReleaseTaskUpdate
     {
         $this->validateDays($days);
@@ -40,35 +45,96 @@ class ReleaseTaskProgressService
         $update = DB::transaction(function () use ($task, $actor, $days, $plannedStartOn): ReleaseTaskUpdate {
             [$lockedTask, $rfc] = $this->lockTask($task, $actor);
 
-            if ($lockedTask->estimated_days !== null) {
-                throw new ReleaseTaskProgressException('Estimasi sudah ditetapkan dan hanya dapat direvisi.');
-            }
-
-            $lockedTask->update([
-                'estimated_days' => $days,
-                'planned_start_on' => $plannedStartOn,
-            ]);
-
-            $update = $lockedTask->updates()->create([
-                'change_request_id' => $rfc->id,
-                'user_id' => $actor->id,
-                'type' => 'estimate_set',
-                'old_estimated_days' => null,
-                'new_estimated_days' => $days,
-            ]);
-
-            $this->logActivity($rfc, $actor, $lockedTask, 'release_progress_estimate_set', 'Estimasi pengerjaan ditetapkan', [
-                'old_estimated_days' => null,
-                'new_estimated_days' => $days,
-                'planned_start_on' => $plannedStartOn,
-            ]);
-
-            return $update;
+            return $this->storeEstimate($lockedTask, $rfc, $actor, $days, $plannedStartOn);
         });
 
         $this->notifyReleaseProgress($update);
 
         return $update;
+    }
+
+    /**
+     * Simpan analisis risiko Tim Rilis sekaligus penetapan estimasi.
+     *
+     * Estimasi hanya ditetapkan bila tugas belum memilikinya. Tugas pending
+     * yang sudah memiliki estimasi cukup melengkapi analisis risikonya.
+     *
+     * @param  array{activity_plan?: mixed, change_plan?: mixed, rollback_mechanism?: mixed}  $data
+     */
+    public function saveRiskAnalysis(
+        ReleaseTask $task,
+        User $actor,
+        array $data,
+        int $days,
+        ?Carbon $plannedStart = null,
+    ): ReleaseTaskRiskAnalysis {
+        $activityPlan = $this->validatePlan('Rencana kegiatan', (string) ($data['activity_plan'] ?? ''));
+        $changePlan = $this->validatePlan('Rencana perubahan', (string) ($data['change_plan'] ?? ''));
+        $rollbackMechanism = $this->validatePlan('Mekanisme rollback', (string) ($data['rollback_mechanism'] ?? ''));
+
+        $this->validateDays($days);
+        $this->validatePlannedStart($plannedStart, $task->planned_start_on);
+
+        $plannedStartOn = $plannedStart?->copy()->timezone('Asia/Jakarta')->toDateString()
+            ?? now('Asia/Jakarta')->toDateString();
+
+        [$analysis, $estimateUpdate, $riskUpdate] = DB::transaction(function () use (
+            $task,
+            $actor,
+            $activityPlan,
+            $changePlan,
+            $rollbackMechanism,
+            $days,
+            $plannedStartOn,
+        ): array {
+            [$lockedTask, $rfc] = $this->lockTask($task, $actor);
+
+            if ($lockedTask->execution_status !== 'pending') {
+                throw new ReleaseTaskProgressException(
+                    'Analisis risiko hanya dapat diisi sebelum pengerjaan dimulai. Gunakan Update informasi setelah pengerjaan berjalan.'
+                );
+            }
+
+            $estimateUpdate = null;
+
+            if ($lockedTask->estimated_days === null) {
+                $estimateUpdate = $this->storeEstimate($lockedTask, $rfc, $actor, $days, $plannedStartOn);
+            } elseif ($lockedTask->estimated_days !== $days) {
+                throw new ReleaseTaskProgressException(
+                    'Estimasi sudah ditetapkan. Gunakan tombol Update informasi untuk mengubahnya.'
+                );
+            }
+
+            $analysis = $lockedTask->riskAnalysis()->updateOrCreate([], [
+                'submitted_by_id' => $actor->id,
+                'activity_plan' => $activityPlan,
+                'change_plan' => $changePlan,
+                'rollback_mechanism' => $rollbackMechanism,
+            ]);
+
+            $riskUpdate = $lockedTask->updates()->create([
+                'change_request_id' => $rfc->id,
+                'user_id' => $actor->id,
+                'type' => 'risk_analysis_submitted',
+            ]);
+
+            $this->logActivity($rfc, $actor, $lockedTask, 'release_progress_risk_analysis_submitted', 'Analisis risiko pengerjaan disimpan', [
+                'risk_analysis_id' => $analysis->id,
+                'activity_plan' => $activityPlan,
+                'change_plan' => $changePlan,
+                'rollback_mechanism' => $rollbackMechanism,
+            ]);
+
+            return [$analysis, $estimateUpdate, $riskUpdate];
+        });
+
+        if ($estimateUpdate instanceof ReleaseTaskUpdate) {
+            $this->notifyReleaseProgress($estimateUpdate);
+        }
+
+        $this->notifyReleaseProgress($riskUpdate);
+
+        return $analysis;
     }
 
     /**
@@ -118,13 +184,13 @@ class ReleaseTaskProgressService
 
         if (mb_strlen($reason) < self::MIN_REASON_LENGTH) {
             throw new ReleaseTaskProgressException(
-                'Alasan revisi minimal '.self::MIN_REASON_LENGTH.' karakter.'
+                'Alasan pembaruan informasi minimal '.self::MIN_REASON_LENGTH.' karakter.'
             );
         }
 
         if (mb_strlen($reason) > self::MAX_REASON_LENGTH) {
             throw new ReleaseTaskProgressException(
-                'Alasan revisi maksimal '.self::MAX_REASON_LENGTH.' karakter.'
+                'Alasan pembaruan informasi maksimal '.self::MAX_REASON_LENGTH.' karakter.'
             );
         }
 
@@ -132,7 +198,7 @@ class ReleaseTaskProgressService
             [$lockedTask, $rfc] = $this->lockTask($task, $actor);
 
             if ($lockedTask->estimated_days === null) {
-                throw new ReleaseTaskProgressException('Tetapkan estimasi terlebih dahulu sebelum melakukan revisi.');
+                throw new ReleaseTaskProgressException('Tetapkan estimasi terlebih dahulu sebelum melakukan pembaruan informasi.');
             }
 
             if ($lockedTask->estimated_days === $newDays) {
@@ -179,6 +245,10 @@ class ReleaseTaskProgressService
 
             if ($lockedTask->estimated_days === null) {
                 throw new ReleaseTaskProgressException('Tetapkan estimasi pengerjaan sebelum memulai.');
+            }
+
+            if (! $lockedTask->riskAnalysis()->exists()) {
+                throw new ReleaseTaskProgressException('Isi form analisis risiko terlebih dahulu sebelum memulai pengerjaan.');
             }
 
             if ($lockedTask->execution_status !== 'pending') {
@@ -229,13 +299,13 @@ class ReleaseTaskProgressService
 
         if (mb_strlen($note) < self::MIN_NOTE_LENGTH) {
             throw new ReleaseTaskProgressException(
-                'Catatan kegiatan minimal '.self::MIN_NOTE_LENGTH.' karakter.'
+                'Rencana perubahan minimal '.self::MIN_NOTE_LENGTH.' karakter.'
             );
         }
 
         if (mb_strlen($note) > self::MAX_NOTE_LENGTH) {
             throw new ReleaseTaskProgressException(
-                'Catatan kegiatan maksimal '.self::MAX_NOTE_LENGTH.' karakter.'
+                'Rencana perubahan maksimal '.self::MAX_NOTE_LENGTH.' karakter.'
             );
         }
 
@@ -243,7 +313,7 @@ class ReleaseTaskProgressService
             [$lockedTask, $rfc] = $this->lockTask($task, $actor);
 
             if ($lockedTask->execution_status !== 'in_progress') {
-                throw new ReleaseTaskProgressException('Catatan kegiatan hanya dapat ditambahkan saat pengerjaan berlangsung.');
+                throw new ReleaseTaskProgressException('Rencana perubahan hanya dapat ditambahkan saat pengerjaan berlangsung.');
             }
 
             $type = $blocked ? 'blocked' : 'progress';
@@ -260,7 +330,7 @@ class ReleaseTaskProgressService
                 $actor,
                 $lockedTask,
                 $blocked ? 'release_progress_blocked' : 'release_progress_note',
-                $blocked ? 'Kendala pengerjaan dicatat' : 'Catatan kegiatan ditambahkan',
+                $blocked ? 'Kendala pengerjaan dicatat' : 'Rencana perubahan ditambahkan',
                 ['note' => $note, 'type' => $type],
             );
 
@@ -274,7 +344,7 @@ class ReleaseTaskProgressService
 
     private function notifyReleaseProgress(ReleaseTaskUpdate $update): void
     {
-        if (! in_array($update->type, ['started', 'estimate_set', 'estimate_revised', 'blocked'], true)) {
+        if (! in_array($update->type, ['started', 'estimate_set', 'estimate_revised', 'blocked', 'risk_analysis_submitted'], true)) {
             return;
         }
 
@@ -323,6 +393,39 @@ class ReleaseTaskProgressService
         return [$lockedTask, $rfc];
     }
 
+    private function storeEstimate(
+        ReleaseTask $lockedTask,
+        ChangeRequest $rfc,
+        User $actor,
+        int $days,
+        string $plannedStartOn,
+    ): ReleaseTaskUpdate {
+        if ($lockedTask->estimated_days !== null) {
+            throw new ReleaseTaskProgressException('Estimasi sudah ditetapkan dan hanya dapat diperbarui.');
+        }
+
+        $lockedTask->update([
+            'estimated_days' => $days,
+            'planned_start_on' => $plannedStartOn,
+        ]);
+
+        $update = $lockedTask->updates()->create([
+            'change_request_id' => $rfc->id,
+            'user_id' => $actor->id,
+            'type' => 'estimate_set',
+            'old_estimated_days' => null,
+            'new_estimated_days' => $days,
+        ]);
+
+        $this->logActivity($rfc, $actor, $lockedTask, 'release_progress_estimate_set', 'Estimasi pengerjaan ditetapkan', [
+            'old_estimated_days' => null,
+            'new_estimated_days' => $days,
+            'planned_start_on' => $plannedStartOn,
+        ]);
+
+        return $update;
+    }
+
     private function validateDays(int $days): void
     {
         if ($days < self::MIN_DAYS || $days > self::MAX_DAYS) {
@@ -332,14 +435,46 @@ class ReleaseTaskProgressService
         }
     }
 
-    private function validatePlannedStart(?Carbon $plannedStart): void
+    private function validatePlan(string $label, string $value): string
+    {
+        $value = trim($value);
+
+        if (mb_strlen($value) < self::MIN_PLAN_LENGTH) {
+            throw new ReleaseTaskProgressException(
+                $label.' minimal '.self::MIN_PLAN_LENGTH.' karakter.'
+            );
+        }
+
+        if (mb_strlen($value) > self::MAX_PLAN_LENGTH) {
+            throw new ReleaseTaskProgressException(
+                $label.' maksimal '.self::MAX_PLAN_LENGTH.' karakter.'
+            );
+        }
+
+        return $value;
+    }
+
+    /**
+     * Validasi tanggal rencana mulai.
+     *
+     * Tanggal yang tidak berubah dari nilai tersimpan tetap diterima meskipun
+     * sudah lewat. Ini memungkinkan Tim Rilis memperbarui analisis risiko pada
+     * tugas yang jadwalnya sudah terlanjur berjalan, tanpa menggeser tanggal.
+     */
+    private function validatePlannedStart(?Carbon $plannedStart, ?Carbon $unchangedFrom = null): void
     {
         if ($plannedStart === null) {
             return;
         }
 
-        $today = now('Asia/Jakarta')->startOfDay();
         $planned = $plannedStart->copy()->timezone('Asia/Jakarta')->startOfDay();
+
+        if ($unchangedFrom !== null
+            && $planned->toDateString() === $unchangedFrom->copy()->timezone('Asia/Jakarta')->toDateString()) {
+            return;
+        }
+
+        $today = now('Asia/Jakarta')->startOfDay();
 
         if ($planned->lt($today)) {
             throw new ReleaseTaskProgressException('Rencana mulai tidak boleh di masa lalu.');

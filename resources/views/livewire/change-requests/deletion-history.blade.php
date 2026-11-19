@@ -1,80 +1,59 @@
 <div class="space-y-6">
 
     {{-- Judul halaman --}}
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-            <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-200/70 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-600">
-                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                        d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13M10 11v5M14 11v5" />
-                </svg>
-                Arsip RFC
-            </span>
-            <h1 class="mt-2 text-[26px] font-bold leading-tight tracking-tight text-slate-900 sm:text-[30px]">
-                Riwayat Penghapusan
-            </h1>
-            <p class="mt-1 max-w-2xl text-sm text-slate-500">
-                @if ($isStaff)
-                    Daftar RFC yang dihapus beserta alasannya. RFC tidak dihapus permanen dan dapat dipulihkan ke
-                    daftar aktif.
-                @else
-                    Daftar RFC milik Anda yang dihapus beserta alasannya. Data tetap tersimpan dan dapat dipulihkan
-                    oleh Admin atau Change Manager.
-                @endif
-            </p>
-        </div>
-
-        <a href="{{ route('change-requests.index') }}" wire:navigate
-            class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-blue-300 hover:text-blue-700">
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <x-ui.page-header eyebrow="Arsip RFC" title="Riwayat Penghapusan"
+        :description="$isStaff
+            ? 'Daftar RFC yang dihapus beserta alasannya. RFC tidak dihapus permanen dan dapat dipulihkan ke daftar aktif.'
+            : 'Daftar RFC milik Anda yang dihapus beserta alasannya. Data tetap tersimpan dan dapat dipulihkan oleh Admin atau Change Manager.'"
+        icon-tone="navy">
+        <x-slot:icon>
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                    d="M14 3v4a1 1 0 0 0 1 1h4M6 3h8l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6M9 16h4" />
+                    d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13M10 11v5M14 11v5" />
             </svg>
-            Lihat RFC Aktif
-        </a>
-    </div>
+        </x-slot:icon>
+
+        <x-slot:meta>
+            <span
+                class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[11px] font-semibold text-slate-600">
+                {{ $deletedRfcs->total() }} RFC terhapus
+            </span>
+        </x-slot:meta>
+
+        <x-slot:actions>
+            <x-ui.button variant="secondary" :href="route('change-requests.index')" navigate size="sm">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                        d="M14 3v4a1 1 0 0 0 1 1h4M6 3h8l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6M9 16h4" />
+                </svg>
+                Lihat RFC Aktif
+            </x-ui.button>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     @if ($feedback)
-        <div class="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3.5 text-sm text-emerald-800"
-            role="status">
-            <svg class="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" fill="none" stroke="currentColor"
-                viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-            </svg>
-            <p class="flex-1 font-medium">{{ $feedback }}</p>
-            <button type="button" wire:click="$set('feedback', '')" class="text-emerald-500 hover:text-emerald-700"
-                aria-label="Tutup notifikasi">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M6 18 18 6M6 6l12 12" />
-                </svg>
-            </button>
-        </div>
+        <x-ui.alert tone="success" dismiss="$set('feedback', '')">
+            <span class="font-medium">{{ $feedback }}</span>
+        </x-ui.alert>
     @endif
 
     @if ($errorMessage)
-        <div class="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3.5 text-sm text-rose-800"
-            role="alert">
-            <svg class="mt-0.5 h-5 w-5 shrink-0 text-rose-600" fill="none" stroke="currentColor"
-                viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M12 9v4m0 4h.01M10.34 3.94l-8.4 14.53A1.5 1.5 0 0 0 3.23 21h17.54a1.5 1.5 0 0 0 1.3-2.53l-8.4-14.53a1.5 1.5 0 0 0-2.6 0Z" />
-            </svg>
-            <p class="flex-1 font-medium">{{ $errorMessage }}</p>
-            <button type="button" wire:click="$set('errorMessage', '')" class="text-rose-500 hover:text-rose-700"
-                aria-label="Tutup pesan kesalahan">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M6 18 18 6M6 6l12 12" />
-                </svg>
-            </button>
-        </div>
+        <x-ui.alert tone="danger" dismiss="$set('errorMessage', '')">
+            <span class="font-medium">{{ $errorMessage }}</span>
+        </x-ui.alert>
     @endif
 
     {{-- Filter --}}
-    <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+    <x-dashboard.panel title="Filter" description="Sempitkan arsip berdasarkan kata kunci, tanggal, dan status.">
+        <x-slot:icon>
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7"
+                    d="M3 5.25h18M6.75 12h10.5M10.5 18.75h3" />
+            </svg>
+        </x-slot:icon>
+
+        <div class="p-5 sm:p-6">
         <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
             <div class="xl:col-span-2">
                 <label for="deletion-search" class="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-500">
@@ -123,7 +102,7 @@
             </div>
         </div>
 
-        <div class="mt-3 flex flex-col gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+        <div class="mt-4 flex flex-col gap-2 border-t border-slate-100 pt-4 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
             <p>
                 Menampilkan <span class="font-semibold text-slate-700">{{ $deletedRfcs->count() }}</span> dari
                 <span class="font-semibold text-slate-700">{{ $deletedRfcs->total() }}</span> RFC terhapus.
@@ -135,14 +114,24 @@
                 @error('dateTo')
                     <span class="font-medium text-rose-600">{{ $message }}</span>
                 @enderror
-                <button type="button" wire:click="resetFilters"
-                    class="font-semibold text-blue-600 transition hover:text-blue-700">Reset filter</button>
+                <x-ui.button variant="ghost" size="sm" wire:click="resetFilters">
+                    Reset filter
+                </x-ui.button>
             </div>
         </div>
-    </section>
+        </div>
+    </x-dashboard.panel>
 
     {{-- Tabel --}}
-    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <x-dashboard.panel title="Daftar RFC Terhapus"
+        description="RFC tidak dihapus permanen dan dapat dipulihkan oleh yang berwenang.">
+        <x-slot:icon>
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7"
+                    d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13M10 11v5M14 11v5" />
+            </svg>
+        </x-slot:icon>
+
         <div class="overflow-x-auto">
             <table class="rfc-responsive-table w-full min-w-[860px] text-left">
                 <thead class="border-b border-slate-100 bg-slate-50/70">
@@ -203,21 +192,11 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-5 py-14 text-center">
-                                <span class="mx-auto grid h-14 w-14 place-items-center rounded-full bg-slate-100 text-slate-400">
-                                    <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6"
-                                            d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13M10 11v5M14 11v5" />
-                                    </svg>
-                                </span>
-                                <p class="mt-3 text-sm font-semibold text-slate-600">Belum ada RFC yang dihapus</p>
-                                <p class="mt-1 text-xs text-slate-400">
-                                    @if ($isStaff)
-                                        RFC Draft yang dihapus oleh pemohon akan muncul di halaman ini.
-                                    @else
-                                        RFC Draft yang Anda hapus akan muncul di halaman ini.
-                                    @endif
-                                </p>
+                            <td colspan="6" class="px-4 py-4">
+                                <x-dashboard.empty-state title="Belum ada RFC yang dihapus"
+                                    :description="$isStaff
+                                        ? 'RFC Draft yang dihapus oleh pemohon akan muncul di halaman ini.'
+                                        : 'RFC Draft yang Anda hapus akan muncul di halaman ini.'" />
                             </td>
                         </tr>
                     @endforelse
@@ -230,7 +209,7 @@
                 {{ $deletedRfcs->links() }}
             </div>
         @endif
-    </section>
+    </x-dashboard.panel>
 
     {{-- Dialog konfirmasi pemulihan --}}
     @if ($showRestoreModal && $selectedRfc)

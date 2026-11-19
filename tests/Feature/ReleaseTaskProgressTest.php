@@ -53,6 +53,13 @@ function releaseTaskProgressSetup(array $taskAttributes = [], array $rfcAttribut
         'scheduled_end' => null,
     ], $taskAttributes));
 
+    $task->riskAnalysis()->create([
+        'submitted_by_id' => $user->id,
+        'activity_plan' => 'Menyiapkan cadangan basis data sebelum pelaksanaan perubahan.',
+        'change_plan' => 'Memperbarui konfigurasi layanan dan menjalankan pengujian fungsional.',
+        'rollback_mechanism' => 'Memulihkan cadangan basis data dan konfigurasi sebelumnya.',
+    ]);
+
     return [$user, $rfc, $task, $member];
 }
 
@@ -261,7 +268,20 @@ it('menolak aktor yang bukan pemilik tugas', function (string $actorType) {
         ->and($owner)->not->toBeNull();
 })->with(['anggota lain', 'pemohon', 'change manager']);
 
-it('menampilkan tombol selesaikan pekerjaan dan rollback untuk tugas in progress milik Tim Rilis', function () {
+it('menolak memulai pengerjaan tanpa analisis risiko', function () {
+    [$user, $rfc, $task] = releaseTaskProgressSetup();
+
+    $task->riskAnalysis()->delete();
+
+    app(ReleaseTaskProgressService::class)->setEstimate($task, $user, 3);
+
+    expect(fn () => app(ReleaseTaskProgressService::class)->start($task, $user))
+        ->toThrow(ReleaseTaskProgressException::class, 'Isi form analisis risiko terlebih dahulu sebelum memulai pengerjaan.');
+
+    expect($task->fresh()->execution_status)->toBe('pending');
+});
+
+it('menampilkan tombol Setuju dan Reject untuk tugas in progress milik Tim Rilis', function () {
     [$user, $rfc, $task] = releaseTaskProgressSetup();
 
     $service = app(ReleaseTaskProgressService::class);
@@ -271,11 +291,14 @@ it('menampilkan tombol selesaikan pekerjaan dan rollback untuk tugas in progress
     Livewire::actingAs($user)
         ->test(ShowChangeRequest::class, ['rfc' => $rfc])
         ->assertOk()
-        ->assertSee('Selesaikan Pekerjaan')
-        ->assertSee('Isi laporan hasil. Setelah dikirim, RFC masuk review Change Manager.')
-        ->assertSee('Wajib menuliskan alasan rollback.')
+        ->assertSee('Selesaikan pekerjaan')
+        ->assertSee('Pilih Setuju bila pekerjaan tuntas, atau Reject bila pelaksanaan dihentikan.')
+        ->assertSee('Wajib menuliskan alasan reject.')
+        ->assertSee('Setuju')
+        ->assertSee('Reject')
         ->assertSee('hasil=success')
-        ->assertSee('hasil=rolled_back');
+        ->assertSee('hasil=failed')
+        ->assertDontSee('hasil=rolled_back');
 });
 
 it('tidak menampilkan aksi penyelesaian saat tugas masih menunggu dimulai', function () {
@@ -285,9 +308,9 @@ it('tidak menampilkan aksi penyelesaian saat tugas masih menunggu dimulai', func
         ->test(ShowChangeRequest::class, ['rfc' => $rfc])
         ->assertOk()
         ->assertSee('Mulai Pengerjaan')
-        ->assertDontSee('Isi laporan hasil. Setelah dikirim, RFC masuk review Change Manager.')
-        ->assertDontSee('Wajib menuliskan alasan rollback.')
-        ->assertDontSee('hasil=rolled_back');
+        ->assertDontSee('Pilih Setuju bila pekerjaan tuntas, atau Reject bila pelaksanaan dihentikan.')
+        ->assertDontSee('Wajib menuliskan alasan reject.')
+        ->assertDontSee('hasil=failed');
 });
 
 it('tidak menampilkan tombol aksi pengerjaan kepada change manager dan pemohon', function (string $role) {
@@ -307,13 +330,29 @@ it('tidak menampilkan tombol aksi pengerjaan kepada change manager dan pemohon',
     Livewire::actingAs($viewer)
         ->test(ShowChangeRequest::class, ['rfc' => $rfc])
         ->assertOk()
-        ->assertDontSee('Isi laporan hasil. Setelah dikirim, RFC masuk review Change Manager.')
-        ->assertDontSee('Wajib menuliskan alasan rollback.')
+        ->assertDontSee('Pilih Setuju bila pekerjaan tuntas, atau Reject bila pelaksanaan dihentikan.')
+        ->assertDontSee('Wajib menuliskan alasan reject.')
         ->assertDontSee('hasil=success')
-        ->assertDontSee('hasil=rolled_back');
+        ->assertDontSee('hasil=failed');
 })->with(['Change Manager', 'Pemohon']);
 
-it('mengisi hasil implementasi dari parameter kueri hasil', function () {
+it('mengisi hasil implementasi dari parameter kueri hasil yang valid', function (string $hasil, string $expected) {
+    [$user, $rfc, $task] = releaseTaskProgressSetup();
+
+    $service = app(ReleaseTaskProgressService::class);
+    $service->setEstimate($task, $user, 3);
+    $service->start($task, $user);
+
+    Livewire::actingAs($user)
+        ->withQueryParams(['hasil' => $hasil])
+        ->test(ImplementChange::class, ['rfc' => $rfc])
+        ->assertSet('implementation_result', $expected);
+})->with([
+    ['success', 'success'],
+    ['failed', 'failed'],
+]);
+
+it('mengabaikan parameter kueri rolled_back pada laporan baru', function () {
     [$user, $rfc, $task] = releaseTaskProgressSetup();
 
     $service = app(ReleaseTaskProgressService::class);
@@ -323,7 +362,8 @@ it('mengisi hasil implementasi dari parameter kueri hasil', function () {
     Livewire::actingAs($user)
         ->withQueryParams(['hasil' => 'rolled_back'])
         ->test(ImplementChange::class, ['rfc' => $rfc])
-        ->assertSet('implementation_result', 'rolled_back');
+        ->assertSet('implementation_result', '')
+        ->assertDontSee('Rollback');
 });
 
 it('menyimpan rencana mulai pada estimasi', function () {
@@ -364,6 +404,49 @@ it('menolak rencana mulai lebih dari 60 hari ke depan', function () {
         ->toThrow(ReleaseTaskProgressException::class);
 
     expect($task->fresh()->planned_start_on)->toBeNull();
+});
+
+it('mengizinkan penyimpanan ulang analisis risiko saat rencana mulai sudah lewat', function () {
+    $pastDate = now('Asia/Jakarta')->startOfDay()->subDays(2);
+
+    [$user, , $task] = releaseTaskProgressSetup([
+        'estimated_days' => 3,
+        'planned_start_on' => $pastDate->toDateString(),
+    ]);
+
+    $analysis = app(ReleaseTaskProgressService::class)->saveRiskAnalysis(
+        $task,
+        $user,
+        [
+            'activity_plan' => 'Memperbarui rencana kegiatan berdasarkan koordinasi terbaru.',
+            'change_plan' => 'Memperbarui rencana perubahan tanpa mengubah jadwal yang sudah berjalan.',
+            'rollback_mechanism' => 'Mengembalikan konfigurasi sebelumnya sesuai prosedur rollback.',
+        ],
+        3,
+        $pastDate,
+    );
+
+    expect($analysis->activity_plan)->toBe('Memperbarui rencana kegiatan berdasarkan koordinasi terbaru.')
+        ->and($task->fresh()->planned_start_on->toDateString())->toBe($pastDate->toDateString());
+});
+
+it('tetap menolak penggeseran rencana mulai ke tanggal lain yang sudah lewat', function () {
+    [$user, , $task] = releaseTaskProgressSetup([
+        'estimated_days' => 3,
+        'planned_start_on' => now('Asia/Jakarta')->startOfDay()->subDays(2)->toDateString(),
+    ]);
+
+    expect(fn () => app(ReleaseTaskProgressService::class)->saveRiskAnalysis(
+        $task,
+        $user,
+        [
+            'activity_plan' => 'Memperbarui rencana kegiatan berdasarkan koordinasi terbaru.',
+            'change_plan' => 'Memperbarui rencana perubahan tanpa mengubah jadwal yang sudah berjalan.',
+            'rollback_mechanism' => 'Mengembalikan konfigurasi sebelumnya sesuai prosedur rollback.',
+        ],
+        3,
+        now('Asia/Jakarta')->startOfDay()->subDays(5),
+    ))->toThrow(ReleaseTaskProgressException::class, 'Rencana mulai tidak boleh di masa lalu.');
 });
 
 it('menghitung jendela jadwal sesuai status tugas', function () {

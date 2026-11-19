@@ -47,13 +47,10 @@ class ImplementChange extends Component
 
     protected function rules(): array
     {
-        $isFailure = in_array($this->implementation_result, [
-            ImplementationResult::FAILED->value,
-            ImplementationResult::ROLLED_BACK->value,
-        ], true);
+        $isFailure = $this->implementation_result === ImplementationResult::FAILED->value;
 
         return [
-            'implementation_result' => ['required', Rule::in(ImplementationResult::values())],
+            'implementation_result' => ['required', Rule::in(ImplementationResult::reportableValues())],
             'executor_name' => ['required', 'string', 'max:255'],
             'report_source' => ['required', 'string', 'max:255'],
             'summary' => ['required', 'string'],
@@ -76,13 +73,13 @@ class ImplementChange extends Component
     protected array $messages = [
         'implementation_result.required' => 'Hasil implementasi wajib dipilih.',
         'implementation_result.in' => 'Hasil implementasi tidak dikenali.',
-        'executor_name.required' => 'Pelaksana perubahan wajib diisi.',
-        'executor_name.max' => 'Nama pelaksana perubahan maksimal 255 karakter.',
+        'executor_name.required' => 'PIC pelaksanaan wajib diisi.',
+        'executor_name.max' => 'Nama PIC pelaksanaan maksimal 255 karakter.',
         'report_source.required' => 'Sumber laporan wajib diisi.',
         'report_source.max' => 'Sumber laporan maksimal 255 karakter.',
         'summary.required' => 'Ringkasan hasil wajib diisi.',
         'test_results.required' => 'Hasil pengujian wajib diisi.',
-        'failure_notes.required' => 'Catatan kegagalan atau rollback wajib diisi.',
+        'failure_notes.required' => 'Alasan Reject wajib diisi.',
         'follow_up_action.required' => 'Pilihan tindak lanjut wajib ditentukan.',
         'follow_up_action.in' => 'Pilihan tindak lanjut tidak dikenali.',
         'follow_up_notes.required' => 'Keterangan tindak lanjut wajib diisi.',
@@ -92,7 +89,7 @@ class ImplementChange extends Component
         'files.*.file' => 'Berkas bukti tidak valid.',
         'files.*.max' => 'Ukuran setiap berkas bukti maksimal 5 MB.',
         'files.*.mimetypes' => 'Berkas bukti harus berformat PDF.',
-        'confirmed.accepted' => 'Persetujuan penyelesaian wajib dicentang.',
+        'confirmed.accepted' => 'Konfirmasi laporan wajib dicentang.',
     ];
 
     public function mount(ChangeRequest $rfc): void
@@ -103,7 +100,7 @@ class ImplementChange extends Component
 
         $result = request()->query('hasil');
 
-        if (is_string($result) && in_array($result, ImplementationResult::values(), true)) {
+        if (is_string($result) && in_array($result, ImplementationResult::reportableValues(), true)) {
             $this->implementation_result = $result;
         }
     }
@@ -135,10 +132,7 @@ class ImplementChange extends Component
         /** @var User $user */
         $user = Auth::user();
 
-        $isFailure = in_array($this->implementation_result, [
-            ImplementationResult::FAILED->value,
-            ImplementationResult::ROLLED_BACK->value,
-        ], true);
+        $isFailure = $this->implementation_result === ImplementationResult::FAILED->value;
 
         $data = [
             'implementation_result' => $this->implementation_result,
@@ -161,7 +155,7 @@ class ImplementChange extends Component
 
         $message = $this->implementation_result === ImplementationResult::SUCCESS->value
             ? "Implementasi RFC {$this->rfc->displayIdentifier()} berhasil dicatat dan diselesaikan."
-            : "Implementasi RFC {$this->rfc->displayIdentifier()} dicatat gagal / mengalami rollback.";
+            : "Implementasi RFC {$this->rfc->displayIdentifier()} dicatat dengan hasil Reject.";
 
         session()->flash('message', $message);
         $this->redirect(route('change-requests.show', $this->rfc->id), navigate: true);

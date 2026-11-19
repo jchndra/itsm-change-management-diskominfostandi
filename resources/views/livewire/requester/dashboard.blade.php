@@ -1,28 +1,22 @@
 <div class="space-y-6">
 
     {{-- Judul halaman --}}
-    <div>
-        <h1 class="text-[26px] font-bold leading-tight tracking-tight text-slate-900 sm:text-[30px]">Dashboard Pemohon</h1>
-        <p class="mt-1 text-sm text-slate-500">Pantau dan kelola permintaan perubahan layanan TI Anda.</p>
-    </div>
+    <x-ui.page-header eyebrow="Beranda" title="Dashboard Pemohon"
+        description="Pantau dan kelola permintaan perubahan layanan TI Anda." icon-tone="blue">
+        <x-slot:icon>
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                    d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178Z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                    d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+            </svg>
+        </x-slot:icon>
+    </x-ui.page-header>
 
     @if ($statusMessage)
-        <div class="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3.5 text-sm text-emerald-800"
-            role="status">
-            <svg class="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" fill="none" stroke="currentColor"
-                viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-            </svg>
-            <p class="flex-1 font-medium">{{ $statusMessage }}</p>
-            <button type="button" wire:click="$set('statusMessage', '')" class="text-emerald-500 hover:text-emerald-700"
-                aria-label="Tutup notifikasi">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M6 18 18 6M6 6l12 12" />
-                </svg>
-            </button>
-        </div>
+        <x-ui.alert tone="success" dismiss="$set('statusMessage', '')">
+            <span class="font-medium">{{ $statusMessage }}</span>
+        </x-ui.alert>
     @endif
 
     {{-- Dokumen pendukung RFC --}}
@@ -356,19 +350,20 @@
     <div class="grid grid-cols-1 items-start gap-6 xl:grid-cols-3">
 
         {{-- Tabel RFC terbaru --}}
-        <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm xl:col-span-2">
-            <div class="flex items-center justify-between gap-4 border-b border-slate-100 px-5 py-4">
-                <h3 class="flex items-center gap-2.5 text-[15px] font-bold text-slate-800">
-                    <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7"
-                            d="M14 3v4a1 1 0 0 0 1 1h4M6 3h8l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M9 12h6M9 16h4" />
-                    </svg>
-                    RFC Terbaru Saya
-                </h3>
+        <x-dashboard.panel class="overflow-hidden xl:col-span-2" title="RFC Terbaru Saya"
+            description="Lima pengajuan terakhir beserta status dan aksinya.">
+            <x-slot:icon>
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7"
+                        d="M14 3v4a1 1 0 0 0 1 1h4M6 3h8l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M9 12h6M9 16h4" />
+                </svg>
+            </x-slot:icon>
+
+            <x-slot:actions>
                 <a href="{{ route('change-requests.index') }}" wire:navigate
                     class="text-xs font-semibold text-blue-600 transition hover:text-blue-700">Lihat Semua</a>
-            </div>
+            </x-slot:actions>
 
             <div class="overflow-x-auto">
                 <table class="rfc-responsive-table w-full min-w-[640px] text-left">
@@ -437,57 +432,49 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="px-5 py-12 text-center">
-                                    <span
-                                        class="mx-auto grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-slate-400">
-                                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6"
-                                                d="M14 3v4a1 1 0 0 0 1 1h4M6 3h8l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
-                                        </svg>
-                                    </span>
-                                    <p class="mt-3 text-sm font-medium text-slate-600">Belum ada permintaan perubahan
-                                    </p>
-                                    <p class="mt-1 text-xs text-slate-400">RFC yang Anda ajukan akan muncul di sini.</p>
+                                <td colspan="5" class="px-4 py-4">
+                                    <x-dashboard.empty-state title="Belum ada permintaan perubahan"
+                                        description="RFC yang Anda ajukan akan muncul di sini." />
                                 </td>
                             </tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
-        </section>
+        </x-dashboard.panel>
 
         {{-- Kolom kanan --}}
         <div class="flex flex-col gap-6">
 
             {{-- Timeline status --}}
-            <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" wire:poll.30s
-                aria-label="Status permohonan, diperbarui otomatis setiap 30 detik">
-                <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-                    <h3 class="flex items-center gap-2.5 text-[15px] font-bold text-slate-800">
-                        <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7"
-                                d="M9 12h6m-6 4h6M9 8h6M6 3h9l4 4v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
-                        </svg>
-                        Status Permohonan Saya
-                    </h3>
+            <x-dashboard.panel class="h-full" title="Status Permohonan Saya"
+                description="Tahapan RFC aktif Anda, diperbarui otomatis setiap 30 detik."
+                wire:poll.30s aria-label="Status permohonan, diperbarui otomatis setiap 30 detik">
+                <x-slot:icon>
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7"
+                            d="M9 12h6m-6 4h6M9 8h6M6 3h9l4 4v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
+                    </svg>
+                </x-slot:icon>
 
-                    <div class="flex items-center gap-2">
-                        <span title="Diperbarui otomatis setiap 30 detik"
-                            class="inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700">
-                            <span class="relative flex h-1.5 w-1.5" aria-hidden="true">
-                                <span
-                                    class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70"></span>
-                                <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                            </span>
-                            Otomatis
+                <x-slot:actions>
+                    <span title="Diperbarui otomatis setiap 30 detik"
+                        class="inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700">
+                        <span class="relative flex h-1.5 w-1.5" aria-hidden="true">
+                            <span
+                                class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70"></span>
+                            <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
                         </span>
+                        Otomatis
+                    </span>
 
-                        @if ($latestActiveRfc)
-                            <a href="{{ route('change-requests.show', $latestActiveRfc) }}" wire:navigate
-                                class="text-xs font-semibold text-blue-600 transition hover:text-blue-700">Lihat Semua</a>
-                        @endif
-                    </div>
-                </div>
+                    @if ($latestActiveRfc)
+                        <a href="{{ route('change-requests.show', $latestActiveRfc) }}" wire:navigate
+                            class="text-xs font-semibold text-blue-600 transition hover:text-blue-700">Lihat Semua</a>
+                    @endif
+                </x-slot:actions>
+
+                <div class="p-5">
 
                 @if ($latestActiveRfc)
                     <p class="mb-4 inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
@@ -560,7 +547,8 @@
                             baru</a>
                     </div>
                 @endif
-            </section>
+                </div>
+            </x-dashboard.panel>
         </div>
     </div>
 </div>

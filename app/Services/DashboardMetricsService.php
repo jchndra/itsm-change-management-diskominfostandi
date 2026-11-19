@@ -1007,7 +1007,7 @@ class DashboardMetricsService
             $status === RfcStatus::APPROVED => 'Disetujui',
             $status === RfcStatus::IN_PROGRESS => 'Implementasi dimulai',
             $status === RfcStatus::IMPLEMENTED => 'Implementasi dicatat',
-            $status === RfcStatus::FAILED => 'Implementasi gagal atau rollback',
+            $status === RfcStatus::FAILED => 'Implementasi Reject',
             $status === RfcStatus::CLOSED => 'RFC ditutup',
             $status === RfcStatus::REJECTED => 'RFC ditolak',
             $status === RfcStatus::CANCELLED => 'RFC dibatalkan',

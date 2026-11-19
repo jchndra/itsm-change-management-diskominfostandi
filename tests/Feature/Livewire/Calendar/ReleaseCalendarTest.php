@@ -271,7 +271,7 @@ it('menampilkan tugas selesai tanpa jadwal pada hari executed_at', function () {
         ->assertSee('15 Nov 2026');
 });
 
-it('melabeli tugas rolled_back sebagai Rollback dan successful sebagai Selesai', function () {
+it('melabeli tugas rolled_back sebagai Reject dan successful sebagai Selesai', function () {
     [$user, $member] = calendarTeamMember();
 
     $rolledBack = calendarTask($member, [], [
@@ -291,7 +291,7 @@ it('melabeli tugas rolled_back sebagai Rollback dan successful sebagai Selesai',
         ->test(ReleaseCalendar::class)
         ->assertSee($rolledBack->changeRequest->displayIdentifier())
         ->assertSee($successful->changeRequest->displayIdentifier())
-        ->assertSee('• Rollback')
+        ->assertSee('• Reject')
         ->assertSee('• Selesai');
 });
 

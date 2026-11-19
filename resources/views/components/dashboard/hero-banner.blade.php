@@ -67,6 +67,12 @@
                 </p>
             @endif
 
+            @isset($actions)
+                <div class="mt-5 flex flex-wrap items-center gap-2.5">
+                    {{ $actions }}
+                </div>
+            @endisset
+
             @if ($showMeta)
                 <div class="mt-6 flex flex-wrap items-center gap-2.5">
                     @if (filled($dateTime))

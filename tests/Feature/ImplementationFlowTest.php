@@ -235,7 +235,7 @@ test('hasil gagal mewajibkan catatan dan tindak lanjut beserta keterangannya', f
         ->and($implementation->follow_up_notes)->toBe('Akan diajukan RFC baru setelah analisis akar masalah.');
 });
 
-test('hasil rollback membuat status failed dan tindak lanjut none tidak mewajibkan keterangan', function () {
+test('hasil Reject membuat status failed dan tindak lanjut none tidak mewajibkan keterangan', function () {
     $rfc = implementationRfc(RfcStatus::APPROVED);
     $team = implementationReleaseTeamActor($rfc);
 
@@ -243,8 +243,8 @@ test('hasil rollback membuat status failed dan tindak lanjut none tidak mewajibk
 
     Livewire::test(ImplementChange::class, ['rfc' => $rfc])
         ->set(validImplementationFields([
-            'implementation_result' => ImplementationResult::ROLLED_BACK->value,
-            'failure_notes' => 'Perubahan di-rollback ke versi sebelumnya.',
+            'implementation_result' => ImplementationResult::FAILED->value,
+            'failure_notes' => 'Perubahan ditolak setelah pengujian regresi.',
             'follow_up_action' => FollowUpAction::NONE->value,
         ]))
         ->set('files', [implementationPdf()])
@@ -254,10 +254,49 @@ test('hasil rollback membuat status failed dan tindak lanjut none tidak mewajibk
     $implementation = ChangeRequestImplementation::where('change_request_id', $rfc->id)->sole();
 
     expect($rfc->fresh()->status)->toBe(RfcStatus::FAILED->value)
-        ->and($implementation->implementation_result)->toBe(ImplementationResult::ROLLED_BACK->value)
-        ->and($implementation->failure_notes)->toBe('Perubahan di-rollback ke versi sebelumnya.')
+        ->and($implementation->implementation_result)->toBe(ImplementationResult::FAILED->value)
+        ->and($implementation->failure_notes)->toBe('Perubahan ditolak setelah pengujian regresi.')
         ->and($implementation->follow_up_action)->toBe(FollowUpAction::NONE->value)
-        ->and($implementation->follow_up_notes)->toBeNull();
+        ->and($implementation->follow_up_notes)->toBeNull()
+        ->and($rfc->fresh()->releaseTaskFor($team)->execution_status)->toBe('rolled_back')
+        ->and(ImplementationResult::labelFor($implementation->implementation_result))->toBe('Reject');
+});
+
+test('service menolak hasil rolled_back untuk laporan implementasi baru', function () {
+    $rfc = implementationRfc(RfcStatus::APPROVED);
+    $team = implementationReleaseTeamActor($rfc);
+
+    expect(fn () => recordImplementation($rfc, $team, [
+        'implementation_result' => ImplementationResult::ROLLED_BACK->value,
+        'failure_notes' => 'Perubahan di-rollback ke versi sebelumnya.',
+        'follow_up_action' => FollowUpAction::NONE->value,
+    ]))->toThrow(RfcImplementationException::class, 'Hasil implementasi hanya dapat Berhasil atau Reject.');
+
+    expect(ChangeRequestImplementation::count())->toBe(0)
+        ->and(Evidence::count())->toBe(0)
+        ->and($rfc->fresh()->status)->toBe(RfcStatus::APPROVED->value);
+});
+
+test('data implementasi rolled_back lama tetap terbaca dengan label legacy', function () {
+    $requester = implementationUser('Pemohon');
+    $cm = implementationUser('Change Manager');
+    $rfc = implementationRfc(RfcStatus::FAILED, $requester);
+
+    implementationRecordRow($rfc, $cm, [
+        'implementation_result' => ImplementationResult::ROLLED_BACK->value,
+        'failure_notes' => 'Perubahan lama dikembalikan ke versi sebelumnya.',
+    ]);
+
+    $this->actingAs($cm);
+
+    Livewire::test(ShowChangeRequest::class, ['rfc' => $rfc])
+        ->assertOk()
+        ->assertSee('Rollback dilakukan')
+        ->assertSee('Perubahan lama dikembalikan ke versi sebelumnya.')
+        ->assertSee('Alasan Reject');
+
+    expect(ImplementationResult::labelFor(ImplementationResult::ROLLED_BACK->value))
+        ->toBe('Rollback dilakukan');
 });
 
 test('validasi menolak isian wajib kosong tanpa bukti dan tanpa konfirmasi', function () {
@@ -566,7 +605,9 @@ test('staf dapat melihat dan mengunduh bukti implementasi', function () {
     $html = Livewire::test(ShowChangeRequest::class, ['rfc' => $rfc->fresh()])->html();
 
     expect($html)->not->toContain('implementation-evidences')
-        ->and($html)->not->toContain('storage/app/private');
+        ->and($html)->not->toContain('storage/app/private')
+        ->and($html)->toContain(route('change-requests.evidences.show', ['rfc' => $rfc, 'evidence' => $evidence]))
+        ->and($html)->toContain('data-viewer-title="bukti-staf.pdf"');
 });
 
 test('pemohon tidak dapat membuka bukti dan evidence RFC lain menghasilkan 404', function () {
@@ -634,10 +675,12 @@ test('pemohon hanya melihat hasil ringkasan catatan tindak lanjut dan jumlah buk
 
     $this->actingAs($requester);
 
+    $evidence = Evidence::where('change_request_id', $rfc->id)->sole();
+
     Livewire::test(ShowChangeRequest::class, ['rfc' => $rfc->fresh()])
         ->assertOk()
         ->assertSee('Hasil Implementasi')
-        ->assertSee('Gagal')
+        ->assertSee('Reject')
         ->assertSee('Ringkasan hasil yang boleh dilihat Pemohon.')
         ->assertSee('Catatan kegagalan yang boleh dilihat Pemohon.')
         ->assertSee('Eskalasi atau investigasi')
@@ -647,14 +690,14 @@ test('pemohon hanya melihat hasil ringkasan catatan tindak lanjut dan jumlah buk
         ->assertDontSee('Sumber Laporan Rahasia')
         ->assertDontSee('Hasil pengujian rahasia internal.')
         ->assertDontSee('bukti-rahasia.pdf')
-        ->assertDontSee('Unduh');
+        ->assertDontSee(route('change-requests.evidences.show', ['rfc' => $rfc, 'evidence' => $evidence]), false);
 
     $history = app(RfcHistoryService::class)->build($rfc->fresh(), false);
     $serialized = json_encode($history);
     $implementationEvent = collect($history['events'])->firstWhere('implementation', true);
 
     expect($implementationEvent)->not->toBeNull()
-        ->and($implementationEvent['note'])->toContain('Hasil: Gagal')
+        ->and($implementationEvent['note'])->toContain('Hasil: Reject')
         ->and($implementationEvent['note'])->toContain('Ringkasan: Ringkasan hasil yang boleh dilihat Pemohon.')
         ->and($implementationEvent['actor_name'])->toBeNull()
         ->and($serialized)->not->toContain('Nama Pelaksana Rahasia')
@@ -666,7 +709,7 @@ test('pemohon hanya melihat hasil ringkasan catatan tindak lanjut dan jumlah buk
     $staffEvent = collect($staffHistory['events'])->firstWhere('implementation', true);
 
     expect($staffEvent)->not->toBeNull()
-        ->and($staffEvent['note'])->toContain('Pelaksana: Nama Pelaksana Rahasia')
+        ->and($staffEvent['note'])->toContain('PIC pelaksanaan: Nama Pelaksana Rahasia')
         ->and($staffEvent['note'])->toContain('Jumlah bukti: 1 file')
         ->and($staffEvent['note'])->toContain('bukti-rahasia.pdf');
 });
@@ -687,40 +730,40 @@ test('tombol catat implementasi hanya untuk Tim Rilis yang ditugaskan dan CM mem
 
     Livewire::test(ShowChangeRequest::class, ['rfc' => $approved])
         ->assertOk()
-        ->assertSee('Selesaikan Pekerjaan')
+        ->assertSee('Selesaikan pekerjaan')
         ->assertSee(route('change-requests.implement', $approved));
 
     $this->actingAs($implementedTeam);
 
     Livewire::test(ShowChangeRequest::class, ['rfc' => $implemented])
         ->assertOk()
-        ->assertDontSee('Selesaikan Pekerjaan');
+        ->assertDontSee('Selesaikan pekerjaan');
 
     $this->actingAs($cm);
 
     Livewire::test(ShowChangeRequest::class, ['rfc' => $unassignedApproved])
         ->assertOk()
         ->assertSee('Disposisi')
-        ->assertDontSee('Selesaikan Pekerjaan')
+        ->assertDontSee('Selesaikan pekerjaan')
         ->assertDontSee(route('change-requests.implement', $unassignedApproved));
 
     Livewire::test(ShowChangeRequest::class, ['rfc' => $approved])
         ->assertOk()
         ->assertSee('Pantau Pelaksanaan')
-        ->assertDontSee('Selesaikan Pekerjaan')
+        ->assertDontSee('Selesaikan pekerjaan')
         ->assertDontSee(route('change-requests.implement', $approved));
 
     $this->actingAs($admin);
 
     Livewire::test(ShowChangeRequest::class, ['rfc' => $approved])
         ->assertOk()
-        ->assertDontSee('Selesaikan Pekerjaan');
+        ->assertDontSee('Selesaikan pekerjaan');
 
     $this->actingAs($requester);
 
     Livewire::test(ShowChangeRequest::class, ['rfc' => $approved])
         ->assertOk()
-        ->assertDontSee('Selesaikan Pekerjaan');
+        ->assertDontSee('Selesaikan pekerjaan');
 });
 
 test('RFC lama tanpa data implementasi tetap tampil tanpa error', function () {

@@ -184,7 +184,8 @@ it('memberikan tautan lampiran pada riwayat proses untuk staf dan tim rilis yang
         ->firstWhere('key', 'attachment_added');
 
     expect($requesterEvent)->not->toBeNull()
-        ->and($requesterEvent['attachment_url'] ?? null)->toBeNull();
+        ->and($requesterEvent['attachment_url'] ?? null)->toBeNull()
+        ->and($requesterEvent['attachment_name'] ?? null)->toBeNull();
 
     // Staf: nama berkas dan tautan keduanya tersedia.
     $staffEvent = collect(app(RfcHistoryService::class)->build($rfc->fresh(), true)['events'])
@@ -192,7 +193,8 @@ it('memberikan tautan lampiran pada riwayat proses untuk staf dan tim rilis yang
 
     expect($staffEvent)->not->toBeNull()
         ->and($staffEvent['note'])->toContain('dokumen-perubahan.pdf')
-        ->and($staffEvent['attachment_url'])->toBe($expectedUrl);
+        ->and($staffEvent['attachment_url'])->toBe($expectedUrl)
+        ->and($staffEvent['attachment_name'])->toBe('dokumen-perubahan.pdf');
 
     // Tim Rilis yang ditugaskan: tautan tersedia meski catatan tetap disembunyikan.
     $releaseUser = User::factory()->create(['is_active' => true, 'name' => 'Tim Rilis Lampiran']);
@@ -214,12 +216,14 @@ it('memberikan tautan lampiran pada riwayat proses untuk staf dan tim rilis yang
 
     expect($releaseEvent)->not->toBeNull()
         ->and($releaseEvent['attachment_url'])->toBe($expectedUrl)
+        ->and($releaseEvent['attachment_name'])->toBe('dokumen-perubahan.pdf')
         ->and($releaseEvent['note'])->toBeNull();
 
     $this->get(route('change-requests.show', $rfc))
         ->assertOk()
         ->assertSee('Lihat lampiran')
-        ->assertSee($expectedUrl, false);
+        ->assertSee($expectedUrl, false)
+        ->assertSee('open-attachment-viewer', false);
 
     $this->get($expectedUrl)->assertOk();
 });

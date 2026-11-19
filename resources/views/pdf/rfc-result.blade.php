@@ -462,7 +462,7 @@
 
                 @php($revisions = $task->updates->where('type', 'estimate_revised')->sortBy('created_at'))
                 @if ($revisions->isNotEmpty())
-                    <p class="task-title" style="margin-top: 7px;">Riwayat Revisi Estimasi</p>
+                    <p class="task-title" style="margin-top: 7px;">Riwayat Update Informasi</p>
                     <ul>
                         @foreach ($revisions as $revision)
                             <li>
@@ -488,7 +488,7 @@
                 </tr>
                 @if (filled($implementation->executor_name))
                     <tr>
-                        <th>Pelaksana</th>
+                        <th>PIC pelaksanaan</th>
                         <td>{{ $implementation->executor_name }}</td>
                     </tr>
                 @endif
@@ -518,7 +518,7 @@
                 @endif
                 @if (filled($implementation->failure_notes))
                     <tr>
-                        <th>Catatan Kegagalan / Rollback</th>
+                        <th>Alasan Reject</th>
                         <td>{{ $implementation->failure_notes }}</td>
                     </tr>
                 @endif

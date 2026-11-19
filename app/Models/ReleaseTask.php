@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 class ReleaseTask extends Model
@@ -55,6 +56,11 @@ class ReleaseTask extends Model
     public function updates(): HasMany
     {
         return $this->hasMany(ReleaseTaskUpdate::class)->orderByDesc('created_at');
+    }
+
+    public function riskAnalysis(): HasOne
+    {
+        return $this->hasOne(ReleaseTaskRiskAnalysis::class);
     }
 
     /**

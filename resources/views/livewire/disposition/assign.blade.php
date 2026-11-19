@@ -1,4 +1,6 @@
-<div class="mx-auto max-w-5xl space-y-6">
+<x-rfc.action-page :back-href="route('disposition.index')" back-label="Kembali ke daftar disposisi"
+    eyebrow="Disposisi ke Tim Rilis" title="Disposisi RFC"
+    :description="$rfc->displayIdentifier().' · '.$rfc->title" width="5xl">
     @php
         $risk = $rfc->riskAssessment;
         $decisionLabels = [
@@ -8,28 +10,9 @@
         ];
     @endphp
 
-    <div class="flex flex-col gap-4 border-b border-slate-200 pb-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-            <div class="flex items-center gap-3">
-                <a href="{{ route('disposition.index') }}" wire:navigate
-                    class="rounded-full bg-slate-100 p-2 text-slate-600 transition hover:bg-slate-200"
-                    aria-label="Kembali ke daftar disposisi">
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M10 19l-7-7m0 0 7-7m-7 7h18" />
-                    </svg>
-                </a>
-                <div>
-                    <h1 class="text-2xl font-bold text-slate-900">Disposisi RFC</h1>
-                    <p class="mt-0.5 text-sm text-slate-500">
-                        {{ $rfc->displayIdentifier() }} &middot; {{ $rfc->title }}
-                    </p>
-                </div>
-            </div>
-        </div>
-
+    <x-slot:actions>
         <x-status-badge :status="$rfc->status" :tone="$rfc->displayStatusTone()" :label="$rfc->displayStatusLabel()" />
-    </div>
+    </x-slot:actions>
 
     @error('disposition')
         <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
@@ -262,4 +245,4 @@
             </button>
         </div>
     </form>
-</div>
+</x-rfc.action-page>

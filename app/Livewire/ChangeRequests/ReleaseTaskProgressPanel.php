@@ -20,12 +20,22 @@ class ReleaseTaskProgressPanel extends Component
 
     public string $plannedStartOn = '';
 
+    public string $activityPlan = '';
+
+    public string $changePlan = '';
+
+    public string $rollbackMechanism = '';
+
+    public bool $showRiskForm = false;
+
     /** @var array<int, array{identifier: string, range: string}> */
     public array $scheduleConflicts = [];
 
     public string $revisedDays = '';
 
     public string $revisionReason = '';
+
+    public bool $showUpdateForm = false;
 
     public string $progressNote = '';
 
@@ -42,16 +52,39 @@ class ReleaseTaskProgressPanel extends Component
             'releaseTasks.releaseTeamMember',
             'releaseTasks.assignedBy',
             'releaseTasks.updates.user',
+            'releaseTasks.riskAnalysis.submittedBy',
         ]);
 
-        $this->plannedStartOn = $this->assignedTask()?->planned_start_on?->toDateString()
+        $task = $this->assignedTask();
+
+        $this->plannedStartOn = $task?->planned_start_on?->toDateString()
             ?? now('Asia/Jakarta')->toDateString();
+
+        if ($task?->estimated_days !== null) {
+            $this->estimatedDays = (string) $task->estimated_days;
+        }
+
+        if ($task?->riskAnalysis !== null) {
+            $this->activityPlan = $task->riskAnalysis->activity_plan;
+            $this->changePlan = $task->riskAnalysis->change_plan;
+            $this->rollbackMechanism = $task->riskAnalysis->rollback_mechanism;
+        }
+
+        $this->showRiskForm = $task?->riskAnalysis === null;
     }
 
-    public function setEstimate(): void
+    public function toggleRiskForm(): void
     {
         $this->authorize('view', $this->rfc);
-        $this->resetProgressFeedback();
+
+        $this->showRiskForm = ! $this->showRiskForm;
+        $this->resetFeedback();
+    }
+
+    public function saveRiskAnalysis(): void
+    {
+        $this->authorize('view', $this->rfc);
+        $this->resetFeedback();
 
         $task = $this->assignedTask();
 
@@ -61,29 +94,56 @@ class ReleaseTaskProgressPanel extends Component
             return;
         }
 
-        $plannedStart = null;
+        $hasEstimate = $task->estimated_days !== null;
 
-        if (filled($this->plannedStartOn)) {
-            try {
-                $plannedStart = Carbon::createFromFormat('Y-m-d', $this->plannedStartOn, 'Asia/Jakarta')->startOfDay();
-            } catch (\Throwable) {
-                $this->addError('progress', 'Format rencana mulai tidak valid.');
+        $this->validate([
+            'estimatedDays' => $hasEstimate ? ['nullable'] : ['required', 'integer', 'between:1,90'],
+            'plannedStartOn' => ['nullable', 'date_format:Y-m-d'],
+            'activityPlan' => ['required', 'string', 'min:10', 'max:2000'],
+            'changePlan' => ['required', 'string', 'min:10', 'max:2000'],
+            'rollbackMechanism' => ['required', 'string', 'min:10', 'max:2000'],
+        ], [
+            'estimatedDays.required' => 'Estimasi kegiatan wajib diisi.',
+            'estimatedDays.integer' => 'Estimasi kegiatan harus berupa angka.',
+            'estimatedDays.between' => 'Estimasi kegiatan harus antara 1 dan 90 hari.',
+            'plannedStartOn.date_format' => 'Format tanggal rencana mulai tidak valid.',
+            'activityPlan.required' => 'Rencana kegiatan wajib diisi.',
+            'activityPlan.min' => 'Rencana kegiatan minimal 10 karakter.',
+            'activityPlan.max' => 'Rencana kegiatan maksimal 2.000 karakter.',
+            'changePlan.required' => 'Rencana perubahan wajib diisi.',
+            'changePlan.min' => 'Rencana perubahan minimal 10 karakter.',
+            'changePlan.max' => 'Rencana perubahan maksimal 2.000 karakter.',
+            'rollbackMechanism.required' => 'Mekanisme rollback wajib diisi.',
+            'rollbackMechanism.min' => 'Mekanisme rollback minimal 10 karakter.',
+            'rollbackMechanism.max' => 'Mekanisme rollback maksimal 2.000 karakter.',
+        ]);
 
-                return;
-            }
+        $plannedStart = $this->parsePlannedStart();
+
+        if ($plannedStart === false) {
+            return;
         }
 
         try {
-            app(ReleaseTaskProgressService::class)
-                ->setEstimate($task, $this->currentUser(), (int) $this->estimatedDays, $plannedStart);
+            app(ReleaseTaskProgressService::class)->saveRiskAnalysis(
+                $task,
+                $this->currentUser(),
+                [
+                    'activity_plan' => $this->activityPlan,
+                    'change_plan' => $this->changePlan,
+                    'rollback_mechanism' => $this->rollbackMechanism,
+                ],
+                (int) ($hasEstimate ? $task->estimated_days : $this->estimatedDays),
+                $plannedStart,
+            );
         } catch (ReleaseTaskProgressException|InvalidRfcStatusTransitionException $exception) {
             $this->addError('progress', $exception->getMessage());
 
             return;
         }
 
-        $this->estimatedDays = '';
-        $this->progressMessage = 'Estimasi pengerjaan berhasil disimpan.';
+        $this->progressMessage = 'Analisis risiko berhasil disimpan.';
+        $this->showRiskForm = false;
         $this->refreshProgressData();
         $this->captureScheduleConflicts($task);
         $this->dispatch('release-progress-updated');
@@ -92,7 +152,7 @@ class ReleaseTaskProgressPanel extends Component
     public function reviseEstimate(): void
     {
         $this->authorize('view', $this->rfc);
-        $this->resetProgressFeedback();
+        $this->resetFeedback();
 
         $task = $this->assignedTask();
 
@@ -101,6 +161,18 @@ class ReleaseTaskProgressPanel extends Component
 
             return;
         }
+
+        $this->validate([
+            'revisedDays' => ['required', 'integer', 'between:1,90'],
+            'revisionReason' => ['required', 'string', 'min:'.ReleaseTaskProgressService::MIN_REASON_LENGTH, 'max:'.ReleaseTaskProgressService::MAX_REASON_LENGTH],
+        ], [
+            'revisedDays.required' => 'Estimasi hari baru wajib diisi.',
+            'revisedDays.integer' => 'Estimasi hari baru harus berupa angka.',
+            'revisedDays.between' => 'Estimasi hari baru harus antara 1 dan 90 hari.',
+            'revisionReason.required' => 'Alasan pembaruan informasi wajib diisi.',
+            'revisionReason.min' => 'Alasan pembaruan informasi minimal '.ReleaseTaskProgressService::MIN_REASON_LENGTH.' karakter.',
+            'revisionReason.max' => 'Alasan pembaruan informasi maksimal '.ReleaseTaskProgressService::MAX_REASON_LENGTH.' karakter.',
+        ]);
 
         try {
             app(ReleaseTaskProgressService::class)
@@ -113,7 +185,8 @@ class ReleaseTaskProgressPanel extends Component
 
         $this->revisedDays = '';
         $this->revisionReason = '';
-        $this->progressMessage = 'Revisi estimasi berhasil disimpan.';
+        $this->showUpdateForm = false;
+        $this->progressMessage = 'Update tersimpan.';
         $this->refreshProgressData();
         $this->dispatch('release-progress-updated');
     }
@@ -121,7 +194,7 @@ class ReleaseTaskProgressPanel extends Component
     public function startWork(): void
     {
         $this->authorize('view', $this->rfc);
-        $this->resetProgressFeedback();
+        $this->resetFeedback();
 
         $task = $this->assignedTask();
 
@@ -147,7 +220,7 @@ class ReleaseTaskProgressPanel extends Component
     public function addProgressNote(): void
     {
         $this->authorize('view', $this->rfc);
-        $this->resetProgressFeedback();
+        $this->resetFeedback();
 
         $task = $this->assignedTask();
 
@@ -168,7 +241,7 @@ class ReleaseTaskProgressPanel extends Component
 
         $this->progressNote = '';
         $this->progressBlocked = false;
-        $this->progressMessage = 'Catatan kegiatan berhasil ditambahkan.';
+        $this->progressMessage = 'Rencana perubahan berhasil ditambahkan.';
         $this->refreshProgressData();
         $this->dispatch('release-progress-updated');
     }
@@ -199,9 +272,24 @@ class ReleaseTaskProgressPanel extends Component
         return $user;
     }
 
-    private function resetProgressFeedback(): void
+    private function parsePlannedStart(): Carbon|false|null
     {
-        $this->resetValidation('progress');
+        if (blank($this->plannedStartOn)) {
+            return null;
+        }
+
+        try {
+            return Carbon::createFromFormat('Y-m-d', $this->plannedStartOn, 'Asia/Jakarta')->startOfDay();
+        } catch (\Throwable) {
+            $this->addError('plannedStartOn', 'Format rencana mulai tidak valid.');
+
+            return false;
+        }
+    }
+
+    private function resetFeedback(): void
+    {
+        $this->resetValidation();
         $this->progressMessage = '';
         $this->scheduleConflicts = [];
     }
@@ -255,6 +343,7 @@ class ReleaseTaskProgressPanel extends Component
             'releaseTasks.releaseTeamMember',
             'releaseTasks.assignedBy',
             'releaseTasks.updates.user',
+            'releaseTasks.riskAnalysis.submittedBy',
         ]);
     }
 }

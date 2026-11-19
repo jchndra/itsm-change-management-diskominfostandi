@@ -136,7 +136,7 @@ it('menghubungkan implementasi dengan RFC dan pengguna terkait', function () {
 
 it('menyediakan label Indonesia untuk hasil implementasi dan tindak lanjut', function () {
     expect(ImplementationResult::labelFor('success'))->toBe('Berhasil')
-        ->and(ImplementationResult::labelFor('failed'))->toBe('Gagal')
+        ->and(ImplementationResult::labelFor('failed'))->toBe('Reject')
         ->and(ImplementationResult::labelFor('rolled_back'))->toBe('Rollback dilakukan')
         ->and(FollowUpAction::labelFor('none'))->toBe('Tidak ada tindak lanjut')
         ->and(FollowUpAction::labelFor('new_rfc'))->toBe('Ajukan RFC baru')

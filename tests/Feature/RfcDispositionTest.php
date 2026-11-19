@@ -611,7 +611,7 @@ it('menata menu Disposisi RFC setelah Daftar RFC dan hanya menandai satu menu ak
     );
 
     $positions = [
-        strpos($sidebar, 'Dashboard Change Manager'),
+        strpos($sidebar, 'Dashboard'),
         strpos($sidebar, 'Daftar RFC'),
         strpos($sidebar, 'Disposisi RFC'),
         strpos($sidebar, 'Riwayat Penghapusan'),

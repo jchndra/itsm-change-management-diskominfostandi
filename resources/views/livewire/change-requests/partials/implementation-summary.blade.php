@@ -10,7 +10,7 @@
         </p>
     </div>
     <div>
-        <span class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Pelaksana Perubahan</span>
+        <span class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">PIC pelaksanaan</span>
         <p class="font-medium text-slate-800">{{ $implementation->executor_name }}</p>
     </div>
     <div>
@@ -39,7 +39,7 @@
     </div>
     @if (filled($implementation->failure_notes))
         <div class="md:col-span-2">
-            <span class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Catatan Kegagalan / Rollback</span>
+            <span class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Alasan Reject</span>
             <p class="whitespace-pre-wrap text-slate-800">{{ $implementation->failure_notes }}</p>
         </div>
     @endif
@@ -59,7 +59,7 @@
 
 <div class="mt-6 border-t border-slate-100 pt-4">
     <h4 class="mb-3 text-sm font-bold text-slate-700">
-        Bukti Pendukung ({{ $evidences->count() }} file)
+        Dokumen perubahan dan bukti dukung ({{ $evidences->count() }} file)
     </h4>
 
     @if ($evidences->isEmpty())

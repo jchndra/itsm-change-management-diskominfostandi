@@ -26,7 +26,27 @@
         $isStaff = $canViewAllRfc;
         $canManageReleaseTeam = $currentUser?->can('release_team.manage') ?? false;
         $unreadCount = $currentUser ? $currentUser->unreadNotifications()->count() : 0;
-        $headerNotifications = $currentUser ? $currentUser->unreadNotifications()->take(5)->get() : collect();
+        $headerDiscussionNotifications = $currentUser
+            ? $currentUser->unreadNotifications()->where('data->event', 'comment_added')->take(3)->get()
+            : collect();
+        $headerOtherNotifications = $currentUser
+            ? $currentUser->unreadNotifications()
+                ->where(function ($query): void {
+                    $query->whereNull('data->event')->orWhere('data->event', '!=', 'comment_added');
+                })
+                ->take(3)
+                ->get()
+            : collect();
+        $headerDiscussionUnreadCount = $currentUser
+            ? $currentUser->unreadNotifications()->where('data->event', 'comment_added')->count()
+            : 0;
+        $headerOtherUnreadCount = $currentUser
+            ? $currentUser->unreadNotifications()
+                ->where(function ($query): void {
+                    $query->whereNull('data->event')->orWhere('data->event', '!=', 'comment_added');
+                })
+                ->count()
+            : 0;
         $canCreateRfc = $currentUser?->can('rfc.create') ?? false;
         $canReviewCompleteness = $currentUser?->can('rfc.review_completeness') ?? false;
         $canViewDisposition = $currentUser?->can('viewDisposition') ?? false;
@@ -81,7 +101,7 @@
             </div>
 
             {{-- Navigasi --}}
-            <nav class="mt-2 flex-1 space-y-1 overflow-y-auto px-3 pb-4">
+            <nav class="mt-2 min-h-0 flex-1 space-y-1 overflow-y-auto px-3 pb-4">
                 @if ($isReleaseTeamOnly)
                     <x-sidebar-link :href="route('release-team.dashboard')" :active="request()->routeIs('release-team.*')">
                         <x-slot:icon>
@@ -168,7 +188,7 @@
                                         d="M3.75 4.5h16.5M4.5 19.5h15M6.75 16.5V9m5.25 7.5V6m5.25 10.5v-5.25" />
                                 </svg>
                             </x-slot:icon>
-                            Dashboard Change Manager
+                            Dashboard
                         </x-sidebar-link>
 
                         <x-sidebar-link :href="route('release-calendar.index')" :active="request()->routeIs('release-calendar.*')">
@@ -279,42 +299,89 @@
                 @endif
             </nav>
 
-            {{-- Footer sidebar --}}
-            <div class="relative mt-auto overflow-hidden">
-                <svg viewBox="0 0 256 120" fill="none" class="pointer-events-none absolute inset-x-0 bottom-0 h-32 w-full text-white/[0.07]"
-                    aria-hidden="true">
-                    <g fill="currentColor">
-                        <rect x="0" y="66" width="22" height="54" />
-                        <rect x="26" y="48" width="16" height="72" />
-                        <rect x="46" y="74" width="26" height="46" />
-                        <rect x="76" y="38" width="20" height="82" />
-                        <rect x="100" y="58" width="14" height="62" />
-                        <rect x="118" y="28" width="24" height="92" />
-                        <rect x="146" y="62" width="18" height="58" />
-                        <rect x="168" y="44" width="22" height="76" />
-                        <rect x="194" y="70" width="16" height="50" />
-                        <rect x="214" y="52" width="20" height="68" />
-                        <rect x="238" y="76" width="18" height="44" />
-                        <path d="M130 18c5 6 8 9 8 13h-16c0-4 3-7 8-13Z" />
+            {{-- Ilustrasi kota --}}
+            <div class="relative mt-auto shrink-0 overflow-hidden" aria-hidden="true">
+                <svg viewBox="0 0 256 140" fill="none" class="relative block w-full select-none">
+                    {{-- Lapis belakang --}}
+                    <g class="text-sky-300/10" fill="currentColor">
+                        <rect x="4" y="62" width="18" height="78" />
+                        <rect x="26" y="44" width="14" height="96" />
+                        <rect x="44" y="70" width="22" height="70" />
+                        <rect x="70" y="34" width="16" height="106" />
+                        <rect x="77" y="24" width="2" height="10" />
+                        <rect x="90" y="56" width="12" height="84" />
+                        <rect x="106" y="48" width="20" height="92" />
+                        <rect x="130" y="66" width="14" height="74" />
+                        <rect x="148" y="30" width="20" height="110" />
+                        <rect x="157" y="20" width="2" height="10" />
+                        <rect x="172" y="52" width="14" height="88" />
+                        <rect x="190" y="40" width="18" height="100" />
+                        <rect x="212" y="64" width="18" height="76" />
+                        <rect x="234" y="50" width="18" height="90" />
+                    </g>
+
+                    {{-- Lapis tengah --}}
+                    <g class="text-sky-200/20" fill="currentColor">
+                        <rect x="-4" y="88" width="22" height="52" />
+                        <rect x="22" y="76" width="16" height="64" />
+                        <rect x="42" y="96" width="26" height="44" />
+                        <rect x="72" y="82" width="16" height="58" />
+                        <rect x="92" y="98" width="14" height="42" />
+                        <rect x="110" y="78" width="20" height="62" />
+                        <rect x="134" y="92" width="16" height="48" />
+                        <rect x="154" y="72" width="20" height="68" />
+                        <rect x="178" y="94" width="14" height="46" />
+                        <rect x="196" y="84" width="18" height="56" />
+                        <rect x="218" y="98" width="16" height="42" />
+                        <rect x="238" y="80" width="20" height="60" />
+                    </g>
+
+                    {{-- Lapis depan + landmark kubah --}}
+                    <g class="text-sky-100/30" fill="currentColor">
+                        <rect x="0" y="108" width="24" height="32" />
+                        <rect x="28" y="100" width="14" height="40" />
+                        <rect x="46" y="114" width="26" height="26" />
+                        <rect x="76" y="104" width="16" height="36" />
+                        <rect x="96" y="116" width="14" height="24" />
+                        <rect x="114" y="102" width="22" height="38" />
+                        <rect x="142" y="106" width="24" height="34" />
+                        <path d="M154 84c7 10 11 15 11 22h-22c0-7 4-12 11-22Z" />
+                        <rect x="153" y="78" width="2" height="6" />
+                        <rect x="172" y="110" width="16" height="30" />
+                        <rect x="192" y="98" width="20" height="42" />
+                        <rect x="216" y="112" width="14" height="28" />
+                        <rect x="234" y="104" width="22" height="36" />
+                    </g>
+
+                    {{-- Lampu jendela --}}
+                    <g class="text-white/40" fill="currentColor">
+                        <rect x="4" y="114" width="4" height="4" />
+                        <rect x="14" y="114" width="4" height="4" />
+                        <rect x="4" y="124" width="4" height="4" />
+                        <rect x="14" y="124" width="4" height="4" />
+                        <rect x="32" y="108" width="3" height="4" />
+                        <rect x="32" y="118" width="3" height="4" />
+                        <rect x="80" y="110" width="4" height="4" />
+                        <rect x="80" y="120" width="4" height="4" />
+                        <rect x="118" y="110" width="4" height="4" />
+                        <rect x="126" y="110" width="4" height="4" />
+                        <rect x="118" y="120" width="4" height="4" />
+                        <rect x="126" y="120" width="4" height="4" />
+                        <rect x="148" y="114" width="4" height="4" />
+                        <rect x="156" y="114" width="4" height="4" />
+                        <rect x="148" y="124" width="4" height="4" />
+                        <rect x="156" y="124" width="4" height="4" />
+                        <rect x="196" y="106" width="4" height="4" />
+                        <rect x="204" y="106" width="4" height="4" />
+                        <rect x="196" y="118" width="4" height="4" />
+                        <rect x="204" y="118" width="4" height="4" />
+                        <rect x="220" y="120" width="3" height="4" />
+                        <rect x="240" y="112" width="4" height="4" />
+                        <rect x="248" y="112" width="4" height="4" />
+                        <rect x="240" y="124" width="4" height="4" />
+                        <rect x="248" y="124" width="4" height="4" />
                     </g>
                 </svg>
-
-                <div class="relative m-3 rounded-2xl border border-white/10 bg-white/[0.05] p-4 backdrop-blur-sm">
-                    <div class="flex items-center gap-2.5">
-                        <span class="grid h-8 w-8 place-items-center rounded-lg bg-white/10 text-blue-100">
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                                    d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-5h6v5" />
-                            </svg>
-                        </span>
-                        <p class="text-[11px] font-semibold leading-tight text-blue-50">
-                            Diskominfostandi<br>Kota Bekasi
-                        </p>
-                    </div>
-                    <p class="mt-3 text-[11px] leading-relaxed text-blue-100/60">
-                        Bersama Mewujudkan<br>Layanan TI yang Andal
-                    </p>
-                </div>
             </div>
         </aside>
 
@@ -344,6 +411,7 @@
                             </span>
                             <input type="search" name="q" value="{{ request('q') }}"
                                 placeholder="Cari RFC, nomor tiket, atau kata kunci..."
+                                aria-label="Cari RFC, nomor tiket, atau kata kunci"
                                 class="h-11 w-full rounded-full border border-slate-200 bg-slate-100/70 pl-11 pr-12 text-sm text-slate-700 placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-100">
                         </div>
                     </form>
@@ -425,23 +493,63 @@
                                         class="text-xs font-semibold text-blue-600 hover:text-blue-700">Lihat semua</a>
                                 </div>
                                 <div class="max-h-80 overflow-y-auto p-2">
-                                    @forelse ($headerNotifications as $notification)
-                                        <a href="{{ route('notifications.index', ['open' => $notification->id]) }}"
-                                            class="flex gap-3 rounded-xl p-2.5 transition hover:bg-slate-50">
-                                            <x-notification-icon :status="data_get($notification->data, 'status')"
-                                                :outcome="data_get($notification->data, 'outcome')"
-                                                :event="data_get($notification->data, 'event')" class="h-8 w-8" />
-                                            <div class="min-w-0">
-                                                <p class="line-clamp-2 text-xs leading-relaxed text-slate-700">
-                                                    {{ data_get($notification->data, 'message', 'Notifikasi baru') }}</p>
-                                                <p class="mt-1 text-[10px] text-slate-400">
-                                                    {{ $notification->created_at?->copy()->locale('id')->diffForHumans() }}</p>
+                                    @if ($headerDiscussionNotifications->isEmpty() && $headerOtherNotifications->isEmpty())
+                                        <p class="px-3 py-8 text-center text-xs text-slate-500">Belum ada notifikasi baru.</p>
+                                    @endif
+
+                                    @if ($headerDiscussionNotifications->isNotEmpty())
+                                        <div class="px-2 pb-1 pt-1.5">
+                                            <div class="flex items-center justify-between gap-2">
+                                                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                                    Diskusi RFC
+                                                </p>
+                                                <span class="rounded-full bg-indigo-100 px-1.5 py-0.5 text-[10px] font-bold text-indigo-700">
+                                                    {{ $headerDiscussionUnreadCount }}
+                                                </span>
                                             </div>
-                                        </a>
-                                    @empty
-                                        <p class="px-3 py-8 text-center text-xs text-slate-500">Belum ada notifikasi baru.
-                                        </p>
-                                    @endforelse
+                                        </div>
+                                        @foreach ($headerDiscussionNotifications as $notification)
+                                            <a href="{{ route('notifications.index', ['open' => $notification->id]) }}"
+                                                class="flex gap-3 rounded-xl p-2.5 transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600">
+                                                <x-notification-icon :status="data_get($notification->data, 'status')"
+                                                    :outcome="data_get($notification->data, 'outcome')"
+                                                    :event="data_get($notification->data, 'event')" class="h-8 w-8" />
+                                                <div class="min-w-0">
+                                                    <p class="line-clamp-2 text-xs leading-relaxed text-slate-700">
+                                                        {{ data_get($notification->data, 'message', 'Notifikasi baru') }}</p>
+                                                    <p class="mt-1 text-[10px] text-slate-400">
+                                                        {{ $notification->created_at?->copy()->locale('id')->diffForHumans() }}</p>
+                                                </div>
+                                            </a>
+                                        @endforeach
+                                    @endif
+
+                                    @if ($headerOtherNotifications->isNotEmpty())
+                                        <div class="px-2 pb-1 pt-2">
+                                            <div class="flex items-center justify-between gap-2">
+                                                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                                    Notifikasi lainnya
+                                                </p>
+                                                <span class="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">
+                                                    {{ $headerOtherUnreadCount }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        @foreach ($headerOtherNotifications as $notification)
+                                            <a href="{{ route('notifications.index', ['open' => $notification->id]) }}"
+                                                class="flex gap-3 rounded-xl p-2.5 transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600">
+                                                <x-notification-icon :status="data_get($notification->data, 'status')"
+                                                    :outcome="data_get($notification->data, 'outcome')"
+                                                    :event="data_get($notification->data, 'event')" class="h-8 w-8" />
+                                                <div class="min-w-0">
+                                                    <p class="line-clamp-2 text-xs leading-relaxed text-slate-700">
+                                                        {{ data_get($notification->data, 'message', 'Notifikasi baru') }}</p>
+                                                    <p class="mt-1 text-[10px] text-slate-400">
+                                                        {{ $notification->created_at?->copy()->locale('id')->diffForHumans() }}</p>
+                                                </div>
+                                            </a>
+                                        @endforeach
+                                    @endif
                                 </div>
                             </div>
                         </div>

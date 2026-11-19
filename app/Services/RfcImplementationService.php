@@ -47,13 +47,17 @@ class RfcImplementationService
             throw new RfcImplementationException('Hasil implementasi wajib dipilih dengan benar.');
         }
 
+        if (! in_array($result, [ImplementationResult::SUCCESS, ImplementationResult::FAILED], true)) {
+            throw new RfcImplementationException('Hasil implementasi hanya dapat Berhasil atau Reject.');
+        }
+
         $executorName = trim((string) ($data['executor_name'] ?? ''));
         $reportSource = trim((string) ($data['report_source'] ?? ''));
         $summary = trim((string) ($data['summary'] ?? ''));
         $testResults = trim((string) ($data['test_results'] ?? ''));
 
         foreach ([
-            'Pelaksana perubahan' => $executorName,
+            'PIC pelaksanaan' => $executorName,
             'Sumber laporan' => $reportSource,
             'Ringkasan hasil' => $summary,
             'Hasil pengujian' => $testResults,
@@ -72,7 +76,7 @@ class RfcImplementationService
             $failureNotes = trim((string) ($data['failure_notes'] ?? ''));
 
             if ($failureNotes === '') {
-                throw new RfcImplementationException('Catatan kegagalan atau rollback wajib diisi.');
+                throw new RfcImplementationException('Alasan Reject wajib diisi.');
             }
 
             $followUpAction = FollowUpAction::tryFrom((string) ($data['follow_up_action'] ?? ''));

@@ -230,7 +230,7 @@ class ReleaseTeamDashboard extends Component
         }
 
         $this->closeQuick();
-        $this->quickMessage = 'Catatan kegiatan berhasil ditambahkan.';
+        $this->quickMessage = 'Rencana perubahan berhasil ditambahkan.';
     }
 
     private function currentReleaseTeamUser(): User

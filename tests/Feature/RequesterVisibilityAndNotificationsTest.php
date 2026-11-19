@@ -9,6 +9,7 @@ use App\Models\Authority;
 use App\Models\ChangeRequest;
 use App\Models\Decision;
 use App\Models\User;
+use App\Notifications\RfcCommentNotification;
 use App\Notifications\RfcStatusChangedNotification;
 use App\StateMachines\RfcStatusTransition;
 use Database\Seeders\PermissionSeeder;
@@ -142,7 +143,7 @@ it('tidak menampilkan keputusan returned_to_admin dalam kartu keputusan Pemohon'
     Livewire::test(ShowChangeRequest::class, ['rfc' => $rfc->fresh()])
         ->assertOk()
         ->assertSee('Sedang ditinjau')
-        ->assertDontSee('Dikembalikan ke Admin')
+        ->assertDontSee('Dikembalikan untuk pemeriksaan')
         ->assertDontSee('Penilaian Risiko (Change Manager)')
         ->assertDontSee('Keputusan Change Manager')
         ->assertDontSee('Pejabat Penyetuju A')
@@ -152,7 +153,7 @@ it('tidak menampilkan keputusan returned_to_admin dalam kartu keputusan Pemohon'
 
     Livewire::test(ShowChangeRequest::class, ['rfc' => $rfc->fresh()])
         ->assertOk()
-        ->assertSee('Dikembalikan ke Admin')
+        ->assertSee('Dikembalikan untuk pemeriksaan')
         ->assertSee('Pejabat Penyetuju A')
         ->assertSee($internalNote);
 });
@@ -395,4 +396,87 @@ it('mengembalikan jumlah notifikasi belum dibaca milik pengguna', function () {
         ->getJson(route('notifications.unread-count'))
         ->assertOk()
         ->assertExactJson(['count' => 1]);
+});
+
+it('memisahkan diskusi RFC dari notifikasi lainnya pada halaman dan lonceng', function () {
+    $rfc = ($this->makeRfc)();
+
+    $this->pemohon->notify(new RfcCommentNotification($rfc, $this->cm));
+    $this->pemohon->notify(new RfcStatusChangedNotification($rfc, RfcStatus::APPROVED));
+
+    $this->actingAs($this->pemohon);
+
+    $response = $this->get(route('notifications.index'));
+
+    $response->assertOk()
+        ->assertSee('Diskusi RFC')
+        ->assertSee('Notifikasi lainnya')
+        ->assertSee('Komentar dan balasan pada RFC Anda.')
+        ->assertSee('Perubahan status, pengingat, dan pemberitahuan lain.');
+
+    Livewire::actingAs($this->pemohon)
+        ->test(Notifications::class)
+        ->assertViewHas('discussionNotifications', fn ($notifications): bool => $notifications->total() === 1)
+        ->assertViewHas('otherNotifications', fn ($notifications): bool => $notifications->total() === 1)
+        ->assertViewHas('discussionUnreadCount', 1)
+        ->assertViewHas('otherUnreadCount', 1);
+});
+
+it('memberi paginasi terpisah untuk diskusi RFC dan notifikasi lainnya', function () {
+    $rfc = ($this->makeRfc)();
+
+    for ($i = 0; $i < 11; $i++) {
+        $this->pemohon->notify(new RfcCommentNotification($rfc, $this->cm));
+    }
+
+    $this->pemohon->notify(new RfcStatusChangedNotification($rfc, RfcStatus::APPROVED));
+
+    Livewire::actingAs($this->pemohon)
+        ->test(Notifications::class)
+        ->assertViewHas('discussionNotifications', fn ($notifications): bool => $notifications->count() === 10
+            && $notifications->total() === 11
+            && $notifications->currentPage() === 1)
+        ->assertViewHas('otherNotifications', fn ($notifications): bool => $notifications->count() === 1
+            && $notifications->currentPage() === 1)
+        ->call('gotoPage', 2, 'diskusiPage')
+        ->assertViewHas('discussionNotifications', fn ($notifications): bool => $notifications->count() === 1
+            && $notifications->currentPage() === 2)
+        ->assertViewHas('otherNotifications', fn ($notifications): bool => $notifications->count() === 1);
+});
+
+it('menandai hanya bagian diskusi atau bagian lainnya sebagai dibaca', function () {
+    $rfc = ($this->makeRfc)();
+
+    $this->pemohon->notify(new RfcCommentNotification($rfc, $this->cm));
+    $this->pemohon->notify(new RfcStatusChangedNotification($rfc, RfcStatus::APPROVED));
+
+    $discussion = $this->pemohon->notifications()->where('data->event', 'comment_added')->sole();
+    $other = $this->pemohon->notifications()->whereNull('data->event')->sole();
+
+    Livewire::actingAs($this->pemohon)
+        ->test(Notifications::class)
+        ->call('markDiscussionAsRead');
+
+    expect($discussion->fresh()->read_at)->not->toBeNull()
+        ->and($other->fresh()->read_at)->toBeNull();
+
+    Livewire::actingAs($this->pemohon)
+        ->test(Notifications::class)
+        ->call('markOtherAsRead');
+
+    expect($other->fresh()->read_at)->not->toBeNull();
+});
+
+it('mengarahkan notifikasi diskusi ke bagian diskusi RFC setelah dibaca', function () {
+    $rfc = ($this->makeRfc)();
+
+    $this->pemohon->notify(new RfcCommentNotification($rfc, $this->cm));
+    $notification = $this->pemohon->notifications()->firstOrFail();
+
+    Livewire::actingAs($this->pemohon)
+        ->test(Notifications::class)
+        ->call('markAsRead', $notification->id)
+        ->assertRedirect(route('change-requests.show', ['rfc' => $rfc]).'#diskusi');
+
+    expect($notification->fresh()->read_at)->not->toBeNull();
 });

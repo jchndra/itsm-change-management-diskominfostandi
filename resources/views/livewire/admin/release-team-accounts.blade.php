@@ -1,50 +1,46 @@
 <div class="space-y-6">
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-            <h1 class="text-[26px] font-bold leading-tight tracking-tight text-slate-900 sm:text-[30px]">Akun Tim Rilis</h1>
-            <p class="mt-1 max-w-2xl text-sm text-slate-500">
-                Tautkan akun pengguna yang sudah ada ke anggota Tim Rilis. Halaman ini tidak membuat akun baru.
-            </p>
-        </div>
-
-        <span class="inline-flex items-center gap-2 self-start rounded-full bg-blue-50 px-3.5 py-2 text-xs font-semibold text-blue-700 sm:self-auto">
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <x-ui.page-header eyebrow="Manajemen Admin" title="Akun Tim Rilis"
+        description="Tautkan akun pengguna yang sudah ada ke anggota Tim Rilis. Halaman ini tidak membuat akun baru."
+        icon-tone="navy">
+        <x-slot:icon>
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                    d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+                    d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
             </svg>
-            Manajemen akses
-        </span>
-    </div>
+        </x-slot:icon>
+
+        <x-slot:meta>
+            <span
+                class="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3.5 py-2 text-xs font-semibold text-blue-700">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                        d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
+                </svg>
+                Manajemen akses
+            </span>
+        </x-slot:meta>
+    </x-ui.page-header>
 
     @if ($statusMessage)
-        <div class="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3.5 text-sm text-emerald-800"
-            role="status">
-            <svg class="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-            </svg>
-            <p class="flex-1 font-medium">{{ $statusMessage }}</p>
-            <button type="button" wire:click="$set('statusMessage', '')" class="text-emerald-500 hover:text-emerald-700"
-                aria-label="Tutup pesan">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18 18 6M6 6l12 12" />
-                </svg>
-            </button>
-        </div>
+        <x-ui.alert tone="success" dismiss="$set('statusMessage', '')">
+            <span class="font-medium">{{ $statusMessage }}</span>
+        </x-ui.alert>
     @endif
 
-    <div class="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3.5 text-sm text-amber-800">
-        <svg class="mt-0.5 h-5 w-5 shrink-0 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                d="M12 9v3.75m0 3.75h.008v.008H12v-.008ZM10.34 3.94 2.7 17.06A1.9 1.9 0 0 0 4.34 20h15.32a1.9 1.9 0 0 0 1.64-2.94L13.66 3.94a1.9 1.9 0 0 0-3.32 0Z" />
-        </svg>
-        <p class="leading-relaxed">
-            Hanya akun aktif yang belum tertaut dan bukan Admin, Change Manager, atau Super Admin yang dapat dipilih.
-            Penautan akan memberikan role <span class="font-semibold">Tim Rilis</span> dan dicatat pada activity log.
-        </p>
-    </div>
+    <x-ui.alert tone="warning">
+        Hanya akun aktif yang belum tertaut dan bukan Admin, Change Manager, atau Super Admin yang dapat dipilih.
+        Penautan akan memberikan role <span class="font-semibold">Tim Rilis</span> dan dicatat pada activity log.
+    </x-ui.alert>
 
-    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <x-dashboard.panel title="Daftar Anggota Tim Rilis"
+        description="Anggota Tim Rilis dan akun pengguna yang ditautkan kepadanya.">
+        <x-slot:icon>
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7"
+                    d="M18 18.72a9.094 9.094 0 0 0 2.013-4.22M2.985 18.72a9.094 9.094 0 0 1-.184-4.22m1.465-5.537a9.112 9.112 0 0 1 5.688-5.219M12 12a3.375 3.375 0 1 0 0-6.75A3.375 3.375 0 0 0 12 12Zm0 0c-2.26 0-4.345.63-6.13 1.72a6.376 6.376 0 0 0 18.36 3.2" />
+            </svg>
+        </x-slot:icon>
+
         <div class="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div class="relative w-full sm:max-w-sm">
                 <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
@@ -129,22 +125,16 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-5 py-16 text-center">
-                                <span class="mx-auto grid h-14 w-14 place-items-center rounded-full bg-slate-100 text-slate-400">
-                                    <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6"
-                                            d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
-                                    </svg>
-                                </span>
-                                <p class="mt-3 text-sm font-semibold text-slate-700">Tidak ada anggota yang cocok</p>
-                                <p class="mt-1 text-xs text-slate-500">Ubah kata kunci pencarian atau tambahkan data anggota Tim Rilis.</p>
+                            <td colspan="5" class="px-4 py-4">
+                                <x-dashboard.empty-state title="Tidak ada anggota yang cocok"
+                                    description="Ubah kata kunci pencarian atau tambahkan data anggota Tim Rilis." />
                             </td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
-    </div>
+    </x-dashboard.panel>
 
     @if ($showLinkModal)
         <div class="fixed inset-0 z-50 flex items-center justify-center px-4 py-6" role="dialog" aria-modal="true"

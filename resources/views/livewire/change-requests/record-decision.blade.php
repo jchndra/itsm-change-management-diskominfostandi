@@ -1,26 +1,11 @@
-<div class="max-w-4xl mx-auto space-y-6">
-    <div class="flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-            <div class="flex items-center gap-3">
-                <a href="{{ route('change-requests.show', $rfc->id) }}"
-                    class="text-slate-400 transition hover:text-slate-600" wire:navigate>
-                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                    </svg>
-                </a>
-                <h1 class="text-2xl font-bold text-slate-900">Pencatatan Keputusan Change Manager</h1>
-            </div>
-            <p class="mt-1 pl-9 text-sm text-slate-500">
-                Keputusan resmi Change Manager untuk {{ $rfc->displayIdentifier() }}
-            </p>
-        </div>
-        <a href="{{ route('change-requests.show', $rfc->id) }}"
-            class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
-            wire:navigate>
+<x-rfc.action-page :back-href="route('change-requests.show', $rfc->id)" back-label="Kembali ke detail RFC"
+    eyebrow="Keputusan Change Manager" title="Pencatatan Keputusan Change Manager"
+    :description="'Keputusan resmi Change Manager untuk '.$rfc->displayIdentifier()" width="4xl">
+    <x-slot:actions>
+        <x-ui.button variant="secondary" :href="route('change-requests.show', $rfc->id)" navigate size="sm">
             Batal
-        </a>
-    </div>
+        </x-ui.button>
+    </x-slot:actions>
 
     @include('livewire.change-requests.partials.rfc-summary', ['rfc' => $rfc])
 
@@ -101,4 +86,4 @@
             </button>
         </div>
     </form>
-</div>
+</x-rfc.action-page>

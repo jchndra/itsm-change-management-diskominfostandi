@@ -1,8 +1,5 @@
 @php
-    $isFailureResult = in_array($implementation_result, [
-        \App\Enums\ImplementationResult::FAILED->value,
-        \App\Enums\ImplementationResult::ROLLED_BACK->value,
-    ], true);
+    $isFailureResult = $implementation_result === \App\Enums\ImplementationResult::FAILED->value;
 
     $isSuccessResult = $implementation_result === \App\Enums\ImplementationResult::SUCCESS->value;
 
@@ -12,41 +9,26 @@
         'pending' => ['label' => 'Menunggu dimulai', 'classes' => 'bg-slate-100 text-slate-700 ring-slate-200'],
         'in_progress' => ['label' => 'Sedang dikerjakan', 'classes' => 'bg-blue-100 text-blue-700 ring-blue-200'],
         'successful' => ['label' => 'Selesai', 'classes' => 'bg-emerald-100 text-emerald-700 ring-emerald-200'],
-        'rolled_back' => ['label' => 'Rollback', 'classes' => 'bg-rose-100 text-rose-700 ring-rose-200'],
+        'rolled_back' => ['label' => 'Reject', 'classes' => 'bg-rose-100 text-rose-700 ring-rose-200'],
         default => ['label' => 'Belum tersedia', 'classes' => 'bg-slate-100 text-slate-700 ring-slate-200'],
     };
 
     $steps = [
         ['label' => 'Estimasi', 'state' => 'done'],
         ['label' => 'Dikerjakan', 'state' => 'done'],
-        ['label' => 'Selesai / Rollback', 'state' => 'active'],
+        ['label' => 'Selesai / Reject', 'state' => 'active'],
     ];
 
     $fieldClasses = 'block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 shadow-sm transition placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500';
     $cardClasses = 'rounded-xl border border-slate-200 bg-white shadow-sm';
 @endphp
 
-<div class="mx-auto max-w-4xl space-y-6">
-    {{-- Kepala halaman --}}
-    <div class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 pb-4">
-        <div class="flex min-w-0 items-start gap-3">
-            <a href="{{ route('change-requests.show', $rfc->id) }}" wire:navigate
-                class="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-emerald-300 hover:text-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
-                aria-label="Kembali ke detail RFC">
-                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"
-                    aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
-                </svg>
-            </a>
-            <div class="min-w-0">
-                <h1 class="text-2xl font-bold text-slate-900">Catat Implementasi</h1>
-                <p class="mt-1 text-sm text-slate-500">
-                    Pelaksanaan perubahan untuk <span class="font-semibold text-slate-700">{{ $rfc->displayIdentifier() }}</span>
-                </p>
-            </div>
-        </div>
+<x-rfc.action-page :back-href="route('change-requests.show', $rfc->id)" back-label="Kembali ke detail RFC"
+    eyebrow="Aksi Tim Rilis" title="Catat Implementasi"
+    :description="'Pelaksanaan perubahan untuk '.$rfc->displayIdentifier()" width="4xl">
+    <x-slot:actions>
         <x-status-badge :status="$rfc->status" :tone="$rfc->displayStatusTone()" :label="$rfc->displayStatusLabel()" />
-    </div>
+    </x-slot:actions>
 
     @error('status')
         <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-medium text-rose-700" role="alert">
@@ -169,21 +151,21 @@
                 </div>
             </div>
 
-            <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                @foreach (\App\Enums\ImplementationResult::cases() as $result)
+            <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                @foreach ([\App\Enums\ImplementationResult::SUCCESS, \App\Enums\ImplementationResult::FAILED] as $result)
                     @php
                         $resultAccent = match ($result) {
                             \App\Enums\ImplementationResult::SUCCESS => [
                                 'card' => 'peer-checked:border-emerald-500 peer-checked:bg-emerald-50 peer-checked:ring-emerald-500',
                                 'icon' => 'bg-emerald-100 text-emerald-700',
+                                'label' => 'Setuju',
+                                'description' => 'Perubahan berjalan sesuai rencana.',
                             ],
                             \App\Enums\ImplementationResult::FAILED => [
-                                'card' => 'peer-checked:border-amber-500 peer-checked:bg-amber-50 peer-checked:ring-amber-500',
-                                'icon' => 'bg-amber-100 text-amber-700',
-                            ],
-                            \App\Enums\ImplementationResult::ROLLED_BACK => [
                                 'card' => 'peer-checked:border-rose-500 peer-checked:bg-rose-50 peer-checked:ring-rose-500',
                                 'icon' => 'bg-rose-100 text-rose-700',
+                                'label' => 'Reject',
+                                'description' => 'Perubahan tidak diterima atau gagal diterapkan.',
                             ],
                         };
                     @endphp
@@ -195,45 +177,23 @@
                             class="flex h-full items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 peer-checked:ring-2 peer-focus-visible:ring-2 peer-focus-visible:ring-slate-500 peer-focus-visible:ring-offset-2 {{ $resultAccent['card'] }}">
                             <span
                                 class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg {{ $resultAccent['icon'] }}">
-                                @switch($result)
-                                    @case(\App\Enums\ImplementationResult::SUCCESS)
-                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2"
-                                            stroke="currentColor" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                                        </svg>
-                                    @break
-
-                                    @case(\App\Enums\ImplementationResult::FAILED)
-                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2"
-                                            stroke="currentColor" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                d="M12 9v3.75m0 3h.008v.008H12v-.008ZM10.34 3.94l-7.5 13a1.5 1.5 0 0 0 1.3 2.25h15a1.5 1.5 0 0 0 1.3-2.25l-7.5-13a1.5 1.5 0 0 0-2.6 0Z" />
-                                        </svg>
-                                    @break
-
-                                    @default
-                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2"
-                                            stroke="currentColor" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
-                                        </svg>
-                                @endswitch
+                                @if ($result === \App\Enums\ImplementationResult::SUCCESS)
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                                        stroke="currentColor" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                    </svg>
+                                @else
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                                        stroke="currentColor" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M6 18 18 6M6 6l12 12" />
+                                    </svg>
+                                @endif
                             </span>
                             <span class="min-w-0">
-                                <span class="block text-sm font-semibold text-slate-800">{{ $result->label() }}</span>
+                                <span class="block text-sm font-semibold text-slate-800">{{ $resultAccent['label'] }}</span>
                                 <span class="mt-0.5 block text-xs leading-relaxed text-slate-500">
-                                    @switch($result)
-                                        @case(\App\Enums\ImplementationResult::SUCCESS)
-                                            Perubahan berjalan sesuai rencana.
-                                        @break
-
-                                        @case(\App\Enums\ImplementationResult::FAILED)
-                                            Perubahan gagal diterapkan.
-                                        @break
-
-                                        @default
-                                            Perubahan dikembalikan ke kondisi semula.
-                                    @endswitch
+                                    {{ $resultAccent['description'] }}
                                 </span>
                             </span>
                         </span>
@@ -260,10 +220,10 @@
                 <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
                     <div class="min-w-0">
                         <label for="executor_name" class="mb-1 block text-sm font-semibold text-slate-700">
-                            Pelaksana Perubahan <span class="text-rose-500" aria-hidden="true">*</span>
+                            PIC pelaksanaan <span class="text-rose-500" aria-hidden="true">*</span>
                         </label>
                         <input id="executor_name" type="text" wire:model="executor_name"
-                            placeholder="Contoh: Tim Rilis Diskominfostandi" class="{{ $fieldClasses }}">
+                            placeholder="Contoh: Nama PIC pelaksanaan" class="{{ $fieldClasses }}">
                         @error('executor_name')
                             <p class="mt-1 text-xs font-medium text-rose-600" role="alert">{{ $message }}</p>
                         @enderror
@@ -303,7 +263,7 @@
             </div>
         </section>
 
-        {{-- 3. Kegagalan / Rollback (kondisional) --}}
+        {{-- 3. Alasan Reject (kondisional) --}}
         @if ($isFailureResult)
             <section class="rounded-xl border border-rose-200 bg-rose-50/60 p-5 shadow-sm sm:p-6"
                 aria-labelledby="kegagalan-heading">
@@ -311,15 +271,15 @@
                     <span
                         class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-100 text-sm font-bold text-rose-700 ring-1 ring-inset ring-rose-200">3</span>
                     <div class="min-w-0">
-                        <h2 id="kegagalan-heading" class="text-base font-bold text-rose-900">Kegagalan / Rollback</h2>
-                        <p class="mt-0.5 text-xs text-rose-700">Wajib dilengkapi karena hasil bukan Berhasil.</p>
+                        <h2 id="kegagalan-heading" class="text-base font-bold text-rose-900">Alasan Reject</h2>
+                        <p class="mt-0.5 text-xs text-rose-700">Wajib dilengkapi karena hasil yang dipilih adalah Reject.</p>
                     </div>
                 </div>
 
                 <div class="mt-4 space-y-5">
                     <div>
                         <label for="failure_notes" class="mb-1 block text-sm font-semibold text-rose-900">
-                            Catatan Kegagalan atau Rollback <span class="text-rose-500" aria-hidden="true">*</span>
+                            Alasan Reject <span class="text-rose-500" aria-hidden="true">*</span>
                         </label>
                         <textarea id="failure_notes" wire:model="failure_notes" rows="3"
                             class="{{ $fieldClasses }} resize-y border-rose-300 focus:border-rose-500 focus:ring-rose-500"></textarea>
@@ -358,16 +318,16 @@
             </section>
         @endif
 
-        {{-- 4. Bukti Pendukung --}}
+        {{-- 4. Dokumen perubahan dan bukti dukung --}}
         <section class="{{ $cardClasses }} p-5 sm:p-6" aria-labelledby="bukti-pendukung-heading">
             <div class="flex items-start gap-3">
                 <span
                     class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700 ring-1 ring-inset ring-emerald-200">4</span>
                 <div class="min-w-0">
                     <h2 id="bukti-pendukung-heading" class="text-base font-bold text-slate-800">
-                        Bukti Pendukung <span class="text-rose-500" aria-hidden="true">*</span>
+                        Dokumen perubahan dan bukti dukung <span class="text-rose-500" aria-hidden="true">*</span>
                     </h2>
-                    <p class="mt-0.5 text-xs text-slate-500">Unggah bukti pelaksanaan dalam format PDF.</p>
+                    <p class="mt-0.5 text-xs text-slate-500">Unggah dokumen perubahan dan bukti dukung dalam format PDF.</p>
                 </div>
             </div>
 
@@ -465,9 +425,9 @@
                             class="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
                         <span class="text-sm text-slate-700">
                             @if ($isSuccessResult)
-                                Saya, mewakili Tim Rilis, menyatakan pekerjaan ini telah selesai dilaksanakan dan menyetujui hasil pelaksanaan beserta bukti yang dilampirkan.
+                                Saya menyatakan pekerjaan ini telah selesai dilaksanakan dan menyetujui hasil pelaksanaan beserta dokumen perubahan dan bukti dukung yang dilampirkan.
                             @else
-                                Saya, mewakili Tim Rilis, menyatakan pelaksanaan telah dihentikan sesuai hasil yang dipilih dan menyetujui laporan beserta bukti yang dilampirkan.
+                                Saya menyatakan pelaksanaan dinyatakan Reject dan menyetujui laporan beserta dokumen perubahan dan bukti dukung yang dilampirkan.
                             @endif
                             <span class="mt-1 block text-xs text-slate-500">
                                 Setelah disimpan, laporan dan bukti tidak dapat diubah, dan RFC masuk review Change Manager.
@@ -493,4 +453,4 @@
             </div>
         </section>
     </form>
-</div>
+</x-rfc.action-page>

@@ -37,7 +37,7 @@ enum RfcStatus: string
             self::APPROVED => 'Disetujui',
             self::IN_PROGRESS => 'Sedang Dikerjakan',
             self::IMPLEMENTED => 'Menunggu Evaluasi',
-            self::FAILED => 'Gagal / Rollback',
+            self::FAILED => 'Reject',
             self::CLOSED => 'Ditutup',
             self::REJECTED => 'Ditolak',
             self::CANCELLED => 'Dibatalkan',

@@ -36,6 +36,11 @@
             'wash' => 'from-rose-400/20',
             'bar' => 'from-rose-500 via-pink-400 to-orange-300',
         ],
+        'violet' => [
+            'icon' => 'from-violet-600 to-purple-500 shadow-violet-500/30',
+            'wash' => 'from-violet-400/20',
+            'bar' => 'from-violet-500 via-purple-400 to-fuchsia-300',
+        ],
         'slate' => [
             'icon' => 'from-slate-600 to-slate-400 shadow-slate-500/25',
             'wash' => 'from-slate-400/20',

@@ -22,6 +22,8 @@ class RfcHistoryService
      * Mode Tim Rilis menyembunyikan nomor tiket, catatan keputusan internal,
      * evaluasi, dan penutupan tanpa mengubah tampilan Pemohon atau staf.
      * Instruksi disposisi hanya dibuka untuk penerima disposisi pada RFC ini.
+     * Estimasi kegiatan dan rencana mulai Tim Rilis tetap terlihat oleh semua
+     * pengguna yang berhak melihat RFC sebagai bagian dari kronologi proses.
      *
      * @return array{events: array<int, array<string, mixed>>, next_steps: array<int, array<string, string>>}
      */
@@ -44,6 +46,8 @@ class RfcHistoryService
             'riskAssessment.assessedBy',
             'decisions.recordedBy',
             'submittedBy',
+            'releaseTasks.releaseTeamMember',
+            'releaseTasks.updates.user',
         ]);
 
         $events = [];
@@ -101,7 +105,7 @@ class RfcHistoryService
                     'key' => RfcStatus::TICKET_CREATED->value,
                     'label' => $forStaff
                         ? "Tiket Change {$ticketNumber} dibuat dan diteruskan ke Change Manager"
-                        : 'Diverifikasi Admin dan diteruskan ke Change Manager',
+                        : 'Diverifikasi dan diteruskan ke Change Manager',
                     'note' => $forStaff
                         ? ($staffNote !== '' ? $staffNote : null)
                         : (! $forReleaseTeam && filled($ticketNumber) ? "Nomor tiket: {$ticketNumber}" : null),
@@ -185,6 +189,7 @@ class RfcHistoryService
                     'actor_name' => $forStaff ? $activity->causer?->name : null,
                     'actor_role' => 'Pemohon',
                     'attachment_url' => $attachmentUrl,
+                    'attachment_name' => $attachmentUrl !== null ? $fileName : null,
                     'legacy' => false,
                     'order' => $sequence,
                 ];
@@ -369,6 +374,8 @@ class RfcHistoryService
             ];
         }
 
+        $this->addReleaseEstimateEvents($events, $rfc);
+
         $sequence += 1000;
         foreach ($rfc->decisions->sortBy('decision_date') as $decision) {
             $sequence++;
@@ -400,7 +407,12 @@ class RfcHistoryService
                 $isVisibleDispositionEvent = $isDispositionRecipient
                     && $event['key'] === 'release_disposition';
 
-                if (! $isVisibleDispositionEvent && ! in_array($event['key'], [
+                $isReleaseEstimateEvent = in_array($event['key'], [
+                    'release_estimate_set',
+                    'release_estimate_revised',
+                ], true);
+
+                if (! $isVisibleDispositionEvent && ! $isReleaseEstimateEvent && ! in_array($event['key'], [
                     RfcStatus::REJECTED->value,
                     RfcStatus::NEEDS_REVISION->value,
                     RfcStatus::FAILED->value,
@@ -420,10 +432,11 @@ class RfcHistoryService
                     $event['actor_name'] = null;
                 }
 
-                // Tim Rilis hanya menerima status dan ringkasan pelaksanaan;
-                // seluruh catatan keputusan, evaluasi, dan penutupan internal
-                // tidak boleh ikut terkirim ke halaman detail.
-                if ($forReleaseTeam && ! $isVisibleDispositionEvent) {
+                // Tim Rilis hanya menerima status, ringkasan pelaksanaan, dan
+                // informasi estimasi kegiatan; seluruh catatan keputusan,
+                // evaluasi, dan penutupan internal tidak boleh ikut terkirim
+                // ke halaman detail.
+                if ($forReleaseTeam && ! $isVisibleDispositionEvent && ! $isReleaseEstimateEvent) {
                     $event['actor_name'] = null;
                     $event['note'] = null;
                 }
@@ -431,10 +444,151 @@ class RfcHistoryService
             unset($event);
         }
 
+        foreach ($events as &$event) {
+            // Catatan mentah tetap disimpan pada `note`; `details` hanya
+            // proyeksi tampilan agar baris "Prioritas: Sedang" tidak tampil
+            // sebagai satu paragraf panjang di kolom sempit.
+            $event['details'] = $this->detailLines($event['note'] ?? null);
+        }
+        unset($event);
+
         return [
             'events' => $events,
             'next_steps' => $this->nextSteps($rfc),
         ];
+    }
+
+    /**
+     * Uraikan catatan kejadian menjadi baris label–nilai.
+     *
+     * @return array<int, array{label: ?string, value: string, long: bool}>
+     */
+    private function detailLines(?string $note): array
+    {
+        if (blank($note)) {
+            return [];
+        }
+
+        $details = [];
+
+        foreach (preg_split('/\R/u', trim((string) $note)) ?: [] as $line) {
+            $line = trim($line);
+
+            if ($line === '') {
+                continue;
+            }
+
+            foreach ($this->detailLine($line) as $detail) {
+                $details[] = $detail;
+            }
+        }
+
+        return $details;
+    }
+
+    /**
+     * @return array<int, array{label: ?string, value: string, long: bool}>
+     */
+    private function detailLine(string $line): array
+    {
+        // Nilai gabungan seperti "Risiko: Rendah • Dampak: Rendah" dipecah
+        // menjadi baris terpisah agar setiap level dapat diberi penanda warna.
+        $segments = preg_split('/\s+•\s+/u', $line) ?: [];
+
+        if (count($segments) === 1) {
+            $parsed = $this->parseDetailSegment($line);
+
+            return $parsed === null
+                ? [$this->makeDetail(null, $line)]
+                : [$this->makeDetail($parsed[0], $parsed[1])];
+        }
+
+        $parts = [];
+
+        foreach ($segments as $segment) {
+            $parsed = $this->parseDetailSegment($segment);
+
+            if ($parsed === null) {
+                return [$this->makeDetail(null, $line)];
+            }
+
+            $parts[] = $this->makeDetail($parsed[0], $parsed[1]);
+        }
+
+        return $parts;
+    }
+
+    /**
+     * @return array{0: string, 1: string}|null
+     */
+    private function parseDetailSegment(string $segment): ?array
+    {
+        if (! preg_match('/^([A-Za-z][^:\n]{0,31}):\s*(.+)$/u', trim($segment), $matches)) {
+            return null;
+        }
+
+        return [trim($matches[1]), trim($matches[2])];
+    }
+
+    /**
+     * @return array{label: ?string, value: string, long: bool}
+     */
+    private function makeDetail(?string $label, string $value): array
+    {
+        return [
+            'label' => $label,
+            'value' => $value,
+            'long' => mb_strlen($value) > 80,
+        ];
+    }
+
+    /**
+     * Tambahkan estimasi kegiatan dan rencana mulai Tim Rilis ke kronologi.
+     *
+     * Sumbernya adalah update tugas Tim Rilis agar penetapan dan revisi
+     * estimasi tetap tercatat walau activity log lama tidak memuatnya.
+     *
+     * @param  array<int, array<string, mixed>>  $events
+     */
+    private function addReleaseEstimateEvents(array &$events, ChangeRequest $rfc): void
+    {
+        foreach ($rfc->releaseTasks as $task) {
+            $teamName = $task->releaseTeamMember?->name ?? 'Tim Rilis';
+
+            foreach ($task->updates as $update) {
+                if (! in_array($update->type, ['estimate_set', 'estimate_revised'], true)
+                    || $update->new_estimated_days === null) {
+                    continue;
+                }
+
+                $isRevision = $update->type === 'estimate_revised';
+                $estimateLabel = $isRevision && $update->old_estimated_days !== null
+                    ? $update->old_estimated_days.' hari → '.$update->new_estimated_days.' hari'
+                    : $update->new_estimated_days.' hari';
+
+                $lines = ['Estimasi kegiatan: '.$estimateLabel];
+
+                if ($task->planned_start_on !== null) {
+                    $lines[] = 'Rencana mulai: '.$task->planned_start_on->copy()->locale('id')->translatedFormat('d M Y');
+                }
+
+                if ($isRevision && filled($update->reason)) {
+                    $lines[] = 'Alasan: '.trim((string) $update->reason);
+                }
+
+                $events[] = [
+                    'key' => $isRevision ? 'release_estimate_revised' : 'release_estimate_set',
+                    'label' => $teamName.($isRevision ? ' memperbarui estimasi kegiatan' : ' menetapkan estimasi kegiatan'),
+                    'note' => implode("\n", $lines),
+                    'time' => $update->created_at ?? now(),
+                    'tone' => $isRevision ? 'warning' : 'info',
+                    'actor_name' => $update->user?->name,
+                    'actor_role' => 'Tim Rilis',
+                    'legacy' => false,
+                    'order' => 200000 + $update->id,
+                ];
+            }
+        }
     }
 
     public function cancellationReason(ChangeRequest $rfc): ?string
@@ -654,7 +808,7 @@ class RfcHistoryService
         $ticketCreatedLabel = match (true) {
             $eventType === 'legacy_forwarded' => 'Diteruskan ke Change Manager (penyesuaian alur)',
             in_array($oldStatus, [RfcStatus::DRAFT, RfcStatus::NEEDS_REVISION], true) => 'RFC diajukan dan diteruskan ke Change Manager',
-            default => 'Diverifikasi Admin dan diteruskan ke Change Manager',
+            default => 'Diverifikasi dan diteruskan ke Change Manager',
         };
 
         [$label, $tone, $key] = match ($status) {
@@ -662,20 +816,24 @@ class RfcHistoryService
             RfcStatus::SUBMITTED => ['RFC diajukan', 'info', RfcStatus::SUBMITTED->value],
             RfcStatus::TICKET_CREATED => [$ticketCreatedLabel, 'success', RfcStatus::TICKET_CREATED->value],
             RfcStatus::RETURNED_TO_ADMIN => [
-                $forStaff ? 'Dikembalikan ke Admin' : 'Sedang ditinjau',
+                $forStaff ? 'Dikembalikan untuk pemeriksaan' : 'Sedang ditinjau',
                 'warning',
                 RfcStatus::RETURNED_TO_ADMIN->value,
             ],
             RfcStatus::NEEDS_REVISION => ['Perlu revisi', 'warning', RfcStatus::NEEDS_REVISION->value],
             RfcStatus::REJECTED => [
-                'Ditolak oleh '.$this->rejectionActorLabel($activity->causer, $oldStatus),
+                // Data lama dapat ditolak pada tahap pemeriksaan awal. Istilah
+                // "Admin" tidak lagi dipakai pada alur baru.
+                $this->rejectionActorLabel($activity->causer, $oldStatus) === 'Change Manager'
+                    ? 'Ditolak oleh Change Manager'
+                    : 'Ditolak pada tahap pemeriksaan',
                 'danger',
                 RfcStatus::REJECTED->value,
             ],
             RfcStatus::APPROVED => ['Disetujui oleh Change Manager', 'success', RfcStatus::APPROVED->value],
             RfcStatus::IN_PROGRESS => ['Implementasi dimulai', 'info', RfcStatus::IN_PROGRESS->value],
             RfcStatus::IMPLEMENTED => ['Implementasi berhasil dicatat — menunggu evaluasi', 'success', RfcStatus::IMPLEMENTED->value],
-            RfcStatus::FAILED => ['Implementasi gagal atau rollback — menunggu evaluasi', 'danger', RfcStatus::FAILED->value],
+            RfcStatus::FAILED => ['Implementasi Reject — menunggu evaluasi', 'danger', RfcStatus::FAILED->value],
             RfcStatus::CLOSED => [$this->closureEventLabel($activity), $this->closureEventTone($activity), RfcStatus::CLOSED->value],
             RfcStatus::CANCELLED => ['Dibatalkan', 'danger', RfcStatus::CANCELLED->value],
         };
@@ -783,7 +941,7 @@ class RfcHistoryService
 
         $lines = [
             'Hasil: '.$result,
-            'Pelaksana: '.($executorName !== '' ? $executorName : '-'),
+            'PIC pelaksanaan: '.($executorName !== '' ? $executorName : '-'),
             ($startedAt !== null || $finishedAt !== null)
                 ? 'Waktu pelaksanaan: '.($startedAt ?? '-').' s.d. '.($finishedAt ?? '-')
                 : null,
@@ -793,7 +951,7 @@ class RfcHistoryService
         ];
 
         if ($failureNotes !== '') {
-            $lines[] = 'Catatan kegagalan/rollback: '.$failureNotes;
+            $lines[] = 'Alasan Reject: '.$failureNotes;
         }
 
         if (filled($followUpAction)) {
@@ -893,7 +1051,7 @@ class RfcHistoryService
             DecisionStatus::APPROVED => 'Disetujui oleh Change Manager',
             DecisionStatus::REJECTED => 'Ditolak oleh Change Manager',
             DecisionStatus::REVISION_REQUIRED => $forStaff ? 'Perlu revisi oleh Change Manager' : 'Perlu revisi',
-            DecisionStatus::RETURNED_TO_ADMIN => $forStaff ? 'Dikembalikan ke Admin' : 'Sedang ditinjau',
+            DecisionStatus::RETURNED_TO_ADMIN => $forStaff ? 'Dikembalikan untuk pemeriksaan' : 'Sedang ditinjau',
             default => 'Keputusan Change Manager (legacy)',
         };
         $label = $forStaff && filled($actorName)
@@ -997,7 +1155,7 @@ class RfcHistoryService
             RfcStatus::REJECTED => 'Ditolak',
             RfcStatus::CANCELLED => 'Dibatalkan',
             RfcStatus::IMPLEMENTED => 'Implementasi berhasil dicatat — menunggu evaluasi',
-            RfcStatus::FAILED => 'Implementasi gagal atau rollback — menunggu evaluasi',
+            RfcStatus::FAILED => 'Implementasi Reject — menunggu evaluasi',
             RfcStatus::CLOSED => match ($rfc->implementationOutcome()) {
                 'successful' => 'RFC ditutup — berhasil',
                 'unsuccessful' => 'RFC ditutup — tidak berhasil',
@@ -1218,7 +1376,7 @@ class RfcHistoryService
             // rollback; langkah berikutnya adalah evaluasi sebelum penutupan.
             $steps[2]['state'] = $status === RfcStatus::FAILED ? 'danger' : 'done';
             $steps[2]['description'] = $status === RfcStatus::FAILED
-                ? 'Implementasi gagal'
+                ? 'Implementasi Reject'
                 : 'Implementasi selesai';
 
             if ($rfc->implementation?->evaluated_at !== null) {
@@ -1238,7 +1396,7 @@ class RfcHistoryService
 
             $steps[2]['state'] = $outcome === 'unsuccessful' ? 'danger' : 'done';
             $steps[2]['description'] = $outcome === 'unsuccessful'
-                ? 'Implementasi gagal'
+                ? 'Implementasi Reject'
                 : 'Implementasi selesai';
             $steps[3]['state'] = 'done';
             $steps[3]['description'] = 'Evaluasi tercatat';

@@ -79,7 +79,7 @@ it('membuka halaman tinjauan untuk change manager', function () {
         ->assertSee('Evaluasi Risiko')
         ->assertSee('Keputusan')
         ->assertSee('Disposisi Tim Rilis')
-        ->assertSee('Simpan &amp; Selesaikan', false);
+        ->assertSee('Simpan');
 });
 
 it('menolak pengguna selain change manager', function () {

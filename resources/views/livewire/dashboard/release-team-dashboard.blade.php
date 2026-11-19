@@ -74,7 +74,7 @@
             </x-dashboard.stat-card>
 
             <x-dashboard.stat-card label="Selesai bulan ini" :value="$overview['counts']['done_this_month']"
-                hint="Berhasil atau di-rollback bulan ini" tone="emerald">
+                hint="Berhasil atau Reject bulan ini" tone="emerald">
                 <x-slot:icon>
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
@@ -312,7 +312,7 @@
                                             wire:click="openQuick({{ $task['task_id'] }}, 'note')"
                                             wire:loading.attr="disabled"
                                             class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-white min-h-10 px-3 py-2 text-xs font-bold text-blue-700 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-200 disabled:cursor-wait">
-                                            Catat kegiatan
+                                            Rencana perubahan
                                         </button>
                                     @endif
                                 </div>
@@ -366,10 +366,10 @@
                                 class="mt-4 space-y-3 rounded-xl border border-blue-200 bg-blue-50/60 p-4">
                                 <div>
                                     <label for="quick-progress-note-{{ $task['task_id'] }}"
-                                        class="block text-xs font-semibold text-slate-700">Catatan kegiatan</label>
+                                        class="block text-xs font-semibold text-slate-700">Rencana perubahan</label>
                                     <textarea id="quick-progress-note-{{ $task['task_id'] }}" rows="3"
                                         wire:model="progressNote" required minlength="5" maxlength="1000"
-                                        placeholder="Tulis kegiatan terbaru"
+                                        placeholder="Tulis pembaruan rencana perubahan"
                                         class="mt-1 block w-full resize-y rounded-lg border-slate-300 bg-white text-sm shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"></textarea>
                                     <p class="mt-1 text-xs text-slate-500">Minimal 5 karakter, maksimal 1.000 karakter.</p>
                                 </div>
@@ -391,7 +391,7 @@
                                     </button>
                                     <button type="submit" wire:loading.attr="disabled" wire:target="saveNote"
                                         class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400">
-                                        <span wire:loading.remove wire:target="saveNote">Simpan catatan</span>
+                                        <span wire:loading.remove wire:target="saveNote">Simpan rencana perubahan</span>
                                         <span wire:loading wire:target="saveNote">Menyimpan...</span>
                                     </button>
                                 </div>
@@ -417,7 +417,7 @@
     @else
         {{-- Riwayat tugas --}}
         <x-dashboard.panel class="dashboard-rise dashboard-rise-3" title="Riwayat Tugas" id="riwayat-tugas-tim-rilis"
-            description="Tugas yang sudah selesai atau di-rollback, terbaru lebih dulu.">
+            description="Tugas yang sudah selesai atau Reject, terbaru lebih dulu.">
             <x-slot:icon>
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
@@ -428,7 +428,7 @@
             @if ($history === [])
                 <div class="p-5">
                     <x-dashboard.empty-state title="Belum ada riwayat"
-                        description="Tugas yang selesai atau di-rollback akan muncul di sini." />
+                        description="Tugas yang selesai atau Reject akan muncul di sini." />
                 </div>
             @else
                 <ul class="divide-y divide-slate-100/80">
@@ -449,7 +449,7 @@
                                         class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold {{ $isSuccessful ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-rose-200 bg-rose-50 text-rose-700' }}">
                                         <span class="h-1.5 w-1.5 rounded-full {{ $isSuccessful ? 'bg-emerald-500' : 'bg-rose-500' }}"
                                             aria-hidden="true"></span>
-                                        {{ $isSuccessful ? 'Selesai' : 'Rollback' }}
+                                        {{ $isSuccessful ? 'Selesai' : 'Reject' }}
                                     </span>
                                 </div>
 

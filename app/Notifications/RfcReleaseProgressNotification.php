@@ -43,6 +43,7 @@ class RfcReleaseProgressNotification extends Notification
     {
         return match ($this->update->type) {
             'started' => "RFC {$identifier}: pengerjaan oleh {$team} dimulai",
+            'risk_analysis_submitted' => "RFC {$identifier}: analisis risiko pengerjaan oleh {$team} disimpan",
             'estimate_set' => "RFC {$identifier}: estimasi {$team} ditetapkan {$this->update->new_estimated_days} hari",
             'estimate_revised' => "RFC {$identifier}: estimasi {$team} direvisi {$this->update->old_estimated_days} -> {$this->update->new_estimated_days} hari. Alasan: {$this->update->reason}",
             'blocked' => "RFC {$identifier}: kendala pengerjaan dicatat oleh {$team}. {$this->update->note}",
