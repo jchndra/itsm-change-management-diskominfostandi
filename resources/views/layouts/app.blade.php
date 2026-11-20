@@ -64,7 +64,19 @@
             && ! $isTicketQueueActive;
     @endphp
 
-    <div x-data="{ sidebarOpen: false, mobileSearch: false }" class="min-h-screen">
+    <div x-data="{
+            sidebarOpen: false,
+            mobileSearch: false,
+            sidebarCollapsed: (typeof localStorage !== 'undefined' && localStorage.getItem('sidebarCollapsed') === 'true'),
+            toggleSidebar() {
+                this.sidebarCollapsed = !this.sidebarCollapsed;
+                if (typeof localStorage !== 'undefined') {
+                    localStorage.setItem('sidebarCollapsed', this.sidebarCollapsed ? 'true' : 'false');
+                }
+            },
+        }"
+        x-init="if (typeof localStorage !== 'undefined' && localStorage.getItem('sidebarCollapsed') === null) { sidebarCollapsed = false; }"
+        class="min-h-screen">
 
         {{-- Overlay sidebar mobile --}}
         <div x-show="sidebarOpen" x-cloak x-transition.opacity
@@ -73,17 +85,21 @@
 
         {{-- Sidebar --}}
         <aside
-            class="fixed inset-y-0 left-0 z-50 flex w-64 -translate-x-full flex-col bg-[#08294a] text-white shadow-2xl transition-transform duration-300 lg:translate-x-0"
-            :class="sidebarOpen ? 'translate-x-0' : ''">
+            class="fixed inset-y-0 left-0 z-50 flex -translate-x-full flex-col bg-[#08294a] text-white shadow-2xl transition-all duration-300 lg:translate-x-0"
+            :class="[
+                sidebarOpen ? 'translate-x-0' : '',
+                sidebarCollapsed ? 'w-16' : 'w-64',
+            ]">
 
             {{-- Brand --}}
-            <div class="flex items-start gap-3 px-5 pb-5 pt-6">
+            <div class="flex items-start gap-3 pb-5 pt-6 transition-all duration-300"
+                :class="sidebarCollapsed ? 'px-2 justify-center' : 'px-5'">
                 <span class="mt-0.5 grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-white p-1">
                     <img src="{{ asset('images/logo-diskominfostandi.png') }}"
                         alt="Logo Diskominfostandi Kota Bekasi" class="h-full w-full object-contain">
                 </span>
 
-                <div class="min-w-0 leading-tight">
+                <div class="min-w-0 leading-tight" x-show="!sidebarCollapsed" x-transition.opacity>
                     <p class="text-[13px] font-semibold text-blue-100/90">Sistem Manajemen</p>
                     <p class="text-[15px] font-bold leading-snug text-white">Perubahan Layanan TI</p>
                     <p class="mt-1 text-[10px] font-medium uppercase leading-relaxed tracking-[0.14em] text-blue-200/60">
@@ -101,7 +117,8 @@
             </div>
 
             {{-- Navigasi --}}
-            <nav class="mt-2 min-h-0 flex-1 space-y-1 overflow-y-auto px-3 pb-4">
+            <nav class="mt-2 min-h-0 flex-1 space-y-1 overflow-y-auto pb-4 transition-all duration-300"
+                :class="sidebarCollapsed ? 'px-2' : 'px-3'">
                 @if ($isReleaseTeamOnly)
                     <x-sidebar-link :href="route('release-team.dashboard')" :active="request()->routeIs('release-team.*')">
                         <x-slot:icon>
@@ -386,7 +403,8 @@
         </aside>
 
         {{-- Area konten --}}
-        <div class="flex min-h-screen flex-col lg:pl-64">
+        <div class="flex min-h-screen flex-col transition-[padding] duration-300"
+            :class="sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'">
 
             {{-- Topbar --}}
             <header class="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur">
@@ -398,6 +416,20 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
                         </svg>
+                    </button>
+
+                    <button type="button" x-on:click="toggleSidebar()"
+                        class="hidden items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 shadow-sm transition hover:border-blue-300 hover:bg-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 lg:inline-flex"
+                        :aria-label="sidebarCollapsed ? 'Perluas sidebar' : 'Lipat sidebar'"
+                        :title="sidebarCollapsed ? 'Perluas sidebar' : 'Lipat sidebar'">
+                        <svg class="h-4 w-4 transition-transform duration-300"
+                            :class="sidebarCollapsed ? 'rotate-180' : ''" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 19l-7-7 7-7" />
+                        </svg>
+                        <span x-show="!sidebarCollapsed" x-transition.opacity>Lipat menu</span>
+                        <span x-show="sidebarCollapsed" x-transition.opacity>Perluas menu</span>
                     </button>
 
                     {{-- Pencarian desktop --}}
