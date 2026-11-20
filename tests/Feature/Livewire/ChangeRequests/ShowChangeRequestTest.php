@@ -342,3 +342,83 @@ it('hides the requester name and unit from the requester', function () {
         ->assertDontSee('Nama Pemohon')
         ->assertDontSee('Dinas Pendidikan');
 });
+
+it('menampilkan seluruh panel hasil evaluasi dan keputusan Change Manager kepada Tim Rilis yang ditugaskan', function () {
+    $manager = User::factory()->create([
+        'name' => 'Change Manager Keputusan',
+        'position' => 'Pengendali Perubahan IT',
+    ]);
+    $manager->assignRole('Change Manager');
+
+    $releaseUser = User::factory()->create();
+    $releaseUser->assignRole('Tim Rilis');
+
+    $member = ReleaseTeamMember::factory()->create([
+        'user_id' => $releaseUser->id,
+        'is_active' => true,
+    ]);
+
+    $rfc = ChangeRequest::factory()->create([
+        'status' => RfcStatus::APPROVED->value,
+        'title' => 'RFC Dengan Keputusan Change Manager',
+    ]);
+
+    $rfc->riskAssessment()->create([
+        'assessed_by_id' => $manager->id,
+        'system_criticality_score' => 3,
+        'impact_scope_score' => 3,
+        'rollback_readiness_score' => 2,
+        'total_score' => 8,
+        'risk_level' => 'Rendah',
+        'impact_level' => 'Rendah',
+        'urgency_level' => 'Normal',
+        'classification' => 'Normal Change',
+        'mitigation_plan' => 'Mitigasi contoh',
+        'rollback_plan' => 'Rollback contoh',
+    ]);
+
+    ReleaseTask::factory()->create([
+        'change_request_id' => $rfc->id,
+        'release_team_member_id' => $member->id,
+        'assigned_by_id' => $manager->id,
+        'execution_status' => 'pending',
+    ]);
+
+    Decision::create([
+        'change_request_id' => $rfc->id,
+        'recorded_by_id' => $manager->id,
+        'snapshot_authority_name' => $manager->name,
+        'snapshot_authority_position' => $manager->position,
+        'decision_status' => DecisionStatus::REVISION_REQUIRED->value,
+        'decision_date' => now()->subDay(),
+        'reason' => 'Alasan revisi lama yang tidak perlu dilihat Tim Rilis.',
+    ]);
+
+    Decision::create([
+        'change_request_id' => $rfc->id,
+        'recorded_by_id' => $manager->id,
+        'snapshot_authority_name' => $manager->name,
+        'snapshot_authority_position' => $manager->position,
+        'decision_status' => DecisionStatus::APPROVED->value,
+        'decision_date' => now(),
+        'reason' => 'Disetujui, lanjutkan pengerjaan.',
+    ]);
+
+    $this->actingAs($releaseUser);
+
+    Livewire::test(ShowChangeRequest::class, ['rfc' => $rfc->fresh()])
+        ->assertOk()
+        ->assertSee('Hasil Evaluasi & Keputusan')
+        ->assertSee('Penilaian Risiko (Change Manager)')
+        ->assertSee('Tingkat Risiko')
+        ->assertSee('Dampak')
+        ->assertSee('Klasifikasi')
+        ->assertSee('Normal Change')
+        ->assertSee('Keputusan Change Manager')
+        ->assertSee('Disetujui')
+        ->assertSee('Disetujui, lanjutkan pengerjaan.')
+        ->assertSee('Alasan revisi lama yang tidak perlu dilihat Tim Rilis.')
+        ->assertSee($manager->name)
+        ->assertSee($manager->position)
+        ->assertSeeHtml('href="#keputusan"');
+});

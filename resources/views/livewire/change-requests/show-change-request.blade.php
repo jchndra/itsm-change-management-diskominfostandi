@@ -100,6 +100,8 @@
                     \App\Enums\DecisionStatus::REJECTED->value,
                     \App\Enums\DecisionStatus::REVISION_REQUIRED->value,
                 ], true)));
+        $showRiskAssessment = ($isStaff || $isReleaseTeamView) && $rfc->riskAssessment;
+        $decisionList = $isStaff || $isReleaseTeamView ? $rfc->decisions : $visibleDecisions;
         $implementation = $rfc->implementation;
         $implementationEvidences = $implementation
             ? $rfc->evidences->where('evidence_type', 'implementation')->values()
@@ -134,7 +136,7 @@
             || ($isStaff && $rfc->releaseTasks->isNotEmpty());
         $hasReleaseProgressSection = ($isStaff || $isRequesterOwner) && $rfc->releaseTasks->isNotEmpty();
         $hasAttachmentSection = $supportingAttachments->isNotEmpty();
-        $hasDecisionSection = ($isStaff && $rfc->riskAssessment) || $visibleDecisions->isNotEmpty();
+        $hasDecisionSection = $showRiskAssessment || $decisionList->isNotEmpty();
         $hasEvaluationSection = $isStaff
             && ($implementation?->evaluated_at || $rfc->closed_at || filled($rfc->closure_notes));
     @endphp
@@ -1146,7 +1148,7 @@
                         </x-slot:icon>
 
                         <div class="space-y-6 p-5 sm:p-6">
-                            @if ($isStaff && $rfc->riskAssessment)
+                            @if ($showRiskAssessment)
                                 <div>
                                     <h4 class="mb-3 text-sm font-bold text-slate-700">Penilaian Risiko (Change Manager)</h4>
                                     <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -1170,11 +1172,11 @@
                                 </div>
                             @endif
 
-                            @if ($visibleDecisions->isNotEmpty())
+                            @if ($decisionList->isNotEmpty())
                                 <div>
                                     <h4 class="mb-3 text-sm font-bold text-slate-700">Keputusan Change Manager</h4>
                                     <div class="space-y-3">
-                                        @foreach ($visibleDecisions as $decision)
+                                        @foreach ($decisionList as $decision)
                                             @php
                                                 $decisionCard = match ($decision->decision_status) {
                                                     \App\Enums\DecisionStatus::APPROVED->value => 'bg-emerald-50 border-emerald-100',
@@ -1198,7 +1200,7 @@
                                             @endphp
                                             <div class="rounded-xl border p-4 {{ $decisionCard }}">
                                                 <div class="mb-2 flex items-start justify-between gap-3">
-                                                    @if ($isStaff)
+                                                    @if ($isStaff || $isReleaseTeamView)
                                                         <div>
                                                             <span
                                                                 class="font-bold text-slate-800">{{ $decision->snapshot_authority_name ?? 'Change Manager' }}</span>

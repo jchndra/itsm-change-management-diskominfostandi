@@ -225,7 +225,7 @@ it('menolak Tim Rilis lain yang tidak ditugaskan pada RFC yang sama', function (
         ->assertForbidden();
 });
 
-it('menyembunyikan data internal dari HTML dan riwayat Tim Rilis yang ditugaskan', function () {
+it('menyembunyikan data internal selain keputusan dari HTML dan riwayat Tim Rilis yang ditugaskan', function () {
     $manager = releaseTeamPolicyUser(['Change Manager'], [
         'name' => 'Change Manager Internal',
         'email' => 'manager.internal@example.test',
@@ -290,13 +290,16 @@ it('menyembunyikan data internal dari HTML dan riwayat Tim Rilis yang ditugaskan
         ->assertOk()
         ->assertSee('Instruksi disposisi yang boleh dilihat penerima.')
         ->assertSee('Diberikan oleh '.$manager->name)
+        ->assertSee('Keputusan Change Manager')
+        ->assertSee('Alasan keputusan internal rahasia.')
+        ->assertSee('Pejabat Internal')
+        ->assertSee('Kepala Bidang Internal')
         ->getContent();
 
     expect($html)
         ->not->toContain('Nomor Tiket')
         ->not->toContain('CHG-2026-7777')
         ->not->toContain('Catatan pemeriksaan Admin lama yang rahasia.')
-        ->not->toContain('Alasan keputusan internal rahasia.')
         ->not->toContain('Catatan transisi internal rahasia.')
         ->not->toContain('Catatan evaluasi internal rahasia.')
         ->not->toContain('Catatan penutupan internal rahasia.')
