@@ -25,6 +25,7 @@
             && ! $canViewOwnRfc;
         $isStaff = $canViewAllRfc;
         $canManageReleaseTeam = $currentUser?->can('release_team.manage') ?? false;
+        $canManageUsers = $currentUser?->can('users.manage') ?? false;
         $unreadCount = $currentUser ? $currentUser->unreadNotifications()->count() : 0;
         $headerDiscussionNotifications = $currentUser
             ? $currentUser->unreadNotifications()->where('data->event', 'comment_added')->take(3)->get()
@@ -67,39 +68,60 @@
     <div x-data="{
             sidebarOpen: false,
             mobileSearch: false,
+            isDesktop: window.matchMedia('(min-width: 1024px)').matches,
+            supportsHover: window.matchMedia('(hover: hover)').matches,
             sidebarCollapsed: (typeof localStorage !== 'undefined' && localStorage.getItem('sidebarCollapsed') === 'true'),
-            toggleSidebar() {
-                this.sidebarCollapsed = !this.sidebarCollapsed;
+            sidebarHovered: false,
+            sidebarFocused: false,
+            setSidebarCollapsed(collapsed) {
+                this.sidebarCollapsed = collapsed;
                 if (typeof localStorage !== 'undefined') {
-                    localStorage.setItem('sidebarCollapsed', this.sidebarCollapsed ? 'true' : 'false');
+                    localStorage.setItem('sidebarCollapsed', collapsed ? 'true' : 'false');
                 }
             },
+            toggleSidebar() {
+                this.setSidebarCollapsed(! this.sidebarCollapsed);
+            },
+            expandSidebar() {
+                this.setSidebarCollapsed(false);
+            },
+            get sidebarCompact() {
+                return this.sidebarCollapsed && this.isDesktop && ! this.sidebarHovered && ! this.sidebarFocused;
+            },
         }"
-        x-init="if (typeof localStorage !== 'undefined' && localStorage.getItem('sidebarCollapsed') === null) { sidebarCollapsed = false; }"
+        x-effect="document.body.style.overflow = sidebarOpen ? 'hidden' : ''"
+        x-on:keydown.escape.window="if (sidebarOpen) { sidebarOpen = false; $nextTick(() => $refs.sidebarOpenButton?.focus()) }"
+        x-on:sidebar-expand.window="expandSidebar()"
+        x-on:resize.window="isDesktop = window.matchMedia('(min-width: 1024px)').matches; supportsHover = window.matchMedia('(hover: hover)').matches; if (isDesktop) { sidebarOpen = false; }"
         class="min-h-screen">
 
         {{-- Overlay sidebar mobile --}}
-        <div x-show="sidebarOpen" x-cloak x-transition.opacity
+        <div x-show="sidebarOpen" x-cloak x-transition.opacity aria-hidden="true"
             class="fixed inset-0 z-40 bg-slate-950/50 backdrop-blur-sm lg:hidden"
-            x-on:click="sidebarOpen = false"></div>
+            x-on:click="sidebarOpen = false; $nextTick(() => $refs.sidebarOpenButton?.focus())"></div>
 
         {{-- Sidebar --}}
         <aside id="app-sidebar"
-            class="fixed inset-y-0 left-0 z-50 flex -translate-x-full flex-col bg-[#08294a] text-white shadow-2xl transition-all duration-300 lg:translate-x-0"
+            class="fixed inset-y-0 left-0 z-50 flex w-64 -translate-x-full flex-col bg-[#08294a] text-white shadow-2xl transition-all duration-300 motion-reduce:transition-none lg:translate-x-0"
             :class="[
                 sidebarOpen ? 'translate-x-0' : '',
-                sidebarCollapsed ? 'w-16' : 'w-64',
-            ]">
+                sidebarCompact ? 'lg:w-16' : 'lg:w-64',
+            ]"
+            :inert="! sidebarOpen && ! isDesktop"
+            x-on:mouseenter="if (isDesktop && supportsHover) sidebarHovered = true"
+            x-on:mouseleave="if (isDesktop && supportsHover) sidebarHovered = false"
+            x-on:focusin="if (isDesktop) sidebarFocused = true"
+            x-on:focusout="if (isDesktop && ! $el.contains($event.relatedTarget)) sidebarFocused = false">
 
             {{-- Brand --}}
-            <div class="flex items-start gap-3 pb-5 pt-6 transition-all duration-300"
-                :class="sidebarCollapsed ? 'px-2 justify-center' : 'px-5'">
+            <div class="flex items-start gap-3 pb-5 pt-6 transition-all duration-300 motion-reduce:transition-none"
+                :class="sidebarCompact ? 'justify-center px-2' : 'px-5'">
                 <span class="mt-0.5 grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-white p-1">
                     <img src="{{ asset('images/logo-diskominfostandi.png') }}"
                         alt="Logo Diskominfostandi Kota Bekasi" class="h-full w-full object-contain">
                 </span>
 
-                <div class="min-w-0 leading-tight" x-show="!sidebarCollapsed" x-transition.opacity>
+                <div class="min-w-0 leading-tight" x-show="!sidebarCompact">
                     <p class="text-[13px] font-semibold text-blue-100/90">Sistem Manajemen</p>
                     <p class="text-[15px] font-bold leading-snug text-white">Perubahan Layanan TI</p>
                     <p class="mt-1 text-[10px] font-medium uppercase leading-relaxed tracking-[0.14em] text-blue-200/60">
@@ -107,18 +129,20 @@
                     </p>
                 </div>
 
-                <button type="button" x-on:click="sidebarOpen = false"
-                    class="ml-auto grid h-8 w-8 place-items-center rounded-lg text-blue-100/70 hover:bg-white/10 hover:text-white lg:hidden"
+                <button type="button" x-ref="sidebarCloseButton"
+                    x-on:click="sidebarOpen = false; $nextTick(() => $refs.sidebarOpenButton?.focus())"
+                    class="ml-auto grid h-8 w-8 place-items-center rounded-lg text-blue-100/70 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 lg:hidden"
                     aria-label="Tutup menu">
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
             </div>
 
             {{-- Navigasi --}}
-            <nav class="mt-2 min-h-0 flex-1 space-y-1 overflow-y-auto pb-4 transition-all duration-300"
-                :class="sidebarCollapsed ? 'px-2' : 'px-3'">
+            <nav aria-label="Navigasi utama"
+                class="scrollbar-thin mt-2 min-h-0 flex-1 space-y-1 overflow-y-auto pb-4 transition-all duration-300 motion-reduce:transition-none"
+                :class="sidebarCompact ? 'px-2' : 'px-3'">
                 @if ($isReleaseTeamOnly)
                     <x-sidebar-link :href="route('release-team.dashboard')" :active="request()->routeIs('release-team.*')">
                         <x-slot:icon>
@@ -173,29 +197,41 @@
                         </x-sidebar-link>
                     @endif
 
-                    @if ($canManageReleaseTeam)
-                        <x-sidebar-link :href="route('admin.release-team-accounts.index')" :active="request()->routeIs('admin.release-team-accounts.*')">
+                    @if ($canManageReleaseTeam || $canManageUsers)
+                        <x-sidebar-group id="administration" label="Administrasi"
+                            :active="request()->routeIs(['admin.release-team-accounts.*', 'admin.users.*'])">
                             <x-slot:icon>
                                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                                        d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+                                        d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
                                 </svg>
                             </x-slot:icon>
-                            Akun Tim Rilis
-                        </x-sidebar-link>
-                    @endif
 
-                    @can('users.manage')
-                        <x-sidebar-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.*')">
-                            <x-slot:icon>
-                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                                        d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
-                                </svg>
-                            </x-slot:icon>
-                            Kelola Pengguna
-                        </x-sidebar-link>
-                    @endcan
+                            @if ($canManageReleaseTeam)
+                                <x-sidebar-link nested :href="route('admin.release-team-accounts.index')" :active="request()->routeIs('admin.release-team-accounts.*')">
+                                    <x-slot:icon>
+                                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                                d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+                                        </svg>
+                                    </x-slot:icon>
+                                    Akun Tim Rilis
+                                </x-sidebar-link>
+                            @endif
+
+                            @if ($canManageUsers)
+                                <x-sidebar-link nested :href="route('admin.users.index')" :active="request()->routeIs('admin.users.*')">
+                                    <x-slot:icon>
+                                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                                d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+                                        </svg>
+                                    </x-slot:icon>
+                                    Kelola Pengguna
+                                </x-sidebar-link>
+                            @endif
+                        </x-sidebar-group>
+                    @endif
 
                     @if ($canViewChangeManagerDashboard)
                         <x-sidebar-link :href="route('change-manager.dashboard')" :active="request()->routeIs('change-manager.dashboard')">
@@ -219,15 +255,39 @@
                         </x-sidebar-link>
                     @endif
 
-                    <x-sidebar-link :href="route('change-requests.index')" :active="$isRfcListActive">
+                    <x-sidebar-group id="change-request" label="Change Request"
+                        :active="request()->routeIs('change-requests.*')">
                         <x-slot:icon>
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
                                     d="M8.25 6.75h9M8.25 12h9M8.25 17.25h9M4.5 6.75h.008v.008H4.5V6.75Zm0 5.25h.008v.008H4.5V12Zm0 5.25h.008v.008H4.5v-.008Z" />
                             </svg>
                         </x-slot:icon>
-                        Daftar RFC
-                    </x-sidebar-link>
+
+                        <x-sidebar-link nested :href="route('change-requests.index')" :active="$isRfcListActive">
+                            <x-slot:icon>
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                        d="M8.25 6.75h9M8.25 12h9M8.25 17.25h9M4.5 6.75h.008v.008H4.5V6.75Zm0 5.25h.008v.008H4.5V12Zm0 5.25h.008v.008H4.5v-.008Z" />
+                                </svg>
+                            </x-slot:icon>
+                            Daftar RFC
+                        </x-sidebar-link>
+
+                        @if ($canReviewCompleteness)
+                            <x-sidebar-link nested :href="route('change-requests.index', ['queue' => 'incoming'])">
+                                <x-slot:icon>
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                            d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v6a2.25 2.25 0 0 1-2.25 2.25H12M8.25 9H6.75A2.25 2.25 0 0 0 4.5 11.25v6A2.25 2.25 0 0 0 6.75 19.5h6a2.25 2.25 0 0 0 2.25-2.25V15" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                            d="m9 12.75 2.25 2.25 4.5-4.5" />
+                                    </svg>
+                                </x-slot:icon>
+                                Buat Tiket Change
+                            </x-sidebar-link>
+                        @endif
+                    </x-sidebar-group>
 
                     @if ($canViewDisposition)
                         <x-sidebar-link :href="route('disposition.index')" :active="request()->routeIs('disposition.*')">
@@ -252,7 +312,7 @@
                     </x-sidebar-link>
                 @endif
 
-                @if ($canReviewCompleteness)
+                @if ($canReviewCompleteness && ! $isStaff)
                     <x-sidebar-link :href="route('change-requests.index', ['queue' => 'incoming'])">
                         <x-slot:icon>
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -403,16 +463,17 @@
         </aside>
 
         {{-- Area konten --}}
-        <div class="flex min-h-screen flex-col transition-[padding] duration-300"
-            :class="sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'">
+        <div class="flex min-h-screen flex-col transition-[padding] duration-300 motion-reduce:transition-none"
+            :class="sidebarCompact ? 'lg:pl-16' : 'lg:pl-64'">
 
             {{-- Topbar --}}
             <header class="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur">
                 <div class="flex h-[72px] items-center gap-3 px-4 sm:px-6 lg:px-8">
-                    <button type="button" x-on:click="sidebarOpen = true"
-                        class="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-700 lg:hidden"
-                        aria-label="Buka menu">
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button type="button" x-ref="sidebarOpenButton"
+                        x-on:click="sidebarOpen = true; $nextTick(() => $refs.sidebarCloseButton?.focus())"
+                        class="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 lg:hidden"
+                        aria-label="Buka menu" aria-controls="app-sidebar" :aria-expanded="sidebarOpen">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
                         </svg>
@@ -444,7 +505,11 @@
                             </svg>
                         </button>
 
-                        <span x-show="showTip" x-cloak x-transition.opacity.duration.150ms
+                        <span x-show="showTip" x-cloak
+                            x-transition:enter="transition ease-out duration-150 motion-reduce:transition-none"
+                            x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                            x-transition:leave="transition ease-in duration-100 motion-reduce:transition-none"
+                            x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
                             class="pointer-events-none absolute left-0 top-full z-10 mt-2 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1.5 text-[11px] font-semibold tracking-wide text-white shadow-lg shadow-slate-900/20">
                             <span x-text="sidebarCollapsed ? 'Perluas sidebar' : 'Lipat sidebar'"></span>
                         </span>

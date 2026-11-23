@@ -135,6 +135,12 @@
     .bell-ring {
         animation: none;
     }
+
+    #app-sidebar,
+    #app-sidebar * {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+    }
 }
 
 /* Tabel berubah menjadi daftar kartu pada layar kecil */
