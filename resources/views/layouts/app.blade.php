@@ -84,7 +84,7 @@
             x-on:click="sidebarOpen = false"></div>
 
         {{-- Sidebar --}}
-        <aside
+        <aside id="app-sidebar"
             class="fixed inset-y-0 left-0 z-50 flex -translate-x-full flex-col bg-[#08294a] text-white shadow-2xl transition-all duration-300 lg:translate-x-0"
             :class="[
                 sidebarOpen ? 'translate-x-0' : '',
@@ -418,19 +418,37 @@
                         </svg>
                     </button>
 
-                    <button type="button" x-on:click="toggleSidebar()"
-                        class="hidden items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 shadow-sm transition hover:border-blue-300 hover:bg-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 lg:inline-flex"
-                        :aria-label="sidebarCollapsed ? 'Perluas sidebar' : 'Lipat sidebar'"
-                        :title="sidebarCollapsed ? 'Perluas sidebar' : 'Lipat sidebar'">
-                        <svg class="h-4 w-4 transition-transform duration-300"
-                            :class="sidebarCollapsed ? 'rotate-180' : ''" fill="none" stroke="currentColor"
-                            viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M15 19l-7-7 7-7" />
-                        </svg>
-                        <span x-show="!sidebarCollapsed" x-transition.opacity>Lipat menu</span>
-                        <span x-show="sidebarCollapsed" x-transition.opacity>Perluas menu</span>
-                    </button>
+                    {{-- Tombol lipat sidebar --}}
+                    <div class="relative hidden lg:block" x-data="{ showTip: false }">
+                        <button type="button" x-on:click="toggleSidebar()"
+                            x-on:mouseenter="showTip = true" x-on:mouseleave="showTip = false"
+                            x-on:focus="showTip = true" x-on:blur="showTip = false"
+                            class="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+                            :aria-label="sidebarCollapsed ? 'Perluas sidebar' : 'Lipat sidebar'"
+                            :aria-expanded="!sidebarCollapsed" aria-controls="app-sidebar">
+                            {{-- Sidebar terbuka: chevron mengarah ke kiri (lipat) --}}
+                            <svg x-show="!sidebarCollapsed" x-cloak class="h-5 w-5" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24" aria-hidden="true">
+                                <rect x="3" y="4" width="18" height="16" rx="2.5" stroke-width="1.8" />
+                                <path d="M9 4.5v15" stroke-width="1.8" />
+                                <path d="m16.5 9.5-2.75 2.5 2.75 2.5" stroke-linecap="round"
+                                    stroke-linejoin="round" stroke-width="1.8" />
+                            </svg>
+                            {{-- Sidebar terlipat: chevron mengarah ke kanan (perluas) --}}
+                            <svg x-show="sidebarCollapsed" x-cloak class="h-5 w-5" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24" aria-hidden="true">
+                                <rect x="3" y="4" width="18" height="16" rx="2.5" stroke-width="1.8" />
+                                <path d="M9 4.5v15" stroke-width="1.8" />
+                                <path d="m13.5 9.5 2.75 2.5-2.75 2.5" stroke-linecap="round"
+                                    stroke-linejoin="round" stroke-width="1.8" />
+                            </svg>
+                        </button>
+
+                        <span x-show="showTip" x-cloak x-transition.opacity.duration.150ms
+                            class="pointer-events-none absolute left-0 top-full z-10 mt-2 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1.5 text-[11px] font-semibold tracking-wide text-white shadow-lg shadow-slate-900/20">
+                            <span x-text="sidebarCollapsed ? 'Perluas sidebar' : 'Lipat sidebar'"></span>
+                        </span>
+                    </div>
 
                     {{-- Pencarian desktop --}}
                     <form action="{{ route('change-requests.index') }}" method="GET" class="hidden flex-1 md:block">
