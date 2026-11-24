@@ -484,24 +484,12 @@
                         <button type="button" x-on:click="toggleSidebar()"
                             x-on:mouseenter="showTip = true" x-on:mouseleave="showTip = false"
                             x-on:focus="showTip = true" x-on:blur="showTip = false"
-                            class="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+                            class="grid h-10 w-10 place-items-center rounded-xl bg-blue-500 text-white shadow-sm transition hover:bg-blue-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
                             :aria-label="sidebarCollapsed ? 'Perluas sidebar' : 'Lipat sidebar'"
                             :aria-expanded="!sidebarCollapsed" aria-controls="app-sidebar">
-                            {{-- Sidebar terbuka: chevron mengarah ke kiri (lipat) --}}
-                            <svg x-show="!sidebarCollapsed" x-cloak class="h-5 w-5" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24" aria-hidden="true">
-                                <rect x="3" y="4" width="18" height="16" rx="2.5" stroke-width="1.8" />
-                                <path d="M9 4.5v15" stroke-width="1.8" />
-                                <path d="m16.5 9.5-2.75 2.5 2.75 2.5" stroke-linecap="round"
-                                    stroke-linejoin="round" stroke-width="1.8" />
-                            </svg>
-                            {{-- Sidebar terlipat: chevron mengarah ke kanan (perluas) --}}
-                            <svg x-show="sidebarCollapsed" x-cloak class="h-5 w-5" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24" aria-hidden="true">
-                                <rect x="3" y="4" width="18" height="16" rx="2.5" stroke-width="1.8" />
-                                <path d="M9 4.5v15" stroke-width="1.8" />
-                                <path d="m13.5 9.5 2.75 2.5-2.75 2.5" stroke-linecap="round"
-                                    stroke-linejoin="round" stroke-width="1.8" />
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
                             </svg>
                         </button>
 
@@ -672,8 +660,14 @@
                         <div class="hidden h-8 w-px bg-slate-200 sm:block"></div>
 
                         {{-- Menu pengguna --}}
-                        <div class="relative" x-data="{ open: false }" x-on:click.outside="open = false">
+                        <div class="relative" x-data="{ open: false }"
+                            x-on:click.outside="open = false"
+                            x-on:mouseenter="open = true"
+                            x-on:mouseleave="open = false"
+                            x-on:focusin="open = true"
+                            x-on:focusout="if (!$el.contains($event.relatedTarget)) open = false">
                             <button type="button" x-on:click="open = !open"
+                                :aria-expanded="open" aria-haspopup="menu"
                                 class="flex items-center gap-2.5 rounded-full py-1 pl-1 pr-1.5 transition hover:bg-slate-100 sm:pr-2">
                                 <x-user-avatar :name="$currentUser?->name ?? 'Pengguna'" />
                                 <span class="hidden text-left sm:block">
