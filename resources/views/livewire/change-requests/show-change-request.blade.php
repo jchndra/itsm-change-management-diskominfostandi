@@ -590,10 +590,8 @@
                                 </div>
 
                                 <div class="mt-3">
-                                    <span
-                                        class="block text-[11px] font-semibold uppercase tracking-wider text-slate-500">Instruksi</span>
-                                    <p class="mt-1 whitespace-pre-wrap text-sm text-slate-700">
-                                        {{ $releaseTeamDispositionTask->instruction }}</p>
+                                    <span class="block text-[11px] font-semibold uppercase tracking-wider text-slate-500">Instruksi</span>
+                                    <p class="mt-1 whitespace-pre-wrap text-sm text-slate-700">{{ $releaseTeamDispositionTask->instruction }}</p>
                                 </div>
                             </div>
                         </div>
@@ -730,12 +728,10 @@
                                         {{ $implementation->report_source ?? '-' }}
                                     </x-ui.fact>
                                     <x-ui.fact label="Ringkasan Hasil" class="sm:col-span-2">
-                                        <p class="whitespace-pre-wrap leading-relaxed text-slate-700">
-                                            {{ $implementation->summary }}</p>
+                                        <p class="whitespace-pre-wrap leading-relaxed text-slate-700">{{ $implementation->summary }}</p>
                                     </x-ui.fact>
                                     <x-ui.fact label="Hasil Pengujian" class="sm:col-span-2">
-                                        <p class="whitespace-pre-wrap leading-relaxed text-slate-700">
-                                            {{ $implementation->test_results }}</p>
+                                        < <p class="whitespace-pre-wrap leading-relaxed text-slate-700">{{ $implementation->test_results }}</p>
                                     </x-ui.fact>
                                     @if (filled($implementation->failure_notes))
                                         <x-ui.fact label="Catatan Belum Berhasil" class="sm:col-span-2">
@@ -801,8 +797,7 @@
                                         {{ $implementation->finished_at?->copy()->locale('id')->translatedFormat('d M Y, H:i') }}
                                     </x-ui.fact>
                                     <x-ui.fact label="Ringkasan Hasil" class="sm:col-span-2">
-                                        <p class="whitespace-pre-wrap leading-relaxed text-slate-700">
-                                            {{ $implementation->summary }}</p>
+                                        <p class="whitespace-pre-wrap leading-relaxed text-slate-700">{{ $implementation->summary }}</p>
                                     </x-ui.fact>
                                     @if (filled($implementation->failure_notes))
                                         <x-ui.fact label="Catatan Belum Berhasil" class="sm:col-span-2">

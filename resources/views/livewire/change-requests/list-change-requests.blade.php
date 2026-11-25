@@ -635,7 +635,7 @@
                         <th scope="col" class="px-5 py-3.5 font-semibold">Pemohon</th>
                         <th scope="col" class="px-5 py-3.5 font-semibold">Tanggal</th>
                         <th scope="col" class="px-5 py-3.5 font-semibold">Status</th>
-                        <th scope="col" class="px-5 py-3.5 text-right font-semibold">Aksi</th>
+                        <th scope="col" class="px-5 py-3.5 text-left font-semibold">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100/80">

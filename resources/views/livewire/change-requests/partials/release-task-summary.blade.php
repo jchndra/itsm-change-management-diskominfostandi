@@ -81,18 +81,15 @@
                                             class="mt-2 grid grid-cols-1 gap-2 text-xs text-slate-600 sm:grid-cols-2">
                                             <div>
                                                 <p class="font-semibold text-slate-700">Rencana kegiatan</p>
-                                                <p class="mt-0.5 whitespace-pre-wrap break-words">
-                                                    {{ $task->riskAnalysis->activity_plan }}</p>
+                                                <p class="mt-0.5 whitespace-pre-wrap break-words">{{ $task->riskAnalysis->activity_plan }}</p>
                                             </div>
                                             <div>
                                                 <p class="font-semibold text-slate-700">Rencana perubahan</p>
-                                                <p class="mt-0.5 whitespace-pre-wrap break-words">
-                                                    {{ $task->riskAnalysis->change_plan }}</p>
+                                                <p class="mt-0.5 whitespace-pre-wrap break-words">{{ $task->riskAnalysis->change_plan }}</p>
                                             </div>
                                             <div class="sm:col-span-2">
                                                 <p class="font-semibold text-slate-700">Mekanisme rollback</p>
-                                                <p class="mt-0.5 whitespace-pre-wrap break-words">
-                                                    {{ $task->riskAnalysis->rollback_mechanism }}</p>
+                                                <p class="mt-0.5 whitespace-pre-wrap break-words">{{ $task->riskAnalysis->rollback_mechanism }}</p>
                                             </div>
                                         </div>
                                     </div>

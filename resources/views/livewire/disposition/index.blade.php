@@ -78,7 +78,7 @@
                             <th scope="col" class="px-5 py-3.5 font-semibold">Pemohon &amp; Unit Kerja</th>
                             <th scope="col" class="px-5 py-3.5 font-semibold">Kategori Diusulkan</th>
                             <th scope="col" class="px-5 py-3.5 font-semibold">Tanggal Disetujui</th>
-                            <th scope="col" class="px-5 py-3.5 text-right font-semibold">Aksi</th>
+                            <th scope="col" class="px-5 py-3.5 text-left font-semibold">Aksi</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
