@@ -591,7 +591,7 @@
 
                                 <div class="mt-3">
                                     <span class="block text-[11px] font-semibold uppercase tracking-wider text-slate-500">Instruksi</span>
-                                    <p class="mt-1 whitespace-pre-wrap text-sm text-slate-700">{{ $releaseTeamDispositionTask->instruction }}</p>
+                                    <p class="mt-1 whitespace-pre-wrap text-sm text-slate-700">{{ trim($releaseTeamDispositionTask->instruction) }}</p>
                                 </div>
                             </div>
                         </div>
@@ -731,7 +731,7 @@
                                         <p class="whitespace-pre-wrap leading-relaxed text-slate-700">{{ $implementation->summary }}</p>
                                     </x-ui.fact>
                                     <x-ui.fact label="Hasil Pengujian" class="sm:col-span-2">
-                                        < <p class="whitespace-pre-wrap leading-relaxed text-slate-700">{{ $implementation->test_results }}</p>
+                                        <p class="whitespace-pre-wrap leading-relaxed text-slate-700">{{ $implementation->test_results }}</p>
                                     </x-ui.fact>
                                     @if (filled($implementation->failure_notes))
                                         <x-ui.fact label="Catatan Belum Berhasil" class="sm:col-span-2">
@@ -846,8 +846,7 @@
                                             {{ $implementation->evaluated_at->copy()->locale('id')->translatedFormat('d M Y, H:i') }}
                                         </span>
                                     </div>
-                                    <p class="mt-2 whitespace-pre-wrap text-sm text-emerald-950">
-                                        {{ $implementation->evaluation_notes }}</p>
+                                    <p class="mt-2 whitespace-pre-wrap text-sm text-emerald-950">{{ trim($implementation->evaluation_notes ?? '') }}</p>
                                     <p class="mt-3 text-xs text-emerald-800">
                                         Dievaluasi oleh {{ $implementation->evaluatedBy?->name ?? 'Change Manager' }}
                                     </p>
@@ -864,8 +863,7 @@
                                             </span>
                                         @endif
                                     </div>
-                                    <p class="mt-2 whitespace-pre-wrap text-sm text-slate-700">
-                                        {{ $rfc->closure_notes ?: '-' }}</p>
+                                    <p class="mt-2 whitespace-pre-wrap text-sm text-slate-700">{{ trim($rfc->closure_notes ?: '-') }}</p>
                                     @if ($rfc->closedBy || $rfc->closed_at)
                                         <p class="mt-3 text-xs text-slate-500">
                                             Ditutup oleh {{ $rfc->closedBy?->name ?? '-' }}
