@@ -635,10 +635,8 @@
                                         </span>
                                     </div>
                                     <div class="mt-3">
-                                        <span
-                                            class="block text-[11px] font-semibold uppercase tracking-wider text-slate-500">Instruksi</span>
-                                        <p class="mt-1 whitespace-pre-wrap text-sm text-slate-700">
-                                            {{ $task->instruction }}</p>
+                                        <span class="block text-[11px] font-semibold uppercase tracking-wider text-slate-500">Instruksi</span>
+                                        <p class="mt-1 whitespace-pre-wrap text-sm text-slate-700">{{ trim($task->instruction ?? '') }}</p>
                                     </div>
                                 </div>
                             @endforeach
