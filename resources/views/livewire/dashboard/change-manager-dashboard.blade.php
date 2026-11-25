@@ -250,7 +250,7 @@
                             <th scope="col" class="px-5 py-3 font-semibold">Kategori</th>
                             <th scope="col" class="px-5 py-3 font-semibold">Usia Tunggu</th>
                             <th scope="col" class="px-5 py-3 font-semibold">Status</th>
-                            <th scope="col" class="px-5 py-3 text-right font-semibold">Aksi</th>
+                            <th scope="col" class="px-5 py-3 text-left font-semibold">Aksi</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100/80">
@@ -300,7 +300,7 @@
                                 <td data-label="Status" class="whitespace-nowrap px-5 py-4">
                                     <x-status-badge :status="$item['status']" />
                                 </td>
-                                <td data-label="Aksi" class="whitespace-nowrap px-5 py-4 text-right">
+                                <td data-label="Aksi" class="whitespace-nowrap px-5 py-4 text-left">
                                     <a href="{{ route('change-requests.' . $item['action_route'], $item['id']) }}"
                                         wire:navigate
                                         class="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-sky-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm shadow-blue-500/20 transition duration-200 hover:-translate-y-0.5 hover:from-blue-700 hover:to-sky-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-200">

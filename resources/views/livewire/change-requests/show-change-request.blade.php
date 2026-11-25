@@ -455,7 +455,7 @@
 
                         @if (filled($rfc->impact_description))
                             <x-ui.fact label="Keterangan" class="sm:col-span-2">
-                                <p class="whitespace-pre-wrap leading-relaxed text-slate-700">
+                                <p class="whitespace-pre-wrap leading-relaxed text-slate-700 -ml-4 -mt-1">
                                     {{ $rfc->impact_description }}</p>
                             </x-ui.fact>
                         @endif
