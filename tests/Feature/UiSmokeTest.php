@@ -21,12 +21,34 @@ it('renders requester dashboard shell', function () {
     $this->actingAs($user)
         ->get('/requester/dashboard')
         ->assertOk()
+        ->assertSee('Selamat datang, Budi Santoso')
+        ->assertSee('Pemohon')
         ->assertSee('Dashboard Pemohon')
+        ->assertDontSee('BERANDA')
         ->assertSee('Ajukan RFC Baru')
         ->assertSee('RFC Terbaru Saya')
         ->assertSee('Status Permohonan Saya')
         ->assertSee('Notifikasi')
         ->assertSee('Budi Santoso');
+});
+
+it('menampilkan banner sambutan pada dashboard Pemohon', function () {
+    $user = User::factory()->create(['name' => 'Budi Santoso']);
+
+    $component = Livewire::actingAs($user)->test(Dashboard::class);
+
+    $html = $component->html();
+
+    $component
+        ->assertOk()
+        ->assertSee('Selamat datang, Budi Santoso')
+        ->assertSee('Pemohon')
+        ->assertSee('Pantau dan kelola permintaan perubahan layanan TI Anda.')
+        ->assertDontSee('BERANDA')
+        ->assertDontSee('Muat ulang');
+
+    expect(substr_count($html, 'Dashboard Pemohon'))->toBe(1)
+        ->and(substr_count($html, '<h1'))->toBe(1);
 });
 
 it('renders notifications and profile pages', function () {

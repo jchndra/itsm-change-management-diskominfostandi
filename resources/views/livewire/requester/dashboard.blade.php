@@ -1,9 +1,9 @@
-<div class="space-y-6">
+<div class="space-y-5 sm:space-y-6">
 
-    {{-- Judul halaman --}}
-    <x-ui.page-header eyebrow="Beranda" title="Dashboard Pemohon"
-        description="Pantau dan kelola permintaan perubahan layanan TI Anda." icon-tone="blue">
-    </x-ui.page-header>
+    {{-- Banner sambutan --}}
+    <x-dashboard.hero-banner class="dashboard-rise" title="Dashboard Pemohon"
+        description="Pantau dan kelola permintaan perubahan layanan TI Anda." :user-name="auth()->user()->name"
+        role-label="Pemohon" :show-meta="false" />
 
     @if ($statusMessage)
         <x-ui.alert tone="success" dismiss="$set('statusMessage', '')">
